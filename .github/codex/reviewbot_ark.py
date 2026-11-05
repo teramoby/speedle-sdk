@@ -85,18 +85,21 @@ def limited_input(path, limit):
 
 
 def http_post(request_path, response_path, timeout):
-    """Post with curl's total deadline; omit every response/error body from logs."""
+    """Post with curl's total deadline; keep credentials and response bodies out of logs."""
+    authorization = json.dumps(f"Authorization: Bearer {os.environ['ARK_API_KEY']}")
     try:
         completed = subprocess.run(
             [
                 "curl", "--silent", "--show-error", "--connect-timeout", "20",
                 "--max-time", str(timeout), "--output", str(response_path),
                 "--write-out", "%{http_code}", ARK_URL,
-                "-H", f"Authorization: Bearer {os.environ['ARK_API_KEY']}",
+                # Read the bearer header from stdin so it never appears in curl's argv.
+                "--config", "-",
                 "-H", "Content-Type: application/json",
                 "--data-binary", f"@{request_path}",
             ],
             check=False,
+            input=f"header = {authorization}\n",
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
             text=True,
@@ -168,7 +171,8 @@ def run(config, input_path, retry_input_path, result_path, request_path, respons
                 continue
             if response_status == OUTPUT_TOKEN_LIMIT:
                 print(f"ReviewBot reason_code=retry_exhausted model={model}", file=sys.stderr)
-            print(f"ReviewBot reason_code=unusable_output model={model}", file=sys.stderr)
+            else:
+                print(f"ReviewBot reason_code=unusable_output model={model}", file=sys.stderr)
             break
         if model_index + 1 < len(config["models"]):
             print(f"::warning::ReviewBot model {model} failed; trying the next model.")

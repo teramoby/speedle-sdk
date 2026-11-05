@@ -3,10 +3,13 @@
 import contextlib
 import io
 import json
+import os
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -119,6 +122,23 @@ class ArkFailoverTests(unittest.TestCase):
         self.assertEqual([call["model"] for call in self.calls], ["kimi-k3.1-pro"] * 2)
         self.assertEqual([call["input"] for call in self.calls], ["full input", "reduced input"])
 
+    def test_output_limit_retry_exhaustion_logs_one_reason_code(self):
+        self.config["models"] = ["kimi-k3.1-pro"]
+        self.scenarios = [
+            (200, response(output=[], status="incomplete", incomplete_reason="max_output_tokens")),
+            (200, response(output=[], status="incomplete", incomplete_reason="max_output_tokens")),
+        ]
+        retried, errors = self.run_models()
+        self.assertIsNone(retried)
+        model_errors = [
+            line for line in errors.splitlines()
+            if line.startswith("ReviewBot reason_code=") and " model=" in line
+        ]
+        self.assertEqual(model_errors, [
+            "ReviewBot reason_code=retry_exhausted model=kimi-k3.1-pro",
+        ])
+        self.assertNotIn("reason_code=unusable_output", errors)
+
     def test_next_model_starts_with_full_input_and_fresh_retry_state(self):
         self.scenarios = [
             (200, response(output=[], status="incomplete", incomplete_reason="max_output_tokens")),
@@ -142,6 +162,22 @@ class ArkFailoverTests(unittest.TestCase):
         self.assertEqual(len(self.calls), 3)
         self.assertFalse(self.result.exists())
         self.assertIn("reason_code=all_models_failed", errors)
+
+    def test_curl_reads_authorization_header_from_stdin(self):
+        self.request.write_text("{}", encoding="utf-8")
+        self.response.write_text("{}", encoding="utf-8")
+        completed = subprocess.CompletedProcess(args=[], returncode=0, stdout="200")
+        with mock.patch.dict(os.environ, {"ARK_API_KEY": "test-secret"}):
+            with mock.patch.object(reviewbot_ark.subprocess, "run", return_value=completed) as run:
+                status = reviewbot_ark.http_post(self.request, self.response, 30)
+        self.assertEqual(status, 200)
+        arguments = run.call_args.args[0]
+        self.assertNotIn("test-secret", "\0".join(arguments))
+        self.assertEqual(arguments[arguments.index("--config") + 1], "-")
+        self.assertEqual(
+            run.call_args.kwargs["input"],
+            'header = "Authorization: Bearer test-secret"\n',
+        )
 
     def test_tunables_default_in_script(self):
         self.assertEqual(self.config["models"], reviewbot_ark.DEFAULT_MODELS.split())
