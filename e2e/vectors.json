@@ -1,0 +1,929 @@
+{
+  "description": "SDK end-to-end vectors for the policies in e2e/policies.json. request is a Speedle+ REST JsonContext without serviceName; the runner adds serviceName from SPEEDLE_E2E_SERVICE. expect is the is-allowed body that Speedle+ returned (speedlePlus is its commit), which Speedle Cloud must return unchanged.",
+  "speedlePlus": "46a4f90a6338332352006c328371d04fc5b6106f",
+  "vectors": [
+    {
+      "name": "user-grant-get",
+      "description": "A direct user grant: alice may get /docs/public.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "alice"
+            }
+          ]
+        },
+        "resource": "/docs/public",
+        "action": "get"
+      },
+      "expect": {
+        "allowed": true,
+        "reason": 0
+      }
+    },
+    {
+      "name": "user-grant-second-action",
+      "description": "The same grant lists two actions: alice may also list /docs/public.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "alice"
+            }
+          ]
+        },
+        "resource": "/docs/public",
+        "action": "list"
+      },
+      "expect": {
+        "allowed": true,
+        "reason": 0
+      }
+    },
+    {
+      "name": "user-grant-other-action",
+      "description": "No policy grants alice delete on /docs/public.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "alice"
+            }
+          ]
+        },
+        "resource": "/docs/public",
+        "action": "delete"
+      },
+      "expect": {
+        "allowed": false,
+        "reason": 3
+      }
+    },
+    {
+      "name": "unknown-user",
+      "description": "A user no policy mentions is denied.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "zoe"
+            }
+          ]
+        },
+        "resource": "/docs/public",
+        "action": "get"
+      },
+      "expect": {
+        "allowed": false,
+        "reason": 3
+      }
+    },
+    {
+      "name": "role-from-user",
+      "description": "bob gets the editor role by a user role policy; editors may update /docs/drafts when locked is false.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "bob"
+            }
+          ]
+        },
+        "resource": "/docs/drafts",
+        "action": "update",
+        "attributes": [
+          {
+            "name": "locked",
+            "type": "bool",
+            "value": false
+          }
+        ]
+      },
+      "expect": {
+        "allowed": true,
+        "reason": 0
+      }
+    },
+    {
+      "name": "role-from-group",
+      "description": "Members of group writers get the editor role.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "wendy"
+            },
+            {
+              "type": "group",
+              "name": "writers"
+            }
+          ]
+        },
+        "resource": "/docs/drafts",
+        "action": "update",
+        "attributes": [
+          {
+            "name": "locked",
+            "type": "bool",
+            "value": false
+          }
+        ]
+      },
+      "expect": {
+        "allowed": true,
+        "reason": 0
+      }
+    },
+    {
+      "name": "role-without-role",
+      "description": "Without the writers group, wendy has no role and is denied.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "wendy"
+            }
+          ]
+        },
+        "resource": "/docs/drafts",
+        "action": "update",
+        "attributes": [
+          {
+            "name": "locked",
+            "type": "bool",
+            "value": false
+          }
+        ]
+      },
+      "expect": {
+        "allowed": false,
+        "reason": 3
+      }
+    },
+    {
+      "name": "deny-overrides-role-grant",
+      "description": "A deny on update for editors when locked is true overrides the editor grant.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "bob"
+            }
+          ]
+        },
+        "resource": "/docs/drafts",
+        "action": "update",
+        "attributes": [
+          {
+            "name": "locked",
+            "type": "bool",
+            "value": true
+          }
+        ]
+      },
+      "expect": {
+        "allowed": false,
+        "reason": 1
+      }
+    },
+    {
+      "name": "deny-scoped-to-action",
+      "description": "The locked deny covers update only, so bob may still get /docs/drafts.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "bob"
+            }
+          ]
+        },
+        "resource": "/docs/drafts",
+        "action": "get",
+        "attributes": [
+          {
+            "name": "locked",
+            "type": "bool",
+            "value": true
+          }
+        ]
+      },
+      "expect": {
+        "allowed": true,
+        "reason": 0
+      }
+    },
+    {
+      "name": "missing-attribute-in-deny",
+      "description": "locked is missing, so the deny condition does not match and the editor grant applies.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "bob"
+            }
+          ]
+        },
+        "resource": "/docs/drafts",
+        "action": "update"
+      },
+      "expect": {
+        "allowed": true,
+        "reason": 0
+      }
+    },
+    {
+      "name": "role-deny-overrides-role-grant",
+      "description": "ivan is in writers, but a deny role policy keeps him from the editor role.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "ivan"
+            },
+            {
+              "type": "group",
+              "name": "writers"
+            }
+          ]
+        },
+        "resource": "/docs/drafts",
+        "action": "get"
+      },
+      "expect": {
+        "allowed": false,
+        "reason": 3
+      }
+    },
+    {
+      "name": "resource-scoped-role",
+      "description": "carol owns /projects/apollo; owners may delete resources matching expr:^/projects/[a-z]+$.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "carol"
+            }
+          ]
+        },
+        "resource": "/projects/apollo",
+        "action": "delete"
+      },
+      "expect": {
+        "allowed": true,
+        "reason": 0
+      }
+    },
+    {
+      "name": "resource-scoped-role-other-resource",
+      "description": "carol's owner role is scoped to /projects/apollo, so she may not delete /projects/gemini.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "carol"
+            }
+          ]
+        },
+        "resource": "/projects/gemini",
+        "action": "delete"
+      },
+      "expect": {
+        "allowed": false,
+        "reason": 3
+      }
+    },
+    {
+      "name": "string-condition-match",
+      "description": "Group staff may get /reports when department is finance.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "sam"
+            },
+            {
+              "type": "group",
+              "name": "staff"
+            }
+          ]
+        },
+        "resource": "/reports",
+        "action": "get",
+        "attributes": [
+          {
+            "name": "department",
+            "type": "string",
+            "value": "finance"
+          }
+        ]
+      },
+      "expect": {
+        "allowed": true,
+        "reason": 0
+      }
+    },
+    {
+      "name": "string-condition-mismatch",
+      "description": "department sales does not satisfy the condition.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "sam"
+            },
+            {
+              "type": "group",
+              "name": "staff"
+            }
+          ]
+        },
+        "resource": "/reports",
+        "action": "get",
+        "attributes": [
+          {
+            "name": "department",
+            "type": "string",
+            "value": "sales"
+          }
+        ]
+      },
+      "expect": {
+        "allowed": false,
+        "reason": 3
+      }
+    },
+    {
+      "name": "deny-overrides-group-grant",
+      "description": "henry is finance staff, but a user deny overrides the group grant.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "henry"
+            },
+            {
+              "type": "group",
+              "name": "staff"
+            }
+          ]
+        },
+        "resource": "/reports",
+        "action": "get",
+        "attributes": [
+          {
+            "name": "department",
+            "type": "string",
+            "value": "finance"
+          }
+        ]
+      },
+      "expect": {
+        "allowed": false,
+        "reason": 1
+      }
+    },
+    {
+      "name": "numeric-condition-boundary",
+      "description": "clearance 3 satisfies clearance >= 3.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "dave"
+            }
+          ]
+        },
+        "resource": "/vault",
+        "action": "read",
+        "attributes": [
+          {
+            "name": "clearance",
+            "type": "numeric",
+            "value": 3
+          }
+        ]
+      },
+      "expect": {
+        "allowed": true,
+        "reason": 0
+      }
+    },
+    {
+      "name": "numeric-condition-fraction",
+      "description": "clearance 2.5 does not satisfy clearance >= 3.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "dave"
+            }
+          ]
+        },
+        "resource": "/vault",
+        "action": "read",
+        "attributes": [
+          {
+            "name": "clearance",
+            "type": "numeric",
+            "value": 2.5
+          }
+        ]
+      },
+      "expect": {
+        "allowed": false,
+        "reason": 3
+      }
+    },
+    {
+      "name": "missing-attribute-in-grant",
+      "description": "clearance is missing, so the grant condition does not match.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "dave"
+            }
+          ]
+        },
+        "resource": "/vault",
+        "action": "read"
+      },
+      "expect": {
+        "allowed": false,
+        "reason": 3
+      }
+    },
+    {
+      "name": "wrong-attribute-type",
+      "description": "clearance sent as the string \"3\" does not satisfy the numeric comparison.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "dave"
+            }
+          ]
+        },
+        "resource": "/vault",
+        "action": "read",
+        "attributes": [
+          {
+            "name": "clearance",
+            "type": "string",
+            "value": "3"
+          }
+        ]
+      },
+      "expect": {
+        "allowed": false,
+        "reason": 3
+      }
+    },
+    {
+      "name": "datetime-condition-inside",
+      "description": "issuedAt in 2026 satisfies the datetime range.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "frank"
+            }
+          ]
+        },
+        "resource": "/archive",
+        "action": "get",
+        "attributes": [
+          {
+            "name": "issuedAt",
+            "type": "datetime",
+            "value": "2026-11-05T03:00:00Z"
+          }
+        ]
+      },
+      "expect": {
+        "allowed": true,
+        "reason": 0
+      }
+    },
+    {
+      "name": "datetime-condition-fractional",
+      "description": "Fractional seconds are dropped by Speedle+; the last instant of 2026 is inside the range.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "frank"
+            }
+          ]
+        },
+        "resource": "/archive",
+        "action": "get",
+        "attributes": [
+          {
+            "name": "issuedAt",
+            "type": "datetime",
+            "value": "2026-12-31T23:59:59.5Z"
+          }
+        ]
+      },
+      "expect": {
+        "allowed": true,
+        "reason": 0
+      }
+    },
+    {
+      "name": "datetime-condition-upper-bound",
+      "description": "The range excludes 2027-01-01T00:00:00Z.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "frank"
+            }
+          ]
+        },
+        "resource": "/archive",
+        "action": "get",
+        "attributes": [
+          {
+            "name": "issuedAt",
+            "type": "datetime",
+            "value": "2027-01-01T00:00:00Z"
+          }
+        ]
+      },
+      "expect": {
+        "allowed": false,
+        "reason": 3
+      }
+    },
+    {
+      "name": "datetime-array-contains",
+      "description": "snapshots contains 2026-11-01T00:00:00Z, so frank may restore /backups.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "frank"
+            }
+          ]
+        },
+        "resource": "/backups",
+        "action": "restore",
+        "attributes": [
+          {
+            "name": "snapshots",
+            "type": "datetime",
+            "value": [
+              "2026-10-31T00:00:00Z",
+              "2026-11-01T00:00:00Z"
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "allowed": true,
+        "reason": 0
+      }
+    },
+    {
+      "name": "datetime-array-missing-item",
+      "description": "snapshots does not contain 2026-11-01T00:00:00Z.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "frank"
+            }
+          ]
+        },
+        "resource": "/backups",
+        "action": "restore",
+        "attributes": [
+          {
+            "name": "snapshots",
+            "type": "datetime",
+            "value": [
+              "2026-10-31T00:00:00Z"
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "allowed": false,
+        "reason": 3
+      }
+    },
+    {
+      "name": "string-array-subset",
+      "description": "labels red and blue are a subset of red, green and blue.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "gina"
+            }
+          ]
+        },
+        "resource": "/labels",
+        "action": "tag",
+        "attributes": [
+          {
+            "name": "labels",
+            "type": "string",
+            "value": [
+              "red",
+              "blue"
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "allowed": true,
+        "reason": 0
+      }
+    },
+    {
+      "name": "string-array-not-subset",
+      "description": "black is not one of the allowed labels.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "gina"
+            }
+          ]
+        },
+        "resource": "/labels",
+        "action": "tag",
+        "attributes": [
+          {
+            "name": "labels",
+            "type": "string",
+            "value": [
+              "red",
+              "black"
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "allowed": false,
+        "reason": 3
+      }
+    },
+    {
+      "name": "numeric-array-contains",
+      "description": "scores contains 90.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "gina"
+            }
+          ]
+        },
+        "resource": "/leaderboard",
+        "action": "rank",
+        "attributes": [
+          {
+            "name": "scores",
+            "type": "numeric",
+            "value": [
+              70,
+              90
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "allowed": true,
+        "reason": 0
+      }
+    },
+    {
+      "name": "bool-array-all-true",
+      "description": "No approval is false, so gina may merge.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "gina"
+            }
+          ]
+        },
+        "resource": "/reviews",
+        "action": "merge",
+        "attributes": [
+          {
+            "name": "approvals",
+            "type": "bool",
+            "value": [
+              true,
+              true
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "allowed": true,
+        "reason": 0
+      }
+    },
+    {
+      "name": "bool-array-one-false",
+      "description": "One approval is false, so gina may not merge.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "gina"
+            }
+          ]
+        },
+        "resource": "/reviews",
+        "action": "merge",
+        "attributes": [
+          {
+            "name": "approvals",
+            "type": "bool",
+            "value": [
+              true,
+              false
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "allowed": false,
+        "reason": 3
+      }
+    },
+    {
+      "name": "role-condition-true",
+      "description": "olga has the auditor role only while onDuty is true; auditors may get /logs.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "olga"
+            }
+          ]
+        },
+        "resource": "/logs",
+        "action": "get",
+        "attributes": [
+          {
+            "name": "onDuty",
+            "type": "bool",
+            "value": true
+          }
+        ]
+      },
+      "expect": {
+        "allowed": true,
+        "reason": 0
+      }
+    },
+    {
+      "name": "role-condition-false",
+      "description": "With onDuty false, olga has no auditor role.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "olga"
+            }
+          ]
+        },
+        "resource": "/logs",
+        "action": "get",
+        "attributes": [
+          {
+            "name": "onDuty",
+            "type": "bool",
+            "value": false
+          }
+        ]
+      },
+      "expect": {
+        "allowed": false,
+        "reason": 3
+      }
+    },
+    {
+      "name": "mixed-types-allowed",
+      "description": "A numeric, a bool and a string attribute together satisfy amount <= 1000 && mfa == true && region in ('eu', 'us').",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "sam"
+            },
+            {
+              "type": "group",
+              "name": "staff"
+            }
+          ]
+        },
+        "resource": "/expenses",
+        "action": "approve",
+        "attributes": [
+          {
+            "name": "amount",
+            "type": "numeric",
+            "value": 999.5
+          },
+          {
+            "name": "mfa",
+            "type": "bool",
+            "value": true
+          },
+          {
+            "name": "region",
+            "type": "string",
+            "value": "eu"
+          }
+        ]
+      },
+      "expect": {
+        "allowed": true,
+        "reason": 0
+      }
+    },
+    {
+      "name": "mixed-types-one-fails",
+      "description": "The same request with region apac is denied.",
+      "request": {
+        "subject": {
+          "principals": [
+            {
+              "type": "user",
+              "name": "sam"
+            },
+            {
+              "type": "group",
+              "name": "staff"
+            }
+          ]
+        },
+        "resource": "/expenses",
+        "action": "approve",
+        "attributes": [
+          {
+            "name": "amount",
+            "type": "numeric",
+            "value": 999.5
+          },
+          {
+            "name": "mfa",
+            "type": "bool",
+            "value": true
+          },
+          {
+            "name": "region",
+            "type": "string",
+            "value": "apac"
+          }
+        ]
+      },
+      "expect": {
+        "allowed": false,
+        "reason": 3
+      }
+    }
+  ]
+}

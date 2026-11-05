@@ -1,0 +1,140 @@
+# SDK end-to-end tests against Speedle Cloud gamma (https://g.speedle.io).
+# Setup and the runner contract: e2e/README.md. Never runs on pull requests,
+# and uses no caches, because the run step holds the gamma token.
+name: e2e-gamma
+
+on:
+  workflow_dispatch:
+    inputs:
+      language:
+        description: SDK to test against gamma
+        type: choice
+        default: java
+        options: [java, node, python, go, dotnet, rust, all]
+  schedule:
+    - cron: "23 4 * * 1" # Mondays 04:23 UTC, every SDK
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-gamma
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      languages: ${{ steps.plan.outputs.languages }}
+    steps:
+      - id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          LANGUAGE: ${{ inputs.language }}
+        run: |
+          # The gamma token is for code on main only. The gamma-e2e environment's
+          # branch restriction enforces this; this check makes a run from another
+          # ref fail visibly instead of waiting for or skipping the environment.
+          if [ "$GITHUB_REF" != refs/heads/main ]; then
+            echo "::error::e2e-gamma runs only from main, not $GITHUB_REF"
+            exit 1
+          fi
+          if [ "$EVENT" = schedule ] || [ "$LANGUAGE" = all ]; then
+            languages='["java","node","python","go","dotnet","rust"]'
+          else
+            case "$LANGUAGE" in
+              java | node | python | go | dotnet | rust) languages="[\"$LANGUAGE\"]" ;;
+              *) echo "::error::unknown language '$LANGUAGE'"; exit 1 ;;
+            esac
+          fi
+          echo "languages=$languages" >> "$GITHUB_OUTPUT"
+
+  e2e:
+    name: e2e (${{ matrix.language }})
+    needs: plan
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: gamma-e2e
+    strategy:
+      fail-fast: false
+      # One token for all SDKs: run them one after another.
+      max-parallel: 1
+      matrix:
+        language: ${{ fromJSON(needs.plan.outputs.languages) }}
+    env:
+      SPEEDLE_E2E_ENDPOINT: https://g.speedle.io
+      SPEEDLE_E2E_BACKEND: speedle-cloud
+    steps:
+      - name: Gamma secrets
+        id: secrets
+        env:
+          EVENT: ${{ github.event_name }}
+          HAS_TOKEN: ${{ secrets.SPEEDLE_E2E_TOKEN != '' }}
+          HAS_SERVICE: ${{ secrets.SPEEDLE_E2E_SERVICE != '' }}
+        run: |
+          if [ "$HAS_TOKEN" = true ] && [ "$HAS_SERVICE" = true ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          message="The gamma-e2e environment needs the secrets SPEEDLE_E2E_TOKEN and SPEEDLE_E2E_SERVICE (see e2e/README.md)."
+          echo "configured=false" >> "$GITHUB_OUTPUT"
+          echo "Not run: $message" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$EVENT" = schedule ]; then
+            # Until the owner sets up gamma, the weekly run reports and stops.
+            echo "::warning::$message"
+            exit 0
+          fi
+          echo "::error::$message"
+          exit 1
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.secrets.outputs.configured == 'true'
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        if: steps.secrets.outputs.configured == 'true' && matrix.language == 'java'
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.secrets.outputs.configured == 'true' && matrix.language == 'node'
+        with:
+          node-version: "22"
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        if: steps.secrets.outputs.configured == 'true' && matrix.language == 'python'
+        with:
+          python-version: "3.13"
+          enable-cache: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        if: steps.secrets.outputs.configured == 'true' && matrix.language == 'go'
+        with:
+          go-version: "1.26.x"
+          cache: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        if: steps.secrets.outputs.configured == 'true' && matrix.language == 'dotnet'
+        with:
+          dotnet-version: "8.0.x"
+      - name: Rust toolchain
+        if: steps.secrets.outputs.configured == 'true' && matrix.language == 'rust'
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup override set stable
+
+      # The build step gets no secrets, so dependency install scripts never see the token.
+      - name: Build the ${{ matrix.language }} SDK and runner
+        if: steps.secrets.outputs.configured == 'true'
+        env:
+          LANGUAGE: ${{ matrix.language }}
+        run: e2e/"$LANGUAGE"/build.sh
+
+      - name: Run the e2e vectors against ${{ env.SPEEDLE_E2E_ENDPOINT }}
+        if: steps.secrets.outputs.configured == 'true'
+        env:
+          LANGUAGE: ${{ matrix.language }}
+          SPEEDLE_E2E_TOKEN: ${{ secrets.SPEEDLE_E2E_TOKEN }}
+          SPEEDLE_E2E_SERVICE: ${{ secrets.SPEEDLE_E2E_SERVICE }}
+        run: e2e/"$LANGUAGE"/run.sh

@@ -1,0 +1,485 @@
+{
+  "service": {
+    "id": "01a1a901-5800-776a-a5b9-d57974576f60",
+    "name": "sdk-e2e",
+    "revision": 19,
+    "createdAt": 1793836800000,
+    "updatedAt": 1793836800019
+  },
+  "policies": [
+    {
+      "id": "01a1a901-5801-7000-b8a2-983b946627d7",
+      "kind": "role",
+      "name": "writers-are-editors",
+      "spdl": "grant group writers editor",
+      "parsed": {
+        "id": "",
+        "name": "writers-are-editors",
+        "effect": "grant",
+        "roles": [
+          "editor"
+        ],
+        "principals": [
+          "group:writers"
+        ]
+      },
+      "createdAt": 1793836800001,
+      "updatedAt": 1793836800001
+    },
+    {
+      "id": "01a1a901-5802-7c0e-b94f-3782a39a4b8e",
+      "kind": "role",
+      "name": "bob-is-editor",
+      "spdl": "grant user bob editor",
+      "parsed": {
+        "id": "",
+        "name": "bob-is-editor",
+        "effect": "grant",
+        "roles": [
+          "editor"
+        ],
+        "principals": [
+          "user:bob"
+        ]
+      },
+      "createdAt": 1793836800002,
+      "updatedAt": 1793836800002
+    },
+    {
+      "id": "01a1a901-5803-7b36-a17a-34e1eb616490",
+      "kind": "role",
+      "name": "ivan-is-never-editor",
+      "spdl": "deny user ivan editor",
+      "parsed": {
+        "id": "",
+        "name": "ivan-is-never-editor",
+        "effect": "deny",
+        "roles": [
+          "editor"
+        ],
+        "principals": [
+          "user:ivan"
+        ]
+      },
+      "createdAt": 1793836800003,
+      "updatedAt": 1793836800003
+    },
+    {
+      "id": "01a1a901-5804-73a1-918e-ded27f248ba7",
+      "kind": "role",
+      "name": "carol-owns-apollo",
+      "spdl": "grant user carol owner on /projects/apollo",
+      "parsed": {
+        "id": "",
+        "name": "carol-owns-apollo",
+        "effect": "grant",
+        "roles": [
+          "owner"
+        ],
+        "principals": [
+          "user:carol"
+        ],
+        "resources": [
+          "/projects/apollo"
+        ]
+      },
+      "createdAt": 1793836800004,
+      "updatedAt": 1793836800004
+    },
+    {
+      "id": "01a1a901-5805-7475-85d3-d96752ea9275",
+      "kind": "role",
+      "name": "olga-audits-on-duty",
+      "spdl": "grant user olga auditor if onDuty == true",
+      "parsed": {
+        "id": "",
+        "name": "olga-audits-on-duty",
+        "effect": "grant",
+        "roles": [
+          "auditor"
+        ],
+        "principals": [
+          "user:olga"
+        ],
+        "condition": "onDuty == true"
+      },
+      "createdAt": 1793836800005,
+      "updatedAt": 1793836800005
+    },
+    {
+      "id": "01a1a901-5806-74c6-ac07-a54be150101f",
+      "kind": "authz",
+      "name": "public-docs-read",
+      "spdl": "grant user alice get,list /docs/public",
+      "parsed": {
+        "id": "",
+        "name": "public-docs-read",
+        "effect": "grant",
+        "permissions": [
+          {
+            "resource": "/docs/public",
+            "actions": [
+              "get",
+              "list"
+            ]
+          }
+        ],
+        "principals": [
+          [
+            "user:alice"
+          ]
+        ]
+      },
+      "createdAt": 1793836800006,
+      "updatedAt": 1793836800006
+    },
+    {
+      "id": "01a1a901-5807-7304-9f58-0f8b0d35ef51",
+      "kind": "authz",
+      "name": "editors-edit-drafts",
+      "spdl": "grant role editor get,update /docs/drafts",
+      "parsed": {
+        "id": "",
+        "name": "editors-edit-drafts",
+        "effect": "grant",
+        "permissions": [
+          {
+            "resource": "/docs/drafts",
+            "actions": [
+              "get",
+              "update"
+            ]
+          }
+        ],
+        "principals": [
+          [
+            "role:editor"
+          ]
+        ]
+      },
+      "createdAt": 1793836800007,
+      "updatedAt": 1793836800007
+    },
+    {
+      "id": "01a1a901-5808-747c-b96e-e2a054a24a4b",
+      "kind": "authz",
+      "name": "locked-drafts-are-read-only",
+      "spdl": "deny role editor update /docs/drafts if locked == true",
+      "parsed": {
+        "id": "",
+        "name": "locked-drafts-are-read-only",
+        "effect": "deny",
+        "permissions": [
+          {
+            "resource": "/docs/drafts",
+            "actions": [
+              "update"
+            ]
+          }
+        ],
+        "principals": [
+          [
+            "role:editor"
+          ]
+        ],
+        "condition": "locked == true"
+      },
+      "createdAt": 1793836800008,
+      "updatedAt": 1793836800008
+    },
+    {
+      "id": "01a1a901-5809-72e6-bdda-5894c6147de5",
+      "kind": "authz",
+      "name": "owners-delete-projects",
+      "spdl": "grant role owner delete expr:^/projects/[a-z]+$",
+      "parsed": {
+        "id": "",
+        "name": "owners-delete-projects",
+        "effect": "grant",
+        "permissions": [
+          {
+            "resourceExpression": "^/projects/[a-z]+$",
+            "actions": [
+              "delete"
+            ]
+          }
+        ],
+        "principals": [
+          [
+            "role:owner"
+          ]
+        ]
+      },
+      "createdAt": 1793836800009,
+      "updatedAt": 1793836800009
+    },
+    {
+      "id": "01a1a901-580a-709b-b09b-4e9c0dfb0d84",
+      "kind": "authz",
+      "name": "finance-staff-read-reports",
+      "spdl": "grant group staff get /reports if department == 'finance'",
+      "parsed": {
+        "id": "",
+        "name": "finance-staff-read-reports",
+        "effect": "grant",
+        "permissions": [
+          {
+            "resource": "/reports",
+            "actions": [
+              "get"
+            ]
+          }
+        ],
+        "principals": [
+          [
+            "group:staff"
+          ]
+        ],
+        "condition": "department == 'finance'"
+      },
+      "createdAt": 1793836800010,
+      "updatedAt": 1793836800010
+    },
+    {
+      "id": "01a1a901-580b-79a7-b9a6-8c7cd1b49fb2",
+      "kind": "authz",
+      "name": "henry-never-reads-reports",
+      "spdl": "deny user henry get /reports",
+      "parsed": {
+        "id": "",
+        "name": "henry-never-reads-reports",
+        "effect": "deny",
+        "permissions": [
+          {
+            "resource": "/reports",
+            "actions": [
+              "get"
+            ]
+          }
+        ],
+        "principals": [
+          [
+            "user:henry"
+          ]
+        ]
+      },
+      "createdAt": 1793836800011,
+      "updatedAt": 1793836800011
+    },
+    {
+      "id": "01a1a901-580c-74cf-9e4c-9962e7c18494",
+      "kind": "authz",
+      "name": "vault-needs-clearance",
+      "spdl": "grant user dave read /vault if clearance >= 3",
+      "parsed": {
+        "id": "",
+        "name": "vault-needs-clearance",
+        "effect": "grant",
+        "permissions": [
+          {
+            "resource": "/vault",
+            "actions": [
+              "read"
+            ]
+          }
+        ],
+        "principals": [
+          [
+            "user:dave"
+          ]
+        ],
+        "condition": "clearance >= 3"
+      },
+      "createdAt": 1793836800012,
+      "updatedAt": 1793836800012
+    },
+    {
+      "id": "01a1a901-580d-747c-9fc4-8cdf94dc5610",
+      "kind": "authz",
+      "name": "archive-tickets-2026",
+      "spdl": "grant user frank get /archive if issuedAt >= '2026-01-01T00:00:00Z' && issuedAt < '2027-01-01T00:00:00Z'",
+      "parsed": {
+        "id": "",
+        "name": "archive-tickets-2026",
+        "effect": "grant",
+        "permissions": [
+          {
+            "resource": "/archive",
+            "actions": [
+              "get"
+            ]
+          }
+        ],
+        "principals": [
+          [
+            "user:frank"
+          ]
+        ],
+        "condition": "issuedAt >= '2026-01-01T00:00:00Z' && issuedAt < '2027-01-01T00:00:00Z'"
+      },
+      "createdAt": 1793836800013,
+      "updatedAt": 1793836800013
+    },
+    {
+      "id": "01a1a901-580e-7212-805c-a7ecbb0a1961",
+      "kind": "authz",
+      "name": "restore-from-november-snapshot",
+      "spdl": "grant user frank restore /backups if '2026-11-01T00:00:00Z' in snapshots",
+      "parsed": {
+        "id": "",
+        "name": "restore-from-november-snapshot",
+        "effect": "grant",
+        "permissions": [
+          {
+            "resource": "/backups",
+            "actions": [
+              "restore"
+            ]
+          }
+        ],
+        "principals": [
+          [
+            "user:frank"
+          ]
+        ],
+        "condition": "'2026-11-01T00:00:00Z' in snapshots"
+      },
+      "createdAt": 1793836800014,
+      "updatedAt": 1793836800014
+    },
+    {
+      "id": "01a1a901-580f-732c-bbd7-80f4f41d1e55",
+      "kind": "authz",
+      "name": "primary-colour-labels",
+      "spdl": "grant user gina tag /labels if IsSubSet(labels, ('red', 'green', 'blue'))",
+      "parsed": {
+        "id": "",
+        "name": "primary-colour-labels",
+        "effect": "grant",
+        "permissions": [
+          {
+            "resource": "/labels",
+            "actions": [
+              "tag"
+            ]
+          }
+        ],
+        "principals": [
+          [
+            "user:gina"
+          ]
+        ],
+        "condition": "IsSubSet(labels, ('red', 'green', 'blue'))"
+      },
+      "createdAt": 1793836800015,
+      "updatedAt": 1793836800015
+    },
+    {
+      "id": "01a1a901-5810-73e7-b2d9-bc72349b9e5e",
+      "kind": "authz",
+      "name": "top-score-ranks",
+      "spdl": "grant user gina rank /leaderboard if 90 in scores",
+      "parsed": {
+        "id": "",
+        "name": "top-score-ranks",
+        "effect": "grant",
+        "permissions": [
+          {
+            "resource": "/leaderboard",
+            "actions": [
+              "rank"
+            ]
+          }
+        ],
+        "principals": [
+          [
+            "user:gina"
+          ]
+        ],
+        "condition": "90 in scores"
+      },
+      "createdAt": 1793836800016,
+      "updatedAt": 1793836800016
+    },
+    {
+      "id": "01a1a901-5811-79ed-88a2-b58875ca6b95",
+      "kind": "authz",
+      "name": "unanimous-reviews",
+      "spdl": "grant user gina merge /reviews if !(false in approvals)",
+      "parsed": {
+        "id": "",
+        "name": "unanimous-reviews",
+        "effect": "grant",
+        "permissions": [
+          {
+            "resource": "/reviews",
+            "actions": [
+              "merge"
+            ]
+          }
+        ],
+        "principals": [
+          [
+            "user:gina"
+          ]
+        ],
+        "condition": "!(false in approvals)"
+      },
+      "createdAt": 1793836800017,
+      "updatedAt": 1793836800017
+    },
+    {
+      "id": "01a1a901-5812-7f85-845c-713beaa9d4ae",
+      "kind": "authz",
+      "name": "auditors-read-logs",
+      "spdl": "grant role auditor get /logs",
+      "parsed": {
+        "id": "",
+        "name": "auditors-read-logs",
+        "effect": "grant",
+        "permissions": [
+          {
+            "resource": "/logs",
+            "actions": [
+              "get"
+            ]
+          }
+        ],
+        "principals": [
+          [
+            "role:auditor"
+          ]
+        ]
+      },
+      "createdAt": 1793836800018,
+      "updatedAt": 1793836800018
+    },
+    {
+      "id": "01a1a901-5813-736e-abb6-b73474a98076",
+      "kind": "authz",
+      "name": "small-expenses",
+      "spdl": "grant group staff approve /expenses if amount <= 1000 && mfa == true && region in ('eu', 'us')",
+      "parsed": {
+        "id": "",
+        "name": "small-expenses",
+        "effect": "grant",
+        "permissions": [
+          {
+            "resource": "/expenses",
+            "actions": [
+              "approve"
+            ]
+          }
+        ],
+        "principals": [
+          [
+            "group:staff"
+          ]
+        ],
+        "condition": "amount <= 1000 && mfa == true && region in ('eu', 'us')"
+      },
+      "createdAt": 1793836800019,
+      "updatedAt": 1793836800019
+    }
+  ]
+}
