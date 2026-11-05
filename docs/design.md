@@ -156,9 +156,9 @@ Every SDK has one client object per backend endpoint, created once and shared.
 It is safe for concurrent use. The positional order is always
 `subject, action, resource, attributes`.
 
-- `isAllowed(...)` returns a boolean. It returns `true` only for an HTTP 200
-  whose body parses and has `allowed: true`. Any other outcome raises a typed
-  error, so callers fail closed.
+- `isAllowed(...)` returns a boolean: the `allowed` value of an HTTP 200
+  whose body parses. Every other outcome raises a typed error, so a caller
+  that treats an error as a denial fails closed.
 - `check(...)` is the detailed form. It returns a `Decision` with `allowed`,
   `reason`, `errorMessage` (Speedle+ only) and `quotaDailyRemaining` (Cloud
   only).
@@ -619,7 +619,8 @@ service, and no caching of errors.
   `conformance/schema.json`; see `conformance/README.md`.
 - A mock server (planned: one small Go program in `conformance/mock`) replays
   a vector's exchanges, checks each request against the expectation and can
-  inject faults such as a connection reset.
+  inject faults such as a connection reset. It serves HTTPS with a throwaway
+  CA, so bearer vectors run under the same HTTPS-only rule as production.
 - Each SDK has a conformance runner that loads every vector, builds a client
   from `config`, runs `call` against the mock, and compares the outcome with
   `expect`. A vector failure fails CI.
