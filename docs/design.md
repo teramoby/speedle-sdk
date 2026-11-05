@@ -1545,7 +1545,7 @@ module path is written into `go.mod` and every import:
 | --- | --- |
 | npm | Create the npm organization `speedle` (free for public packages) on the owner's npm account with 2FA. That reserves the `@speedle` scope. Configure trusted publishing (GitHub Actions OIDC, repository `teramoby/speedle-sdk`, the release workflow) for `@speedle/sdk`; if npm requires the package to exist first, provide one short-lived granular token for the first release. |
 | PyPI | A PyPI account with 2FA. Add a pending trusted publisher for project `speedle` (repository `teramoby/speedle-sdk`, release workflow, environment). Optionally request a PyPI organization `speedle`. |
-| Maven Central | Done: namespace `io.speedle` verified. At release time, a Central Portal user token and a GPG signing key as GitHub Actions secrets in `teramoby/speedle-sdk` (names listed in the release-automation PR). |
+| Maven Central | Done: namespace `io.speedle` verified. At release time, a Central Portal user token and a GPG signing key as secrets of the `release` environment in `teramoby/speedle-sdk`: `MAVEN_CENTRAL_USERNAME`, `MAVEN_CENTRAL_PASSWORD`, `MAVEN_GPG_KEY`, `MAVEN_GPG_PASSPHRASE` (see `RELEASING.md`). |
 | NuGet | A nuget.org account and an organization `speedle`. Request the ID prefix reservation `Speedle` from the nuget.org team, which marks `Speedle.*` packages as verified and blocks others from using the prefix. Configure trusted publishing for the repository if available, otherwise an API key scoped to `Speedle.*` in a protected environment. |
 | crates.io | A crates.io account (GitHub login, verified email). crates.io has no prefix reservation; the first publish claims `speedle`. Configure trusted publishing for the repository, or a scoped API token in a protected environment. Optionally add a `teramoby` GitHub team as co-owner. |
 | Go | Repository path: nothing. Vanity path, only if chosen: add the two static pages on the speedle.io GitHub Pages site. |
@@ -1558,12 +1558,21 @@ module path is written into `go.mod` and every import:
   `node/v0.1.0`, `python/v0.1.0`, `java/v0.1.0`, `go/v0.1.0`,
   `dotnet/v0.1.0`, `rust/v0.1.0`. The Go prefix is what Go modules in a
   subdirectory require.
-- A release workflow (not part of this phase) starts on a tag push, checks
-  that the tagged commit is on the default branch, runs that SDK's tests and
-  conformance, and publishes behind a protected environment that needs owner
-  approval. Registry OIDC trusted publishing is preferred over stored tokens
-  wherever the registry supports it. Publishing waits for the owner actions
-  in §12.2.
+- The release workflow, `.github/workflows/release.yml`, starts on a tag push
+  for Node.js, Python, Java, .NET and Rust. Go starts from a manual dispatch
+  with a version on the default branch, and its protected `publish-go` job
+  creates the `go/vX.Y.Z` tag only after verification, tests, conformance and
+  owner approval in the same run. Direct Go tag pushes are not a release path.
+  Every run first checks that the protected environment `release` exists and
+  has required reviewers. The workflow checks that the selected commit is on
+  the default branch and that the requested version matches the package
+  metadata, runs that SDK's tests and conformance, and publishes from `release`
+  after owner approval. npm, PyPI, NuGet and crates.io use OIDC trusted
+  publishing; npm and crates.io need a short-lived token for the very first
+  version only, because they add a trusted publisher only to a package that
+  exists. Maven Central uses a user token and a GPG key; Go needs no registry.
+  Publishing waits for the owner actions in §12.2; the exact registry fields
+  and secret names are in `RELEASING.md`.
 - Each SDK keeps a `CHANGELOG.md`; commits follow Conventional Commits with
   the SDK as scope, for example `feat(python): ...`.
 
