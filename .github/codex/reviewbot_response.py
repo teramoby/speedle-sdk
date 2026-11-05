@@ -1,5 +1,5 @@
 # Adapted from Pavu a7b458e; modified for Speedle+. Apache-2.0; see .github/codex/PAVU-LICENSE.txt.
-"""Extract an Ark review without logging response text. Exit 10 permits one retry."""
+"""Extract an Ark review without logging response text. Exit 10 permits one same-model retry."""
 
 import json
 from pathlib import Path
@@ -85,7 +85,7 @@ def extract(response_path, result_path, requested_model):
         return 10
     if status == "incomplete":
         diagnose("incomplete_response", response)
-        return 1
+        return 11
     if status not in (None, "completed") or response.get("error"):
         diagnose("unsuccessful_response", response)
         return 1
@@ -94,6 +94,9 @@ def extract(response_path, result_path, requested_model):
     if not isinstance(output, list):
         diagnose("invalid_response", response)
         return 1
+    has_reasoning = any(
+        isinstance(item, dict) and item.get("type") == "reasoning" for item in output
+    )
     parts = []
     for item in output:
         if not isinstance(item, dict) or item.get("type") != "message":
@@ -111,6 +114,9 @@ def extract(response_path, result_path, requested_model):
                     parts.append(text)
     message = format_markdown("\n".join(parts))
     if not message:
+        if has_reasoning:
+            diagnose("reasoning_only", response)
+            return 12
         diagnose("empty_output", response)
         return 1
 
