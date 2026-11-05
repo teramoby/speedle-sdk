@@ -90,11 +90,11 @@ default-branch version.
   3 lines of diff context instead of 80, within one 600-second HTTP budget.
   Other bad responses fail without publishing partial text.
 - Actions are pinned to full commit SHAs and every job declares its permissions.
-- **Runners.** Jobs use the same `runs-on` labels as the matching speedle-plus
-  jobs and share the speedle-plus self-hosted runners through the org `Speedle`
-  runner group. That group is restricted: only `reviewbot.yml`,
-  `reviewbot-command.yml` and `reviewbot-inline.yml` on `main` of this
-  repository may use it. Command authorization and inline routing run on
+- **Runners.** Self-hosted jobs select the labels `self-hosted`, `aliyun-ecs`
+  and `reviewbot`, served by the dedicated runner `ecs-light-teramoby` in the
+  `aliyun-reviewbot` runner group. That group is restricted: only
+  `reviewbot.yml`, `reviewbot-command.yml` and `reviewbot-inline.yml` on `main`
+  of this repository may use it. Command authorization and inline routing run on
   GitHub-hosted `ubuntu-24.04`, so public comments never reach the self-hosted
   runner. Automatic reviews use the self-hosted runner only for same-repository
   PRs opened by a user or bot; fork PRs fall back to `ubuntu-24.04`.
@@ -107,8 +107,10 @@ the secret or disable the workflows.
 
 ## Differences from speedle-plus
 
-- Runners: same labels and fallback as speedle-plus; the `runs-on` repository
-  guard names `teramoby/speedle-sdk` instead of `teramoby/speedle-plus`.
+- Runners: the dedicated `aliyun-reviewbot` group (labels `aliyun-ecs`,
+  `reviewbot`) instead of the shared `speedle-runner`; same expression and
+  GitHub-hosted fallback as speedle-plus, with the `runs-on` repository guard
+  naming `teramoby/speedle-sdk`.
 - The report handoff and the lowercase `github_token` key fix come from
   [cloud.speedle.io#118](https://github.com/teramoby/cloud.speedle.io/pull/118)
   and [#130](https://github.com/teramoby/cloud.speedle.io/pull/130). They
@@ -122,7 +124,7 @@ the secret or disable the workflows.
 ## Files
 
 - `.github/workflows/reviewbot.yml`, `reviewbot-command.yml`, `reviewbot-inline.yml`
-- `.github/actionlint.yaml`: the `speedle-runner` self-hosted label
+- `.github/actionlint.yaml`: the `aliyun-ecs` and `reviewbot` self-hosted labels
 - `.github/codex/reviewbot_response.py`, `.github/codex/reviewbot_handoff.py`
 - `.github/codex/prompts/reviewbot.md`, `.github/codex/prompts/reviewbot-command.md`
 - `.github/codex/PAVU-LICENSE.txt`, `.github/codex/PAVU-NOTICE.txt`: the Apache 2.0
