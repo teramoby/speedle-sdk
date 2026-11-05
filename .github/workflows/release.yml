@@ -1,19 +1,20 @@
-# Tag-driven release of one SDK per run; see RELEASING.md and design §12.3.
+# Release one SDK per run; see RELEASING.md and design §12.3.
 #
-# A tag `<language>/vX.Y.Z` on a commit of `main` runs:
+# A non-Go tag `<language>/vX.Y.Z` on a commit of `main` runs:
+#   preflight       the release environment exists and has required reviewers
 #   verify          tag format, commit on main, tag version == package metadata
 #   <language>      build, unit tests, conformance against conformance/mock and
 #                   the package artifact; no secrets and no OIDC token
 #   publish-<lang>  in the protected `release` environment, publishes only that
 #                   artifact (npm, PyPI, NuGet, crates.io: trusted publishing;
 #                   Maven Central: user token and GPG key)
-#   Go has no publish job: the tag push is the release (RELEASING.md, Go).
-#   go-proxy        after the build and test job, without the `release`
-#                   environment, confirms the version on proxy.golang.org
+# Go uses workflow_dispatch with a version instead. After the same preflight,
+# verification, tests and environment approval, publish-go creates go/vX.Y.Z;
+# go-proxy then confirms it on proxy.golang.org. The public Go tag therefore
+# never exists before verification and tests pass in the same run.
 #
-# Only tag pushes trigger it: no pull_request, workflow_run or manual trigger,
-# so PR code never runs here. Caches are off so a release never restores state
-# written by another run.
+# There is no pull_request or workflow_run trigger, so PR code never runs here.
+# Caches are off so a release never restores state written by another run.
 name: release
 
 on:
@@ -22,9 +23,14 @@ on:
       - "node/v[0-9]+.[0-9]+.[0-9]+"
       - "python/v[0-9]+.[0-9]+.[0-9]+"
       - "java/v[0-9]+.[0-9]+.[0-9]+"
-      - "go/v[0-9]+.[0-9]+.[0-9]+"
       - "dotnet/v[0-9]+.[0-9]+.[0-9]+"
       - "rust/v[0-9]+.[0-9]+.[0-9]+"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Go version to release (X.Y.Z)
+        required: true
+        type: string
 
 permissions: {}
 
@@ -33,9 +39,32 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  preflight:
+    name: Check release environment protection
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read # required to read environment protection rules
+    steps:
+      - name: Release environment has required reviewers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          environment="$RUNNER_TEMP/release-environment.json"
+          if ! gh api "repos/$GITHUB_REPOSITORY/environments/release" > "$environment"; then
+            echo "::error::The release environment is missing or unreadable. Create it with required reviewers before releasing (RELEASING.md, Owner setup on GitHub)."
+            exit 1
+          fi
+          if ! jq -e 'any(.protection_rules[]?; .type == "required_reviewers" and ((.reviewers // []) | length > 0))' "$environment" > /dev/null; then
+            echo "::error::The release environment has no required reviewers. Add at least one required reviewer before releasing (RELEASING.md, Owner setup on GitHub)."
+            exit 1
+          fi
+          echo "The release environment exists and has required reviewers"
+
   verify:
-    name: Verify tag
-    if: github.ref_type == 'tag'
+    name: Verify release request
+    needs: preflight
+    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -48,17 +77,17 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - name: Tagged commit is on main
+      - name: Release commit is on main
         run: |
           git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main || {
-            echo "::error::$GITHUB_REF_NAME points at $GITHUB_SHA, which is not on main"
+            echo "::error::release commit $GITHUB_SHA is not on main"
             exit 1
           }
-          echo "$GITHUB_REF_NAME -> $GITHUB_SHA is on main"
-      - name: Tag version matches the package metadata
+          echo "$GITHUB_SHA is on main"
+      - name: Requested version matches the package metadata
         id: tag
         env:
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ github.event_name == 'workflow_dispatch' && format('go/v{0}', inputs.version) || github.ref_name }}
         run: python3 .github/scripts/release-version.py "$TAG" >> "$GITHUB_OUTPUT"
 
   # ---------------------------------------------------------------- Node.js
@@ -346,15 +375,47 @@ jobs:
       - name: Conformance (every vector against conformance/mock)
         run: go test -race -count=1 -run '^TestConformance$' -v .
 
-  # The pushed tag is already the Go release: anyone can fetch it through
-  # proxy.golang.org before any job here runs, so a `release` environment
-  # approval would gate nothing. This job only confirms the published version
-  # on proxy.golang.org and sum.golang.org. The gate for Go is the maintainer
-  # check before the tag push (RELEASING.md, Go).
+  # The tag ref is the irreversible Go publish act. Create it only after the
+  # verify and go jobs pass and the release environment approves this job.
+  # No checkout is needed: the API creates a lightweight tag at the verified
+  # commit, and the GITHUB_TOKEN is exposed only to this step.
+  publish-go:
+    name: Create and push the Go module tag
+    needs: [verify, go]
+    if: github.event_name == 'workflow_dispatch' && needs.verify.outputs.language == 'go'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: release
+      url: https://pkg.go.dev/github.com/teramoby/speedle-sdk/go@v${{ needs.verify.outputs.version }}
+    permissions:
+      contents: write
+    steps:
+      - name: Create go module tag at the verified commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: go/v${{ needs.verify.outputs.version }}
+        run: |
+          ref="$RUNNER_TEMP/go-tag-ref.json"
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" > "$ref" 2>/dev/null; then
+            if jq -e --arg sha "$GITHUB_SHA" '.object.type == "commit" and .object.sha == $sha' "$ref" > /dev/null; then
+              echo "$TAG already exists at the verified commit; nothing to do"
+              exit 0
+            fi
+            echo "::error::$TAG already exists at another commit; never move or reuse a Go release tag"
+            exit 1
+          fi
+          gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f ref="refs/tags/$TAG" \
+            -f sha="$GITHUB_SHA"
+          echo "Created and pushed $TAG at verified commit $GITHUB_SHA"
+
+  # This runs only after publish-go has created the public tag. It confirms the
+  # version on proxy.golang.org and sum.golang.org; it is not the publish act.
   go-proxy:
     name: Confirm github.com/teramoby/speedle-sdk/go on proxy.golang.org
-    needs: [verify, go]
-    if: needs.verify.outputs.language == 'go'
+    needs: [verify, go, publish-go]
+    if: github.event_name == 'workflow_dispatch' && needs.verify.outputs.language == 'go'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions: {}

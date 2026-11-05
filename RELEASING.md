@@ -17,23 +17,30 @@ version, starting at `0.1.0`.
 
 ## What the workflow does
 
-A pushed tag that matches one of the patterns above starts one run:
+A pushed non-Go tag that matches one of the patterns above starts one run. Go
+instead starts from a manual workflow dispatch with a version input; maintainers
+never push its final `go/v*` tag.
 
-1. **verify**: the tag is `<language>/vX.Y.Z`, the tagged commit is an
-   ancestor of `main`, and every version source of that SDK (table below)
+1. **preflight**: reads the `release` environment with the workflow token's
+   `actions: read` permission and fails if it is missing, unreadable, or has no
+   required reviewers.
+2. **verify**: the requested tag is `<language>/vX.Y.Z`, the selected commit is
+   an ancestor of `main`, and every version source of that SDK (table below)
    equals `X.Y.Z` (`.github/scripts/release-version.py`).
-2. **`<language>`**: builds, runs the unit tests and every conformance vector
+3. **`<language>`**: builds, runs the unit tests and every conformance vector
    against `conformance/mock`, and builds the package. This job has no
    secrets and no OIDC token, and no caches are used.
-3. **`publish-<language>`**: runs in the GitHub environment `release`, so it
-   waits for a required reviewer. Go has no publish job and no approval: the
-   tag push is the Go release (see Go below), and `go-proxy` only confirms it. It publishes the package built in step 2
-   (Java and Rust rebuild from the same commit: Maven signs while it deploys,
-   and `cargo publish` packages from source with `--no-verify`).
+4. **`publish-<language>`**: runs in the GitHub environment `release`, so it
+   waits for a required reviewer. For five SDKs it publishes the package built
+   in step 3 (Java and Rust rebuild from the same commit: Maven signs while it
+   deploys, and `cargo publish` packages from source with `--no-verify`).
+   **`publish-go`** creates the `go/vX.Y.Z` tag at the verified commit only
+   after approval; `go-proxy` then confirms it on `proxy.golang.org`.
 
 Only the publish job of npm, PyPI, NuGet and crates.io has `id-token: write`.
-The workflow has no pull request, `workflow_run` or manual trigger, and runs
-only on GitHub-hosted `ubuntu-latest` runners.
+The workflow has no pull request or `workflow_run` trigger, and runs only on
+GitHub-hosted `ubuntu-latest` runners. Its only manual trigger is the Go release
+request; the other five SDKs remain tag-driven.
 
 ## Cutting a release
 
@@ -52,29 +59,40 @@ only on GitHub-hosted `ubuntu-latest` runners.
 
    To check locally: `python3 .github/scripts/release-version.py node/vX.Y.Z`.
 2. **Merge** the PR and wait until that SDK's CI workflow is green on `main`.
-3. **Tag** the merge commit and push only that tag:
+3. **Start the run**:
+   - For Node.js, Python, Java, C# or Rust, tag the merge commit and push only
+     that tag:
 
-   ```sh
-   git fetch origin
-   git tag -a node/v0.2.0 -m "node 0.2.0" <merge-commit-sha>
-   git push origin node/v0.2.0
-   ```
+     ```sh
+     git fetch origin
+     git tag -a node/v0.2.0 -m "node 0.2.0" <merge-commit-sha>
+     git push origin node/v0.2.0
+     ```
 
-   Pushing a Go tag publishes the Go module at once and no approval follows
-   (see Go below). Before you push a `go/v*` tag, do the Go pre-tag check.
-4. **Approve** (not Go) the `publish-<language>` job in the run (Actions → release →
-   Review deployments) after checking that:
-   - the run is for the tag you pushed and its commit is the merge commit;
-   - `verify` printed `... is on main` and an `ok:` line for every version source;
-   - the build and test job is green.
-5. **Check** the registry page linked from the `release` environment in the run.
+   - For Go, **do not push `go/vX.Y.Z`**. Dispatch the release workflow on
+     `main` with version `X.Y.Z` (Actions → release → Run workflow), or run:
+
+     ```sh
+     gh workflow run release.yml --repo teramoby/speedle-sdk --ref main -f version=X.Y.Z
+     ```
+
+4. **Approve** the `publish-<language>` job (including `publish-go`) in the run
+   (Actions → release → Review deployments) after checking that:
+   - the run is for the requested tag or Go version and the expected `main`
+     commit;
+   - `preflight` passed, `verify` printed `... is on main` and an `ok:` line for
+     every version source, and the build and test job is green.
+5. **Check** the registry or pkg.go.dev page linked from the `release`
+   environment in the run.
 
 If a publish job fails before anything was uploaded (for example, a missing
-secret), fix the cause and use "Re-run failed jobs". Never move or reuse a tag.
-Registries do not allow a version to be replaced: to fix a bad release, release
-the next patch version and deprecate the bad one (`npm deprecate`, yank on
-PyPI and crates.io, unlist on NuGet, a `retract` directive in `go/go.mod`).
-Maven Central releases cannot be removed.
+secret), fix the cause and use "Re-run failed jobs". If Go fails before
+`publish-go`, no module tag exists; fix the cause and dispatch the same version
+again. Never move or reuse a tag that was created. Registries do not allow a
+version to be replaced: to fix a bad release, release the next patch version
+and deprecate the bad one (`npm deprecate`, yank on PyPI and crates.io, unlist
+on NuGet, a `retract` directive in `go/go.mod`). Maven Central releases cannot
+be removed.
 
 ## Owner setup on GitHub
 
@@ -84,20 +102,32 @@ Repository `teramoby/speedle-sdk`, Settings:
    - Required reviewers: the owner (and any other release approver). With
      more than one approver, enable "Prevent self-review".
    - Clear "Allow administrators to bypass configured protection rules".
-   - Deployment branches and tags: "Selected branches and tags", with five
-     rules of type **Tag**: `node/v*`, `python/v*`, `java/v*`, `dotnet/v*`,
-     `rust/v*` (no Go job uses this environment).
+   - Deployment branches and tags: "Selected branches and tags", with a
+     **Branch** rule for `main` (Go dispatches) and five rules of type **Tag**:
+     `node/v*`, `python/v*`, `java/v*`, `dotnet/v*`, `rust/v*`.
    - Environment secrets and variables from the table below.
-2. **Tag ruleset** (Rules → Rulesets → New tag ruleset), name `release tags`,
-   enforcement Active, bypass list: Repository admin. Target tags: include
-   `node/v*`, `python/v*`, `java/v*`, `go/v*`, `dotnet/v*`, `rust/v*`.
-   Rules: Restrict creations, Restrict updates, Restrict deletions. Only
-   admins can then create release tags, and nobody can move or delete one.
+2. **Tag rulesets** (Rules → Rulesets → New tag ruleset), enforcement Active,
+   bypass list Repository admin:
+   - Name `release tags`: target `node/v*`, `python/v*`, `java/v*`, `dotnet/v*`
+     and `rust/v*`; enable Restrict creations, Restrict updates and Restrict
+     deletions.
+   - Name `Go release tags`: target `go/v*`; enable Restrict updates and
+     Restrict deletions, but not Restrict creations. The protected
+     `publish-go` job's `GITHUB_TOKEN` must be able to create the tag after
+     approval. Direct `go/v*` pushes are not a release path, do not trigger
+     this workflow, and must not be used.
 
-The approval is the gate that matters: GitHub runs the workflow file of the
-tagged commit, so a tag on a commit outside `main` would run that commit's
-copy of `release.yml`. The tag ruleset limits who can push such a tag, and the
-reviewer checks the `verify` job before approving.
+The workflow's `preflight` job queries
+`GET /repos/teramoby/speedle-sdk/environments/release` with `actions: read` and
+fails before verification if the environment is absent or lacks required
+reviewers. It does not prove the deployment-ref or tag-ruleset settings, so the
+owner must complete the setup above before the first release.
+
+The approval is the gate that matters. For non-Go SDKs, GitHub runs the workflow
+file of the tagged commit, so the tag ruleset limits who can push such a tag and
+the reviewer checks `verify` before approving. For Go, dispatch selects `main`,
+and the tag does not exist until the same run has passed `preflight`, `verify`,
+the Go build and tests, and the `publish-go` approval.
 
 ### `release` environment secrets and variables
 
@@ -267,23 +297,23 @@ short-lived publish token, which it revokes at the end of the job.
 
 Nothing to register. Decide the module path before the first `go/v0.1.0` tag
 (design §12.1; the repository path is the default). The tag itself is the
-release: once it is pushed anyone can fetch the version, and
-`proxy.golang.org` and `sum.golang.org` keep it even if the tag is deleted.
-No gate can apply to Go: there is no registry upload to hold back, and the
-`release` environment can only pause jobs that start after the push, while the
-proxy can fetch the tag as soon as it exists. So the workflow has no
-`publish-go` job and no approval for Go. The tag push is the publish act, and
-the deliberate step is the maintainer's pre-tag check:
+release: once it exists anyone can fetch the version, and `proxy.golang.org`
+and `sum.golang.org` keep it even if the tag is deleted. Therefore the
+workflow, not the maintainer, creates the tag:
 
-1. The `go` CI workflow is green on the exact `main` commit you will tag.
-2. `const Version` in `go/speedle.go` on that commit equals `X.Y.Z`
-   (`python3 .github/scripts/release-version.py go/vX.Y.Z` prints `ok:`).
-3. The module path in `go/go.mod` is final and the commit is on `main`
-   (`git merge-base --is-ancestor <sha> origin/main`).
+1. Merge the Go release PR and dispatch `.github/workflows/release.yml` on
+   `main` with `version: X.Y.Z`. Never push `go/vX.Y.Z` directly.
+2. `preflight` checks the protected environment; `verify` checks that the
+   selected commit is on `main`, `const Version` in `go/speedle.go` equals
+   `X.Y.Z`, and the request is well formed. The `go` job then builds and runs
+   all unit and conformance tests without credentials.
+3. Review those results and approve `publish-go` in the `release` environment.
+   Only then does it use `contents: write` to create the lightweight
+   `go/vX.Y.Z` tag at the exact verified `GITHUB_SHA`. `go-proxy` subsequently
+   runs `go mod download` through `proxy.golang.org`, which checks the version
+   against `sum.golang.org` and makes it appear on pkg.go.dev.
 
-Only then push the tag (only admins can, by the tag ruleset). The run then
-repeats `verify` and the `go` build and test job, and `go-proxy` runs
-`go mod download` for the version through `proxy.golang.org`, which checks it
-against `sum.golang.org` and makes it appear on pkg.go.dev. A red run after
-the push cannot undo the release: retract the version in `go/go.mod` and
-release the next patch.
+A failure before `publish-go` publishes nothing and the same version can be
+dispatched again after fixing the cause. Once the tag exists, a later failure
+cannot undo the release: retract the version in `go/go.mod` and release the
+next patch.

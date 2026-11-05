@@ -1558,16 +1558,21 @@ module path is written into `go.mod` and every import:
   `node/v0.1.0`, `python/v0.1.0`, `java/v0.1.0`, `go/v0.1.0`,
   `dotnet/v0.1.0`, `rust/v0.1.0`. The Go prefix is what Go modules in a
   subdirectory require.
-- The release workflow, `.github/workflows/release.yml`, starts on a tag
-  push, checks that the tagged commit is on the default branch and that the
-  tag version matches the package metadata, runs that SDK's tests and
-  conformance, and publishes from the protected environment `release`, which
-  needs owner approval. npm, PyPI, NuGet and crates.io use OIDC trusted
+- The release workflow, `.github/workflows/release.yml`, starts on a tag push
+  for Node.js, Python, Java, .NET and Rust. Go starts from a manual dispatch
+  with a version on the default branch, and its protected `publish-go` job
+  creates the `go/vX.Y.Z` tag only after verification, tests, conformance and
+  owner approval in the same run. Direct Go tag pushes are not a release path.
+  Every run first checks that the protected environment `release` exists and
+  has required reviewers. The workflow checks that the selected commit is on
+  the default branch and that the requested version matches the package
+  metadata, runs that SDK's tests and conformance, and publishes from `release`
+  after owner approval. npm, PyPI, NuGet and crates.io use OIDC trusted
   publishing; npm and crates.io need a short-lived token for the very first
   version only, because they add a trusted publisher only to a package that
-  exists. Maven Central uses a user token and a GPG key; Go needs no
-  registry. Publishing waits for the owner actions in §12.2; the exact
-  registry fields and secret names are in `RELEASING.md`.
+  exists. Maven Central uses a user token and a GPG key; Go needs no registry.
+  Publishing waits for the owner actions in §12.2; the exact registry fields
+  and secret names are in `RELEASING.md`.
 - Each SDK keeps a `CHANGELOG.md`; commits follow Conventional Commits with
   the SDK as scope, for example `feat(python): ...`.
 
