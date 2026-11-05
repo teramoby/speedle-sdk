@@ -191,7 +191,7 @@ jobs:
             jq -n \
               --arg model "${ARK_MODEL}" \
               --rawfile input "${review_input}" \
-              '{model: $model, input: $input, max_output_tokens: 8192, reasoning: {effort: "medium"}}' \
+              '{model: $model, input: $input, max_output_tokens: 32768, reasoning: {effort: "medium"}}' \
               > "${request_body}"
 
             # Both attempts share the original 600-second HTTP time budget.
