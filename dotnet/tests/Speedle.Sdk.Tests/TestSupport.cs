@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -112,9 +113,9 @@ internal sealed class FakeHandler : HttpMessageHandler
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach (KeyValuePair<string, IEnumerable<string>> h in request.Headers)
+        foreach (KeyValuePair<string, HeaderStringValues> h in request.Headers.NonValidated)
         {
-            headers[h.Key] = string.Join(",", h.Value);
+            headers[h.Key] = h.Value.ToString();
         }
 
         string body = string.Empty;
