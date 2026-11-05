@@ -47,7 +47,7 @@ internal sealed record ClientConfig(
             throw Config("serviceName is required and must not be empty");
         }
 
-        Uri target = Target(o.Endpoint);
+        Uri target = BuildTarget(o.Endpoint);
         if (target.Scheme == Uri.UriSchemeHttp)
         {
             if (o.Backend != Backend.SpeedlePlus || o.Auth is not NoneAuth)
@@ -106,7 +106,7 @@ internal sealed record ClientConfig(
             random);
     }
 
-    private static Uri Target(Uri? endpoint)
+    private static Uri BuildTarget(Uri? endpoint)
     {
         if (endpoint is null)
         {
