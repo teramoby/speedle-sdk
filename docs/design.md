@@ -1220,8 +1220,9 @@ Layout: `node/`, `python/`, `java/`, `go/`, `dotnet/`, `rust/`,
 `conformance/`, `contract/`, `docs/`. Each language has its own directory, PR
 and CI workflow.
 
-License: UPL-1.0, the same text and copyright notice as speedle-plus, in the
-root `LICENSE`. Every package declares the SPDX identifier `UPL-1.0` in its
+License: UPL-1.0, the same license text as speedle-plus, with the copyright
+line `Copyright (c) 2026 The Speedle Authors` (owner decision on #212), in
+the root `LICENSE`. Every package declares the SPDX identifier `UPL-1.0` in its
 metadata and ships the license file.
 
 ### 12.1 Package names

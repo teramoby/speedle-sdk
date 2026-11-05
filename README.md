@@ -38,5 +38,6 @@ mobile apps or any other client you do not control.
 
 ## License
 
-[Universal Permissive License (UPL), Version 1.0](LICENSE), the same
-license as [Speedle+](https://github.com/teramoby/speedle-plus).
+Copyright (c) 2026 The Speedle Authors. Licensed under the
+[Universal Permissive License (UPL), Version 1.0](LICENSE), the same license
+as [Speedle+](https://github.com/teramoby/speedle-plus).
