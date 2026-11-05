@@ -79,9 +79,15 @@ notice, sends no code and publishes nothing.
 | Name | Kind | Required | Default | Purpose |
 | --- | --- | --- | --- | --- |
 | `ARK_API_KEY` | Actions secret | Yes | none | Ark Agent Plan API key. Either grant the existing organization secret to `speedle-sdk`, or create a repository secret with this name. |
-| `ARK_REVIEW_MODEL` | Actions variable | No | `kimi-k3` | Ark model ID used for reviews and commands. |
+| `ARK_REVIEW_MODELS` | Actions variable | No | `kimi-k3.1-pro deepseek-v4.1-flash glm-5.3` | Space-separated Ark model IDs, tried in this order. |
+| `ARK_REVIEW_MAX_OUTPUT_TOKENS` | Actions variable | No | `32768` | Maximum output tokens per request. |
+| `ARK_REVIEW_REASONING_EFFORT` | Actions variable | No | `medium` | Ark reasoning effort: `low`, `medium` or `high`. |
+| `ARK_REVIEW_INPUT_LIMIT` | Actions variable | No | `750000` | Maximum input bytes before truncation. |
+| `ARK_REVIEW_MODEL` | Actions variable | No | none | Legacy override. If `ARK_REVIEW_MODELS` is unset, this model is tried before the default chain. |
 
-The endpoint is `https://ark.cn-beijing.volces.com/api/plan/v3/responses`.
+All defaults live in `.github/codex/reviewbot_ark.py`; the workflow YAML only
+forwards variable values. The endpoint is
+`https://ark.cn-beijing.volces.com/api/plan/v3/responses`.
 GitHub reads and writes use the job's `GITHUB_TOKEN`; no PAT or GitHub App is
 needed. The trusted workflows become active once they are on `main`, because
 `issue_comment` and `workflow_run` always run the default-branch version.
@@ -95,6 +101,23 @@ self-hosted runner:
 
 `reviewbot.yml`, `reviewbot-comment.yml` and `reviewbot-inline.yml` route
 untrusted events on `ubuntu-24.04` and must not be in the group.
+
+## Stable workflows, editable scripts
+
+GitHub can hold a new or changed privileged workflow for manual approval. Never
+change `reviewbot-review.yml` or `reviewbot-command.yml` casually: **each change
+to either file needs one owner approval for that file**. These files are stable
+shells containing only triggers, permissions, concurrency, runner settings,
+trusted default-branch checkouts, calls into trusted stage scripts, and the
+validated same-run handoff. The pointer-only routers stay unprivileged and
+contain no analysis or publishing logic.
+
+Request building, Ark calls, failover, response checks, parsing, authorization
+and publishing live under `.github/codex/`. Model selection and other tunables
+live in repository variables, with defaults in `reviewbot_ark.py`. Prompts are
+under `.github/codex/prompts/`. After the trusted change merges to the default
+branch, a diff that changes only these scripts or prompts, or a change only to
+the repository variables above, needs **no privileged-workflow approval**.
 
 ## Security model
 
@@ -121,10 +144,15 @@ untrusted events on `ubuntu-24.04` and must not be in the group.
   rejects the report if it contains any repository secret value or the job
   token, logging the secret's name only. The publisher validates the schema and
   the run, attempt, PR, head and command binding before writing anything.
-- **Bounded requests.** Input is capped at 750,000 bytes and output at 32768
-  tokens. A response cut off by the output-token limit is retried once with
-  3 lines of diff context instead of 80, within one 600-second HTTP budget.
-  Other bad responses fail without publishing partial text.
+- **Bounded requests and failover.** Input is capped by
+  `ARK_REVIEW_INPUT_LIMIT` (750,000 bytes by default) and output by
+  `ARK_REVIEW_MAX_OUTPUT_TOKENS` (32768 by default). Models are tried in
+  `ARK_REVIEW_MODELS` order on HTTP errors, request timeouts, incomplete
+  responses or reasoning-only answers. A response cut off by the output-token
+  limit is retried once on the same model with 3 lines of diff context instead
+  of 80; both attempts share that model's 360-second HTTP budget. The first
+  usable review is published with its model ID. If every model fails, nothing
+  is published and analysis fails with `all_models_failed`.
 - Actions are pinned to full commit SHAs and every job declares its permissions.
 - **Runners.** Self-hosted jobs select the labels `self-hosted`, `aliyun-ecs`
   and `reviewbot`, served by the dedicated runner `ecs-light-teramoby` in the
@@ -160,15 +188,22 @@ reviewed. To stop model calls, remove the secret or disable the workflows.
 - `.github/workflows/reviewbot.yml`, `reviewbot-review.yml`, `reviewbot-comment.yml`,
   `reviewbot-command.yml`, `reviewbot-inline.yml`
 - `.github/actionlint.yaml`: the `aliyun-ecs` and `reviewbot` self-hosted labels
+- `.github/codex/reviewbot_github.js`: trusted validation, authorization and publishing stages
+- `.github/codex/reviewbot_analyze.sh`: immutable-commit input construction
+- `.github/codex/reviewbot_ark.py`: tunables, Ark requests and ordered model failover
 - `.github/codex/reviewbot_response.py`, `.github/codex/reviewbot_handoff.py`
+- `.github/codex/tests/test_reviewbot_ark.py`: local response and failover tests
 - `.github/codex/prompts/reviewbot.md`, `.github/codex/prompts/reviewbot-command.md`
 - `.github/codex/PAVU-LICENSE.txt`, `.github/codex/PAVU-NOTICE.txt`: the Apache 2.0
   license and notice for the reused ReviewBot source. The rest of the repository
   stays under UPL 1.0.
 
-Treat these files as privileged CI configuration. Check changes with:
+Check workflow and script changes with:
 
 ```sh
 actionlint .github/workflows/reviewbot*.yml
 zizmor --offline .github/workflows/reviewbot*.yml
+node --check .github/codex/reviewbot_github.js
+shellcheck .github/codex/reviewbot_analyze.sh
+python3 -I -m unittest discover -s .github/codex/tests -v
 ```
