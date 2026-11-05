@@ -51,6 +51,24 @@ goes through a normal PR that updates the copy, the vectors and each SDK.
 
 "SDK" in the last column describes what every SDK does.
 
+**One request format for both backends** (owner decision,
+[cloud.speedle.io#213](https://github.com/teramoby/cloud.speedle.io/issues/213)).
+Speedle Cloud is being changed to accept exactly the Speedle+ REST
+`JsonContext` from `pkg/svcs/adsrest/check.go` and to return the same body.
+The SDK sends only that format, to both backends. The "Speedle Cloud"
+column describes Cloud contract 0.4.0 as it is today; each difference that
+#213 removes is marked "being removed by cloud.speedle.io#213", and the SDK
+does not code against it. The differences that stay are:
+
+- authentication: a bearer token on Cloud (§3.1, §6.2);
+- Cloud-only responses: 401, 403 `service_mismatch` when `serviceName` is not
+  the token's service, burst and daily-quota 429 with `Retry-After`, and the
+  quota headers (§3.4, §3.5).
+
+The SDK handles Cloud's operational responses (413 `request_too_large`, 503
+`quota_unavailable` and `snapshot_unavailable`) by status, as it would from
+any gateway in front of Speedle+.
+
 ### 3.1 Transport and request headers
 
 | Item | Speedle Cloud | Speedle+ ADS | SDK |
@@ -65,30 +83,67 @@ goes through a normal PR that updates the copy, the vectors and each SDK.
 
 ### 3.2 Request body
 
-| Field | Speedle Cloud (`AdsRequest`) | Speedle+ (`JsonContext`) | SDK |
-| --- | --- | --- | --- |
-| Unknown top-level fields | Rejected (`additionalProperties: false`), 400 `invalid_request` | Ignored by the Go decoder | Sends only the fields below. |
-| `subject` | Optional object or `null` | Object; Swagger marks it required | Always sent. |
-| `subject.principals[]` | Array or `null`; items are `{type, name, idd}` or `null`; no extra keys | Array of `{type, name, idd}`, all `omitempty` | Sends a non-empty array of non-null items. `name` is required; `type` defaults to `user`; `idd` is sent only when set. |
-| Principal `type` values | Any string | `user`, `group`, `role`, `entity` (`api/ads/types.go`) | Open string with constants for the four Speedle+ values. |
-| `subject.token`, `subject.tokenType` | Non-empty value returns 400 `unsupported_token_assertion` | Used by the configured token asserter | Never sent in 0.x. Speedle+ token assertion may come later as a Speedle+-only option. |
-| `subject.asserted` | Boolean, accepted | Not a field; ignored | Never sent. |
-| `serviceName` | Optional. Empty or omitted means the token's service; a different non-empty value returns 403 `service_mismatch` | Required by Swagger. An unknown name gives a 200 with reason 2 `SERVICE_NOT_FOUND` | Taken from config. Required for `speedle-plus`. Optional for `speedle-cloud`, where it is omitted when unset. |
-| `resource`, `action` | String | String | Required string arguments. |
-| `attributes` | Object: name to any JSON value, nested arrays and objects allowed; at most 50 properties and 16,384 canonical UTF-8 bytes | Array of `{name, type, value}`; `type` is `string`, `numeric`, `bool`, `datetime` or empty; `null` values, `null` array items, mixed-type arrays are rejected with 400; no nested objects | The API always takes a map (§5). For `speedle-cloud` the map is sent as is. For `speedle-plus` each entry becomes `{name, type, value}` with `type` inferred: string to `string`, number to `numeric`, boolean to `bool`, a homogeneous array of one of these to that type, an empty array to an empty type. `null`, objects, `null` items and mixed arrays raise `InvalidRequestError` before any request is sent. |
-| Date and time attributes | No date type in the schema | `datetime` strings are converted to Unix seconds (`ConvSingleValue`) | No datetime value type. Callers pass Unix seconds as a number, which is the value Speedle+ stores after conversion, and which Cloud receives unchanged. |
+The SDK sends a Speedle+ `JsonContext` with the fields in this order:
+`subject`, `serviceName`, `resource`, `action`, `attributes`.
 
-Integers above 2^53 lose precision in both backends (Speedle+ decodes
-numbers as `float64`). The SDK documents this and does not guard against it.
+| Field | Speedle Cloud today (`AdsRequest`, 0.4.0) | Speedle+ (`JsonContext`) | SDK |
+| --- | --- | --- | --- |
+| Unknown top-level fields | Rejected (`additionalProperties: false`), 400 `invalid_request`. Being removed by cloud.speedle.io#213 | Ignored by the Go decoder | Sends only the `JsonContext` fields below. |
+| `subject` | Optional object or `null`. Being removed by cloud.speedle.io#213 | Object; Swagger marks it required | Always sent. |
+| `subject.principals[]` | Array or `null`; items are `{type, name, idd}` or `null`; no extra keys. Being removed by cloud.speedle.io#213 | Array of `{type, name, idd}`, all `omitempty` | Sends a non-empty array of non-null items. `name` is required; `type` defaults to `user`; `idd` is sent only when set. |
+| Principal `type` values | Any string | `user`, `group`, `role`, `entity` (`api/ads/types.go`) | Open string with constants for the four Speedle+ values. |
+| `subject.token`, `subject.tokenType` | Non-empty value returns 400 `unsupported_token_assertion`. Being removed by cloud.speedle.io#213 | Used by the configured token asserter | Never sent in 0.x. Token assertion may come later as an option. |
+| `subject.asserted` | Boolean, accepted. Being removed by cloud.speedle.io#213 (not a `JsonContext` field) | Not a field; ignored | Never sent. |
+| `serviceName` | Optional; empty or omitted means the token's service. Being removed by cloud.speedle.io#213, which makes it required. Cloud-only and staying: a value other than the token's service returns 403 `service_mismatch` | Required by Swagger. An unknown name gives a 200 with reason 2 `SERVICE_NOT_FOUND` | Always sent and never empty. It comes from the client's `serviceName` setting, required for both backends, and can be overridden per call (§5). On Cloud it must be the token's service; otherwise the call fails with `ForbiddenError`, `code` `service_mismatch`, not retried and charged (§3.6). |
+| `resource`, `action` | String | String | Required string arguments. |
+| `attributes` | Object: name to any JSON value; at most 50 properties and 16,384 canonical UTF-8 bytes. Being removed by cloud.speedle.io#213, which takes the Speedle+ array | Array of `{name, type, value}`, converted by `DumpRequestAttributes` (§3.2.1) | Always the Speedle+ array, one item per typed attribute, in the caller's order. Omitted when there are no attributes, which Speedle+ treats like an empty array. |
+| Date and time attributes | No date type. Being removed by cloud.speedle.io#213 | `datetime` strings are converted to Unix seconds (`ConvSingleValue`) | `datetime` attributes, built from the language's time type (§3.2.1). |
+
+Integers above 2^53 lose precision (Speedle+ decodes numbers as `float64`).
+The SDK documents this and does not guard against it.
+
+#### 3.2.1 Typed attributes
+
+Each SDK attribute is a name, one of the four Speedle+ types, and either a
+single value or an array of values of that type. It maps one-to-one onto a
+`JsonAttribute`, so callers state the type explicitly.
+
+| `type` | `value` on the wire | Speedle+ conversion | SDK input |
+| --- | --- | --- | --- |
+| `string` | JSON string | None | A string. |
+| `numeric` | JSON number | Must decode as `float64` | A number. NaN and infinities raise `InvalidRequestError`. |
+| `bool` | `true` or `false` | None | A boolean. |
+| `datetime` | JSON string. The SDK writes RFC 3339 in UTC, for example `2026-11-05T03:00:00Z`, with fractional seconds only when they are not zero | Parsed with `time.RFC3339Nano`, `time.RubyDate` or `time.UnixDate`, then stored as Unix seconds (`float64`, fraction dropped) | The language's absolute time type (§5). Never a string, so a string is never taken for a date. Time values without a time zone (Python naive `datetime`) raise `InvalidRequestError`. |
+| Array form of each type | JSON array of values of that type, possibly empty, with the same `type` | Each item converted as above. `null` items and mixed item types return 400 | A list of the same input type. |
+
+Speedle+ also accepts an empty `type`, which skips conversion and lets any
+JSON value through, objects included. The SDK never sends it: every
+attribute it sends has one of the four types.
+
+Checks before sending, each raising `InvalidRequestError` with no request
+sent: an empty attribute name; the same name twice (Speedle+ would keep the
+last one silently); a `null` value or item where the language allows one;
+a non-finite number; a time value without a time zone.
+
+Inferred form. As a convenience, every SDK also takes a map from name to a
+native value and builds the typed attributes from it: a string becomes
+`string`, a number `numeric`, a boolean `bool`, a value of the language's
+time type `datetime`, and a non-empty list whose items are all one of these
+becomes the array form of that type. A string is always `string`, even if it
+looks like a date. Anything else (`null`, an empty list, a mixed list, a
+nested map or object) raises `InvalidRequestError`; the caller then uses the
+typed form. In Python, `bool` is checked before `int`, so `True` becomes
+`bool`. The inferred attributes are sent sorted by name in Unicode
+code point order, so the request does not depend on map iteration order.
 
 ### 3.3 Response body (HTTP 200)
 
-| Field | Speedle Cloud (`AdsDecision`) | Speedle+ (`IsAllowedResponse`) | SDK |
+| Field | Speedle Cloud today (`AdsDecision`, 0.4.0) | Speedle+ (`IsAllowedResponse`) | SDK |
 | --- | --- | --- | --- |
 | `allowed` | Required boolean | Boolean | `isAllowed` returns it. Anything other than JSON `true`/`false` raises `UnexpectedResponseError`. |
 | `reason` | Required integer 0 to 6 | `int32`, same codes | `Decision.reason`, an enum with a fallback that keeps unknown integers. |
-| `errorMessage` | Not allowed (`additionalProperties: false`) | Set, with HTTP 200, when the evaluator returns an error; the decision is then a denial, normally reason 4 `ERROR_IN_EVALUATION` | `Decision.errorMessage`, optional. `isAllowed` still returns the server's `allowed` value (false). |
-| `requestContext`, `attributes`, `grantedRoles`, `rolePolicies`, `policies` | Optional in the schema (diagnostic shape); not in the examples | Never returned by `is-allowed` | Ignored. Not exposed in 0.x. |
+| `errorMessage` | Not allowed (`additionalProperties: false`). Being removed by cloud.speedle.io#213, which returns evaluator errors as Speedle+ does | Set, with HTTP 200, when the evaluator returns an error; the decision is then a denial, normally reason 4 `ERROR_IN_EVALUATION` | `Decision.errorMessage`, optional. `isAllowed` still returns the server's `allowed` value (false). |
+| `requestContext`, `attributes`, `grantedRoles`, `rolePolicies`, `policies` | Optional in the schema (diagnostic shape); not in the examples. Being removed by cloud.speedle.io#213 | Never returned by `is-allowed` | Ignored. Not exposed in 0.x. |
 | Other fields | None allowed | None | Ignored, so a server can add fields without breaking clients. |
 
 Reason codes are identical in both backends: 0 `GRANT_POLICY_FOUND`,
@@ -101,15 +156,17 @@ docs say so.
 
 Cloud error bodies are `{"error": "<code>"}` with a fixed code enum. Speedle+
 error bodies are `{"error": "<free-text message>"}` from
-`httputils.HandleError`. The SDK reads `error` as `code` for `speedle-cloud`
-and as `message` for `speedle-plus` (where `code` is empty). Error type
-names are in §7.
+`httputils.HandleError`. The HTTP status selects the error type. For
+`speedle-cloud`, `error` is reported as `code` when it is one of the Cloud
+codes in this table and as `message` otherwise, so the SDK keeps working when
+#213 makes Cloud's 400 bodies match Speedle+. For `speedle-plus`, `error` is
+always `message` and `code` is empty. Error type names are in §7.
 
 | Status | Speedle Cloud | Speedle+ ADS | SDK error | Retried |
 | --- | --- | --- | --- | --- |
-| 400 | `invalid_request`, `unsupported_token_assertion` | Invalid JSON or attribute conversion (`SPDL-0004`) | `InvalidRequestError` | No |
+| 400 | `invalid_request`, `unsupported_token_assertion`. Being aligned with Speedle+ by cloud.speedle.io#213 | Invalid JSON or attribute conversion (`SPDL-0004`) | `InvalidRequestError` | No |
 | 401 | `unauthorized`, with `WWW-Authenticate: Bearer`; not charged | Not produced by ADS (a gateway may) | `UnauthorizedError` | No |
-| 403 | `service_mismatch` | `ExceedLimit` maps to 403; not expected on `is-allowed` | `ForbiddenError` | No |
+| 403 | `service_mismatch`: `serviceName` is not the token's service (Cloud-only, stays) | `ExceedLimit` maps to 403; not expected on `is-allowed` | `ForbiddenError` | No |
 | 404 | Not declared | Wrong path or method | `HttpError` | No |
 | 413 | `request_too_large`; not charged | Not produced | `RequestTooLargeError` | No |
 | 415 | Not declared | Documented in Swagger | `HttpError` (the SDK always sends JSON) | No |
@@ -145,7 +202,7 @@ state this, and `maxAttempts: 1` turns retries off.
 
 | | Generated core plus idiomatic layer | Hand-written thin client |
 | --- | --- | --- |
-| Fit with the contract | The Cloud schema is OpenAPI 3.1 with `anyOf`/`null` and recursive `$defs`; common generators handle these poorly and emit awkward types. Speedle+ has no OpenAPI 3.1 contract, and its attribute format differs, so its path would be hand-written anyway. | One operation, written once per language against both backends. |
+| Fit with the contract | The Cloud schema is OpenAPI 3.1 with `anyOf`/`null` and recursive `$defs`; common generators handle these poorly and emit awkward types. The wire format is Speedle+'s `JsonContext`, which has no OpenAPI 3.1 contract of its own, and the typed attribute API (§3.2.1) would be hand-written anyway. | One operation, written once per language against both backends. |
 | Dependencies | Generator runtimes pull in HTTP and JSON libraries per language (for example OkHttp/Gson in Java), which collide with user dependencies. | Standard library HTTP in Node, Java, Go and .NET; `httpx` in Python; `reqwest` on `tokio` in Rust. |
 | Idiomatic API, retries, typed errors | Still hand-written as the layer on top. | Hand-written. |
 | Cost of a contract change | Regenerate, review generated diffs, keep the generator version and templates pinned per language, then adjust the layer. | Edit roughly 50 to 100 lines per SDK, update vectors. |
@@ -177,17 +234,34 @@ It is safe for concurrent use. The positional order is always
   only).
 - A subject is either a string, meaning one `user` principal, or a list of
   principals.
-- Attributes are a map from name to a JSON value (string, number, boolean,
-  null, list, map). See §3.2 for the Speedle+ restrictions.
+- Attributes are a list of typed attributes (§3.2.1), built with one factory
+  per Speedle+ type and form: `string`, `numeric`, `bool` and `datetime`,
+  each for a single value or a list. Every SDK also takes the inferred map
+  form of §3.2.1.
+- `serviceName` is a required client setting. Every call can override it
+  (`CallOptions.serviceName` or the language equivalent below).
 
 ### 5.1 TypeScript (Node.js 22 or later, ESM and CJS)
 
 ```ts
 export type Backend = "speedle-cloud" | "speedle-plus";
-export type AttributeValue =
-  | string | number | boolean | null
-  | AttributeValue[] | { [name: string]: AttributeValue };
-export type Attributes = Record<string, AttributeValue>;
+export type AttributeType = "string" | "numeric" | "bool" | "datetime";
+export type Attribute =                      // one JsonAttribute
+  | { readonly name: string; readonly type: "string";   readonly value: string  | readonly string[] }
+  | { readonly name: string; readonly type: "numeric";  readonly value: number  | readonly number[] }
+  | { readonly name: string; readonly type: "bool";     readonly value: boolean | readonly boolean[] }
+  | { readonly name: string; readonly type: "datetime"; readonly value: Date    | readonly Date[] };
+export declare const Attr: {
+  string(name: string, value: string | readonly string[]): Attribute;
+  numeric(name: string, value: number | readonly number[]): Attribute;
+  bool(name: string, value: boolean | readonly boolean[]): Attribute;
+  datetime(name: string, value: Date | readonly Date[]): Attribute;
+};
+// Inferred form (§3.2.1): a Date becomes datetime; a string is always string.
+export type InferredValue =
+  | string | number | boolean | Date
+  | readonly string[] | readonly number[] | readonly boolean[] | readonly Date[];
+export type Attributes = readonly Attribute[] | Readonly<Record<string, InferredValue>>;
 export interface Principal { type?: string; name: string; idd?: string }
 export type Subject = string | Principal[];
 
@@ -229,7 +303,7 @@ export interface ClientOptions {
   backend: Backend;
   endpoint: string;              // base URL, e.g. "https://cloud.speedle.io"
   auth: Auth;
-  serviceName?: string;          // required for "speedle-plus"
+  serviceName: string;           // required; on Cloud, the token's service
   retry?: RetryPolicy;
   failureMode?: FailureMode;
   circuitBreaker?: CircuitBreakerOptions; // absent means no breaker
@@ -238,7 +312,10 @@ export interface ClientOptions {
   allowInsecureHttp?: boolean;   // default false
   userAgentSuffix?: string;
 }
-export interface CallOptions { signal?: AbortSignal } // abort rejects with signal.reason
+export interface CallOptions {
+  signal?: AbortSignal;          // abort rejects with signal.reason
+  serviceName?: string;          // overrides ClientOptions.serviceName for this call
+}
 
 export enum Reason {
   GrantPolicyFound = 0, DenyPolicyFound = 1, ServiceNotFound = 2,
@@ -267,9 +344,19 @@ const speedle = new SpeedleClient({
   backend: "speedle-cloud",
   endpoint: "https://cloud.speedle.io",
   auth: Auth.bearer(process.env.SPEEDLE_TOKEN!),
+  serviceName: "books",
 });
-if (await speedle.isAllowed("alice", "get", "/books/123", { team: "eng" })) { /* ... */ }
+if (await speedle.isAllowed("alice", "get", "/books/123", [
+  Attr.string("team", "eng"),
+  Attr.numeric("clearance", 4),
+  Attr.datetime("issuedAt", new Date("2026-11-05T03:00:00Z")),
+])) { /* ... */ }
+// Inferred form: team is string, clearance is numeric.
+await speedle.isAllowed("alice", "get", "/books/123", { team: "eng", clearance: 4 });
 ```
+
+An array of `Attribute` is the typed form; a plain object is the inferred
+form. An invalid `Date` raises `InvalidRequestError`.
 
 Package `@speedle/sdk`. Transport: `node:https` with a keep-alive `Agent`;
 no runtime dependencies. The package declares Node only and is not built for
@@ -281,8 +368,29 @@ and rejects with `signal.reason` in every failure mode;
 
 ```python
 Backend = Literal["speedle-cloud", "speedle-plus"]
-AttributeValue = Union[str, int, float, bool, None,
-                       Sequence["AttributeValue"], Mapping[str, "AttributeValue"]]
+AttributeType = Literal["string", "numeric", "bool", "datetime"]
+
+@dataclass(frozen=True)
+class Attribute:                # one JsonAttribute; build it with the factories
+    name: str
+    type: AttributeType
+    value: str | float | bool | datetime.datetime | tuple[str | float | bool | datetime.datetime, ...]
+    is_array: bool
+
+    @staticmethod
+    def string(name: str, value: str | Sequence[str]) -> "Attribute": ...
+    @staticmethod
+    def numeric(name: str, value: int | float | Sequence[int | float]) -> "Attribute": ...  # bool rejected
+    @staticmethod
+    def boolean(name: str, value: bool | Sequence[bool]) -> "Attribute": ...   # type "bool"
+    @staticmethod
+    def datetime(name: str, value: datetime.datetime | Sequence[datetime.datetime]) -> "Attribute": ...  # aware only
+
+# Inferred form (§3.2.1): a datetime becomes datetime; a str is always string.
+InferredValue = Union[str, int, float, bool, datetime.datetime,
+                      Sequence[str], Sequence[int | float], Sequence[bool],
+                      Sequence[datetime.datetime]]
+Attributes = Union[Sequence[Attribute], Mapping[str, InferredValue]]
 
 @dataclass(frozen=True)
 class Principal:
@@ -368,20 +476,22 @@ class Decision:
 
 class Client:
     def __init__(self, *, backend: Backend, endpoint: str, auth: Auth,
-                 service_name: str | None = None,
+                 service_name: str,             # on Cloud, the token's service
                  retry: RetryPolicy = RetryPolicy(),
                  failure_mode: FailureMode = "error",
                  circuit_breaker: CircuitBreaker | None = None,
                  hooks: Hooks | None = None, ca_file: str | None = None,
                  allow_insecure_http: bool = False,
                  user_agent_suffix: str | None = None) -> None: ...
-    # deadline overrides RetryPolicy.deadline for this call only.
+    # deadline and service_name override the client settings for this call only.
     def is_allowed(self, subject: Subject, action: str, resource: str,
-                   attributes: Mapping[str, AttributeValue] | None = None, *,
-                   deadline: float | None = None) -> bool: ...
+                   attributes: Attributes | None = None, *,
+                   deadline: float | None = None,
+                   service_name: str | None = None) -> bool: ...
     def check(self, subject: Subject, action: str, resource: str,
-              attributes: Mapping[str, AttributeValue] | None = None, *,
-              deadline: float | None = None) -> Decision: ...
+              attributes: Attributes | None = None, *,
+              deadline: float | None = None,
+              service_name: str | None = None) -> Decision: ...
     def close(self) -> None: ...
     def __enter__(self) -> "Client": ...
     def __exit__(self, *exc: object) -> None: ...
@@ -390,11 +500,13 @@ class AsyncClient:
     # Same constructor; the methods are coroutines. Task cancellation and
     # asyncio.timeout() propagate asyncio.CancelledError / TimeoutError as usual.
     async def is_allowed(self, subject: Subject, action: str, resource: str,
-                         attributes: Mapping[str, AttributeValue] | None = None, *,
-                         deadline: float | None = None) -> bool: ...
+                         attributes: Attributes | None = None, *,
+                         deadline: float | None = None,
+                         service_name: str | None = None) -> bool: ...
     async def check(self, subject: Subject, action: str, resource: str,
-                    attributes: Mapping[str, AttributeValue] | None = None, *,
-                    deadline: float | None = None) -> Decision: ...
+                    attributes: Attributes | None = None, *,
+                    deadline: float | None = None,
+                    service_name: str | None = None) -> Decision: ...
     async def aclose(self) -> None: ...
     async def __aenter__(self) -> "AsyncClient": ...
     async def __aexit__(self, *exc: object) -> None: ...
@@ -402,10 +514,19 @@ class AsyncClient:
 
 ```python
 with Client(backend="speedle-cloud", endpoint="https://cloud.speedle.io",
-            auth=Auth.bearer(os.environ["SPEEDLE_TOKEN"])) as speedle:
-    if speedle.is_allowed("alice", "get", "/books/123", {"team": "eng"}):
+            auth=Auth.bearer(os.environ["SPEEDLE_TOKEN"]),
+            service_name="books") as speedle:
+    if speedle.is_allowed("alice", "get", "/books/123", [
+            Attribute.string("team", "eng"),
+            Attribute.datetime("issued_at", datetime.datetime(2026, 11, 5, 3, tzinfo=datetime.timezone.utc)),
+    ]):
         ...
+    speedle.is_allowed("alice", "get", "/books/123", {"team": "eng"})  # inferred form
 ```
+
+The factory for `bool` is `Attribute.boolean`, because a method named `bool`
+would shadow the built-in inside the class. A sequence of `Attribute` is the
+typed form; a mapping is the inferred form.
 
 Transport: `httpx` (the only runtime dependency), one pooled
 `httpx.Client`/`httpx.AsyncClient` per SDK client. Fully typed (`py.typed`).
@@ -429,6 +550,27 @@ public final class Subject {
   public static Subject user(String name);
   public static Subject of(Principal... principals);
   public List<Principal> principals();
+}
+
+public enum AttributeType {
+  STRING, NUMERIC, BOOL, DATETIME;
+  public String wireName();          // "string", "numeric", "bool", "datetime"
+}
+
+/** One JsonAttribute. Null names, values or list items throw InvalidRequestException. */
+public final class Attribute {
+  public static Attribute string(String name, String value);
+  public static Attribute string(String name, List<String> values);
+  public static Attribute numeric(String name, double value);
+  public static Attribute numeric(String name, List<? extends Number> values);
+  public static Attribute bool(String name, boolean value);
+  public static Attribute bool(String name, List<Boolean> values);
+  public static Attribute datetime(String name, Instant value);
+  public static Attribute datetime(String name, List<Instant> values);
+  public String name();
+  public AttributeType type();
+  public boolean isArray();
+  public Object value();             // String, Double, Boolean, Instant, or an unmodifiable List of one
 }
 
 public interface Auth {
@@ -466,8 +608,11 @@ public interface SpeedleHooks {
   default void onBreakerStateChange(BreakerStateChangeEvent event) {}
 }
 
-public record CallOptions(Optional<Duration> deadline) {
+public record CallOptions(Optional<Duration> deadline, Optional<String> serviceName) {
   public static CallOptions withDeadline(Duration deadline);
+  public static CallOptions withServiceName(String serviceName);
+  public CallOptions deadline(Duration deadline);         // copy with the value set
+  public CallOptions serviceName(String serviceName);
 }
 
 public enum Reason {
@@ -483,6 +628,15 @@ public final class SpeedleClient implements AutoCloseable {
 
   public boolean isAllowed(Subject subject, String action, String resource);
   public boolean isAllowed(Subject subject, String action, String resource,
+                           List<Attribute> attributes);
+  public boolean isAllowed(Subject subject, String action, String resource,
+                           List<Attribute> attributes, CallOptions options);
+  public Decision check(Subject subject, String action, String resource,
+                        List<Attribute> attributes);
+  public Decision check(Subject subject, String action, String resource,
+                        List<Attribute> attributes, CallOptions options);
+  // Inferred form (§3.2.1): an Instant becomes datetime; a String is always string.
+  public boolean isAllowed(Subject subject, String action, String resource,
                            Map<String, ?> attributes);
   public boolean isAllowed(Subject subject, String action, String resource,
                            Map<String, ?> attributes, CallOptions options);
@@ -496,7 +650,7 @@ public final class SpeedleClient implements AutoCloseable {
     public Builder backend(Backend backend);
     public Builder endpoint(URI endpoint);
     public Builder auth(Auth auth);
-    public Builder serviceName(String serviceName);
+    public Builder serviceName(String serviceName);            // required
     public Builder retry(RetryPolicy retry);
     public Builder failureMode(FailureMode mode);              // default ERROR
     public Builder circuitBreaker(CircuitBreakerPolicy policy); // default none
@@ -514,16 +668,19 @@ try (SpeedleClient speedle = SpeedleClient.builder()
     .backend(Backend.SPEEDLE_CLOUD)
     .endpoint(URI.create("https://cloud.speedle.io"))
     .auth(Auth.bearer(System.getenv("SPEEDLE_TOKEN")))
+    .serviceName("books")
     .build()) {
-  if (speedle.isAllowed(Subject.user("alice"), "get", "/books/123", Map.of("team", "eng"))) { /* ... */ }
+  if (speedle.isAllowed(Subject.user("alice"), "get", "/books/123", List.of(
+      Attribute.string("team", "eng"),
+      Attribute.datetime("issuedAt", Instant.parse("2026-11-05T03:00:00Z"))))) { /* ... */ }
 }
 ```
 
 Errors are unchecked (`SpeedleException extends RuntimeException`).
 Transport: `java.net.http.HttpClient`. No runtime dependencies: a small
 internal JSON codec covers this one schema and is tested by the vectors.
-Attribute values are `String`, `Number`, `Boolean`, `null`, `List<?>` and
-`Map<String, ?>`. A `CompletableFuture` variant is deferred; virtual threads
+In the inferred form, values are `String`, `Number` (finite), `Boolean`,
+`Instant`, or a non-empty `List` of one of these. A `CompletableFuture` variant is deferred; virtual threads
 make the blocking call cheap on Java 21. Cancellation: interrupting the
 calling thread aborts the attempt or the retry delay and throws
 `CancelledError` with the interrupt flag restored; the deadline is the
@@ -551,7 +708,37 @@ type Subject []Principal
 
 func User(name string) Subject
 
-type Attributes map[string]any
+type AttributeType string
+
+const (
+	TypeString   AttributeType = "string"
+	TypeNumeric  AttributeType = "numeric"
+	TypeBool     AttributeType = "bool"
+	TypeDatetime AttributeType = "datetime"
+)
+
+// Attribute is one JsonAttribute. Build it with the functions below.
+type Attribute struct{ /* unexported: name, type, value, array flag */ }
+
+func String(name, value string) Attribute
+func Strings(name string, values ...string) Attribute
+func Numeric(name string, value float64) Attribute
+func Numerics(name string, values ...float64) Attribute
+func Bool(name string, value bool) Attribute
+func Bools(name string, values ...bool) Attribute
+func Datetime(name string, value time.Time) Attribute
+func Datetimes(name string, values ...time.Time) Attribute
+
+func (a Attribute) Name() string
+func (a Attribute) Type() AttributeType
+func (a Attribute) IsArray() bool
+func (a Attribute) Value() any // string, float64, bool, time.Time, or a slice of one
+
+type Attributes []Attribute
+
+// Infer builds the inferred form (§3.2.1): string, any Go integer or float,
+// bool, time.Time and slices of one of these. Strings are never datetime.
+func Infer(m map[string]any) (Attributes, error) // error wraps ErrInvalidRequest
 
 type Auth interface{ apply(*transportConfig) error }
 
@@ -613,7 +800,7 @@ type Config struct {
 	Backend           Backend
 	Endpoint          string // base URL
 	Auth              Auth
-	ServiceName       string // required for BackendSpeedlePlus
+	ServiceName       string // required; on Cloud, the token's service
 	Retry             RetryPolicy
 	FailureMode       FailureMode
 	CircuitBreaker    *CircuitBreaker // nil means no breaker
@@ -644,22 +831,35 @@ type Decision struct {
 
 type Client struct{ /* unexported */ }
 
+type CallOption func(*callOptions)
+
+func WithServiceName(name string) CallOption // overrides Config.ServiceName for this call
+
 func NewClient(cfg Config) (*Client, error)
-func (c *Client) IsAllowed(ctx context.Context, subject Subject, action, resource string, attrs Attributes) (bool, error)
-func (c *Client) Check(ctx context.Context, subject Subject, action, resource string, attrs Attributes) (*Decision, error)
+func (c *Client) IsAllowed(ctx context.Context, subject Subject, action, resource string, attrs Attributes, opts ...CallOption) (bool, error)
+func (c *Client) Check(ctx context.Context, subject Subject, action, resource string, attrs Attributes, opts ...CallOption) (*Decision, error)
 func (c *Client) Close()
 ```
 
 ```go
 client, err := speedle.NewClient(speedle.Config{
-	Backend:  speedle.BackendSpeedleCloud,
-	Endpoint: "https://cloud.speedle.io",
-	Auth:     speedle.BearerToken(os.Getenv("SPEEDLE_TOKEN")),
+	Backend:     speedle.BackendSpeedleCloud,
+	Endpoint:    "https://cloud.speedle.io",
+	Auth:        speedle.BearerToken(os.Getenv("SPEEDLE_TOKEN")),
+	ServiceName: "books",
 })
 if err != nil { return err }
 defer client.Close()
-ok, err := client.IsAllowed(ctx, speedle.User("alice"), "get", "/books/123", speedle.Attributes{"team": "eng"})
+ok, err := client.IsAllowed(ctx, speedle.User("alice"), "get", "/books/123", speedle.Attributes{
+	speedle.String("team", "eng"),
+	speedle.Datetime("issuedAt", time.Date(2026, 11, 5, 3, 0, 0, 0, time.UTC)),
+})
 ```
+
+The attribute constructors do not return errors; the §3.2.1 checks (empty
+or duplicate name, NaN, a zero `Attribute`) run when the call starts and
+fail it with `ErrInvalidRequest`. `Strings("tags")` with no values is an
+empty `string` array.
 
 Module `github.com/teramoby/speedle-sdk/go` (§12), package `speedle`.
 Transport: `net/http` with its own `http.Transport`; no third-party
@@ -687,6 +887,30 @@ public sealed class Subject
     public static Subject Of(params Principal[] principals);
     public IReadOnlyList<Principal> Principals { get; }
     public static implicit operator Subject(string userName);
+}
+
+public enum AttributeType { String, Numeric, Bool, Datetime } // wire names "string", "numeric", "bool", "datetime"
+
+// One JsonAttribute. Named SpeedleAttribute to avoid System.Attribute.
+public sealed class SpeedleAttribute
+{
+    public static SpeedleAttribute String(string name, string value);
+    public static SpeedleAttribute Strings(string name, IEnumerable<string> values);
+    public static SpeedleAttribute Numeric(string name, double value);
+    public static SpeedleAttribute Numerics(string name, IEnumerable<double> values);
+    public static SpeedleAttribute Bool(string name, bool value);
+    public static SpeedleAttribute Bools(string name, IEnumerable<bool> values);
+    public static SpeedleAttribute Datetime(string name, DateTimeOffset value);
+    public static SpeedleAttribute Datetimes(string name, IEnumerable<DateTimeOffset> values);
+    public string Name { get; }
+    public AttributeType Type { get; }
+    public bool IsArray { get; }
+    public object Value { get; }   // string, double, bool, DateTimeOffset, or an IReadOnlyList of one
+}
+
+public sealed record CallOptions
+{
+    public string? ServiceName { get; init; }   // overrides SpeedleClientOptions.ServiceName
 }
 
 public abstract class Auth
@@ -736,7 +960,7 @@ public sealed class SpeedleClientOptions
     public required Backend Backend { get; init; }
     public required Uri Endpoint { get; init; }
     public required Auth Auth { get; init; }
-    public string? ServiceName { get; init; }               // required for SpeedlePlus
+    public required string ServiceName { get; init; }       // on Cloud, the token's service
     public RetryPolicy Retry { get; init; } = new();
     public FailureMode FailureMode { get; init; } = FailureMode.Error;
     public CircuitBreakerPolicy? CircuitBreaker { get; init; } // null means no breaker
@@ -760,10 +984,17 @@ public sealed class SpeedleClient : IDisposable, IAsyncDisposable
 {
     public SpeedleClient(SpeedleClientOptions options);
     public Task<bool> IsAllowedAsync(Subject subject, string action, string resource,
-        IReadOnlyDictionary<string, object?>? attributes = null,
+        IReadOnlyList<SpeedleAttribute>? attributes = null, CallOptions? options = null,
         CancellationToken cancellationToken = default);
     public Task<Decision> CheckAsync(Subject subject, string action, string resource,
-        IReadOnlyDictionary<string, object?>? attributes = null,
+        IReadOnlyList<SpeedleAttribute>? attributes = null, CallOptions? options = null,
+        CancellationToken cancellationToken = default);
+    // Inferred form (§3.2.1): a DateTimeOffset becomes datetime; a string is always string.
+    public Task<bool> IsAllowedAsync(Subject subject, string action, string resource,
+        IReadOnlyDictionary<string, object?> attributes, CallOptions? options = null,
+        CancellationToken cancellationToken = default);
+    public Task<Decision> CheckAsync(Subject subject, string action, string resource,
+        IReadOnlyDictionary<string, object?> attributes, CallOptions? options = null,
         CancellationToken cancellationToken = default);
     public void Dispose();
     public ValueTask DisposeAsync();
@@ -776,16 +1007,20 @@ await using var speedle = new SpeedleClient(new SpeedleClientOptions
     Backend = Backend.SpeedleCloud,
     Endpoint = new Uri("https://cloud.speedle.io"),
     Auth = Auth.Bearer(Environment.GetEnvironmentVariable("SPEEDLE_TOKEN")!),
+    ServiceName = "books",
 });
 if (await speedle.IsAllowedAsync("alice", "get", "/books/123",
-        new Dictionary<string, object?> { ["team"] = "eng" }, ct)) { /* ... */ }
+        [SpeedleAttribute.String("team", "eng"),
+         SpeedleAttribute.Datetime("issuedAt", DateTimeOffset.Parse("2026-11-05T03:00:00Z"))],
+        cancellationToken: ct)) { /* ... */ }
 ```
 
 Errors derive from `SpeedleException`, named with the .NET `Exception`
 suffix (`InvalidRequestException`, `RateLimitedException`, ...); the
-conformance runner maps them to the §7 names. Attribute values are `string`,
-numeric primitives, `bool`, `null`, `IEnumerable<object?>`,
-`IReadOnlyDictionary<string, object?>` and `System.Text.Json.Nodes.JsonNode`.
+conformance runner maps them to the §7 names. In the inferred form, values
+are `string`, numeric primitives, `bool`, `DateTimeOffset`, or a non-empty
+`IEnumerable` of one of these; `DateTime` is rejected because its time zone
+can be unspecified.
 Transport: one `HttpClient` over a `SocketsHttpHandler` with
 `PooledConnectionLifetime` of 5 minutes, and `System.Text.Json` with source
 generation, so the package has no dependencies and is trimming and AOT
@@ -814,7 +1049,35 @@ impl Subject {
 }
 impl From<&str> for Subject { /* one user principal */ }
 
-pub type Attributes = serde_json::Map<String, serde_json::Value>;
+pub enum AttributeType { String, Numeric, Bool, Datetime } // wire names "string", "numeric", "bool", "datetime"
+
+/// The value of one JsonAttribute: the type and the single or array form.
+pub enum AttributeValue {
+    String(String),       Strings(Vec<String>),
+    Numeric(f64),         Numerics(Vec<f64>),
+    Bool(bool),           Bools(Vec<bool>),
+    Datetime(SystemTime), Datetimes(Vec<SystemTime>),
+}
+impl AttributeValue { pub fn attribute_type(&self) -> AttributeType; pub fn is_array(&self) -> bool; }
+
+pub struct Attribute { pub name: String, pub value: AttributeValue }
+impl Attribute {
+    pub fn string(name: impl Into<String>, value: impl Into<String>) -> Self;
+    pub fn strings(name: impl Into<String>, values: impl IntoIterator<Item = impl Into<String>>) -> Self;
+    pub fn numeric(name: impl Into<String>, value: f64) -> Self;
+    pub fn numerics(name: impl Into<String>, values: impl IntoIterator<Item = f64>) -> Self;
+    pub fn bool(name: impl Into<String>, value: bool) -> Self;
+    pub fn bools(name: impl Into<String>, values: impl IntoIterator<Item = bool>) -> Self;
+    pub fn datetime(name: impl Into<String>, value: SystemTime) -> Self;
+    pub fn datetimes(name: impl Into<String>, values: impl IntoIterator<Item = SystemTime>) -> Self;
+    /// Inferred form (§3.2.1) from JSON values: strings, numbers, booleans and
+    /// non-empty homogeneous arrays of one of these. JSON has no time type, so
+    /// this never yields `datetime`; use `Attribute::datetime`.
+    pub fn infer(map: &serde_json::Map<String, serde_json::Value>) -> Result<Vec<Attribute>, Error>;
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct CallOptions { pub service_name: Option<String> } // overrides the client's service name
 
 pub struct Auth(/* private */);
 impl Auth {
@@ -882,16 +1145,20 @@ impl Error {
 #[derive(Clone)]                 // cheap clone, shares the pool and breaker
 pub struct Client(/* Arc<...> */);
 impl Client {
-    pub fn builder(backend: Backend, endpoint: &str, auth: Auth) -> ClientBuilder;
+    pub fn builder(backend: Backend, endpoint: &str, auth: Auth,
+                   service_name: impl Into<String>) -> ClientBuilder;
     pub async fn is_allowed(&self, subject: &Subject, action: &str, resource: &str,
-                            attributes: Option<&Attributes>) -> Result<bool, Error>;
+                            attributes: &[Attribute]) -> Result<bool, Error>;
     pub async fn check(&self, subject: &Subject, action: &str, resource: &str,
-                       attributes: Option<&Attributes>) -> Result<Decision, Error>;
+                       attributes: &[Attribute]) -> Result<Decision, Error>;
+    pub async fn is_allowed_with(&self, subject: &Subject, action: &str, resource: &str,
+                                 attributes: &[Attribute], options: &CallOptions) -> Result<bool, Error>;
+    pub async fn check_with(&self, subject: &Subject, action: &str, resource: &str,
+                            attributes: &[Attribute], options: &CallOptions) -> Result<Decision, Error>;
 }
 
 pub struct ClientBuilder(/* private */);
 impl ClientBuilder {
-    pub fn service_name(self, name: impl Into<String>) -> Self;
     pub fn retry(self, policy: RetryPolicy) -> Self;
     pub fn failure_mode(self, mode: FailureMode) -> Self;
     pub fn circuit_breaker(self, breaker: CircuitBreaker) -> Self;
@@ -910,9 +1177,13 @@ pub mod blocking {
 
 ```rust
 let speedle = speedle::Client::builder(Backend::SpeedleCloud, "https://cloud.speedle.io",
-                                       Auth::bearer(std::env::var("SPEEDLE_TOKEN")?))
+                                       Auth::bearer(std::env::var("SPEEDLE_TOKEN")?), "books")
     .build()?;
-if speedle.is_allowed(&"alice".into(), "get", "/books/123", Some(&attrs)).await? { /* ... */ }
+let attrs = [
+    Attribute::string("team", "eng"),
+    Attribute::datetime("issuedAt", UNIX_EPOCH + Duration::from_secs(1_793_847_600)), // 2026-11-05T03:00:00Z
+];
+if speedle.is_allowed(&"alice".into(), "get", "/books/123", &attrs).await? { /* ... */ }
 ```
 
 Runtime and HTTP stack: **`tokio` with `reqwest`** (default features off,
@@ -925,6 +1196,11 @@ avoids a system OpenSSL dependency, which keeps builds and cross-compilation
 simple. Alternatives considered: raw `hyper` (more code for the same
 result), `ureq` (blocking only), runtime-agnostic clients (less maintained).
 
+`datetime` takes `std::time::SystemTime`, which is always an absolute
+instant; the crate formats it as RFC 3339 itself, so it needs no date-time
+dependency. The §3.2.1 checks run when the call starts and return
+`ErrorKind::InvalidRequest`.
+
 Cargo features: `default = []`; `blocking` enables `reqwest/blocking` and
 `speedle::blocking::Client`, for programs without an async runtime. As with
 `reqwest`, the blocking client must not be called from inside an async
@@ -936,13 +1212,19 @@ bound. The blocking client is bounded by the deadline only.
 
 ### 6.1 Endpoint and backend
 
-- `backend` is required. It is never auto-detected, because it selects the
-  attribute wire format (§3.2) and the error body interpretation (§3.4).
+- `backend` is required. It is never auto-detected. The request format is
+  the same for both backends (§3.2); `backend` selects the auth rules
+  (§3.1, §6.2) and the error body interpretation (§3.4).
 - `endpoint` is a base URL with scheme, host and optional port and path
   prefix. The SDK appends `/authz-check/v1/is-allowed`. Query strings and
   fragments are rejected.
-- `serviceName` is required for `speedle-plus` and optional for
-  `speedle-cloud`, where the token already names the service.
+- `serviceName` is required for both backends and must not be empty; it is
+  sent on every call. A call can override it (§5). On `speedle-cloud` it
+  must be the bearer token's service: any other value returns 403
+  `service_mismatch`, raised as `ForbiddenError` with `code`
+  `service_mismatch`. That response is charged and not retried. On
+  `speedle-plus` an unknown service is not an error: the decision is a deny
+  with reason 2 `SERVICE_NOT_FOUND`.
 - Configuration errors raise `ConfigurationError` from the constructor, before
   any request.
 
@@ -1110,9 +1392,9 @@ token, request attributes or the full request body.
 | --- | --- | --- | --- | --- | --- |
 | Base | Any SDK error | `SpeedleError` / `SpeedleError` / `SpeedleException` | `*speedle.Error` | `SpeedleException` | `speedle::Error` |
 | Configuration | Invalid client options | `ConfigurationError` | `ErrConfiguration` | `ConfigurationException` | `Configuration` |
-| Invalid request | 400; Speedle+ attribute conversion before sending | `InvalidRequestError` | `ErrInvalidRequest` | `InvalidRequestException` | `InvalidRequest` |
+| Invalid request | 400; the attribute checks of §3.2.1 before sending | `InvalidRequestError` | `ErrInvalidRequest` | `InvalidRequestException` | `InvalidRequest` |
 | Unauthorized | 401 | `UnauthorizedError` | `ErrUnauthorized` | `UnauthorizedException` | `Unauthorized` |
-| Forbidden | 403, including `service_mismatch` | `ForbiddenError` | `ErrForbidden` | `ForbiddenException` | `Forbidden` |
+| Forbidden | 403, including Cloud `service_mismatch` (`serviceName` is not the token's service) | `ForbiddenError` | `ErrForbidden` | `ForbiddenException` | `Forbidden` |
 | Request too large | 413 | `RequestTooLargeError` | `ErrRequestTooLarge` | `RequestTooLargeException` | `RequestTooLarge` |
 | Too many requests | 429 with an unknown code | `TooManyRequestsError` | `ErrTooManyRequests` | `TooManyRequestsException` | `TooManyRequests` |
 | Rate limited | Burst 429 (§6.3) | `RateLimitedError` | `ErrRateLimited` | `RateLimitedException` | `RateLimited` |
@@ -1204,6 +1486,10 @@ service, and no caching of errors.
   429 with `Retry-After: 1` (retried); a burst 429 with `Retry-After: 60`
   (not retried under the default deadline); a daily-quota 429; 401; deadline
   exceeded; fail-closed returns `false`; the breaker opens and recovers.
+- Required request-format vectors: every attribute type in single and array
+  form, including `datetime`, on both backends with the same body; the
+  inferred form sorted by name; a rejected attribute with no request sent;
+  a per-call `serviceName` override; Cloud 403 `service_mismatch`.
 - CI runs on GitHub-hosted `ubuntu-latest` runners only, one workflow per
   language with path filters, `permissions: contents: read` and actions
   pinned by commit SHA. Each SDK is tested on its supported runtime versions.
