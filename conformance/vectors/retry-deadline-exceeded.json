@@ -8,6 +8,7 @@
       "type": "bearer",
       "token": "spdl_018bcfe5-6800-7000-8000-000000000001_0000000000000000000000000000000000000000000"
     },
+    "serviceName": "books",
     "retry": {
       "deadlineMs": 300
     }
@@ -52,6 +53,7 @@
               }
             ]
           },
+          "serviceName": "books",
           "resource": "/books/123",
           "action": "get"
         }
@@ -90,6 +92,7 @@
               }
             ]
           },
+          "serviceName": "books",
           "resource": "/books/123",
           "action": "get"
         }

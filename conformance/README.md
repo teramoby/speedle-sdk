@@ -14,10 +14,10 @@ implementation.
 
 | Field | Meaning |
 | --- | --- |
-| `backend` | `speedle-cloud` or `speedle-plus`. Selects the wire format the SDK must produce. |
-| `config` | Client options: `auth` (`none` or `bearer`), `serviceName`, `retry` (`maxAttempts`, `baseDelayMs`, `maxDelayMs`, `attemptTimeoutMs`, `deadlineMs`), `failureMode` (`error` or `closed`), `circuitBreaker` (`failureThreshold`, `coolDownMs`). Unset values take the SDK defaults. The runner adds the endpoint (the mock's base URL) and the mock's test CA. |
+| `backend` | `speedle-cloud` or `speedle-plus`. Both get the same Speedle+ `JsonContext` body; the backend changes only auth and error handling. |
+| `config` | Client options: `auth` (`none` or `bearer`), `serviceName` (required), `retry` (`maxAttempts`, `baseDelayMs`, `maxDelayMs`, `attemptTimeoutMs`, `deadlineMs`), `failureMode` (`error` or `closed`), `circuitBreaker` (`failureThreshold`, `coolDownMs`). Unset values take the SDK defaults. The runner adds the endpoint (the mock's base URL) and the mock's test CA. |
 | `jitterFraction` | The value in [0, 1] that the injected random source returns; each backoff delay is `jitterFraction × min(maxDelay, baseDelay × 2^(n-1))`. Default 1. |
-| `call`, `expect` | One call: `method` (`isAllowed` or `check`), `subject` (a user name or a list of principals), `action`, `resource`, optional `attributes`; and its outcome. |
+| `call`, `expect` | One call: `method` (`isAllowed` or `check`), `subject` (a user name or a list of principals), `action`, `resource`, an optional `serviceName` override, and at most one of `attributes` (typed `{name, type, value}` items) or `inferredAttributes` (a name-to-value map for the inferred overload); and its outcome. |
 | `steps` | Instead of `call` and `expect`: several calls on the same client, each with optional `advanceMs` (virtual time added before the call), `call` and `expect`. Used for breaker vectors. |
 | `exchanges` | The requests the SDK must send across all calls, in order, and the mock's answer to each: a response or a fault. An empty list means the SDK must fail before sending anything. |
 | `events` | Optional. The complete, ordered list of hook events across all calls: `attempt`, `retry`, `giveUp`, `breaker`. |
@@ -26,6 +26,14 @@ implementation.
 (the `check` result) or `error` (the error type and its fields), plus an
 optional `delaysMs`: the exact retry sleeps the call requested, in order
 (`[]` means none).
+
+Attributes: for each `attributes` item the runner calls the SDK factory for
+its `type` and form (single value or array). A `datetime` value is RFC 3339
+in UTC with whole seconds, such as `2026-11-05T03:00:00Z`; the runner parses
+it into the language's time type, and the SDK must send the same string.
+`inferredAttributes` goes to the inferred-map overload as the language's
+native map, so it cannot hold `datetime` values; each SDK tests time-type
+inference in its own unit tests.
 
 Matching rules:
 
@@ -71,10 +79,12 @@ Mutual TLS is not covered here; each SDK tests it with its own TLS fixtures.
 
 | Vector | Covers |
 | --- | --- |
-| `cloud-allowed` | 200 allow, nested attributes sent as an object, bearer header, `X-Quota-Daily-Remaining` on the decision |
-| `speedle-plus-denied` | 200 deny, no `Authorization`, attributes converted to Speedle+ `{name, type, value}` items |
+| `cloud-allowed` | 200 allow; every attribute type in single and array form, including `datetime` and an empty array; bearer header; `X-Quota-Daily-Remaining` on the decision |
+| `speedle-plus-typed-attributes` | The same call and request body as `cloud-allowed` against Speedle+, without `Authorization` |
+| `speedle-plus-denied` | 200 deny, no `Authorization`, inferred attributes sent as typed items sorted by name |
 | `cloud-invalid-request` | 400 `invalid_request`, charged, no retry |
-| `speedle-plus-invalid-attribute` | Client-side rejection of a `null` attribute for Speedle+, no request sent |
+| `cloud-service-mismatch` | Per-call `serviceName` override that is not the token's service: 403 `service_mismatch`, `ForbiddenError`, charged, no retry |
+| `attribute-null-rejected` | Client-side rejection of a `null` inferred attribute, no request sent |
 | `cloud-unauthorized` | 401, not charged, never retried |
 | `cloud-daily-quota-exceeded` | 429 `daily_quota_exceeded` with `Retry-After: 3600`, never retried although attempts remain |
 | `retry-503-503-200` | 503, 503, 200: succeeds on attempt 3 after 100 ms and 200 ms delays |

@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
   "id": "speedle-plus-denied",
-  "description": "Speedle+ denies the request. No Authorization header is sent and the attribute map is converted to the typed array.",
+  "description": "Speedle+ denies the request. The inferred form becomes typed items sorted by name; no Authorization header is sent.",
   "backend": "speedle-plus",
   "config": {
     "auth": {
@@ -23,7 +23,7 @@
     ],
     "action": "download",
     "resource": "/books/HarryPotter",
-    "attributes": {
+    "inferredAttributes": {
       "clearance": 4,
       "region": "eu",
       "tags": [

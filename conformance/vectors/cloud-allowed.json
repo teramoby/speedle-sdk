@@ -1,28 +1,79 @@
 {
   "$schema": "../schema.json",
   "id": "cloud-allowed",
-  "description": "Speedle Cloud allows the request; check returns the decision and the remaining daily quota.",
+  "description": "Speedle Cloud allows the request. Every attribute type in single and array form, including datetime and an empty array, is sent as Speedle+ {name, type, value} items in the caller's order. check returns the decision and the remaining daily quota.",
   "backend": "speedle-cloud",
   "config": {
     "auth": {
       "type": "bearer",
       "token": "spdl_018bcfe5-6800-7000-8000-000000000001_0000000000000000000000000000000000000000000"
-    }
+    },
+    "serviceName": "books"
   },
   "call": {
     "method": "check",
     "subject": "alice",
     "action": "get",
     "resource": "/books/123",
-    "attributes": {
-      "team": "engineering",
-      "nested": [
-        null,
-        {
-          "enabled": true
-        }
-      ]
-    }
+    "attributes": [
+      {
+        "name": "team",
+        "type": "string",
+        "value": "engineering"
+      },
+      {
+        "name": "tags",
+        "type": "string",
+        "value": [
+          "a",
+          "b"
+        ]
+      },
+      {
+        "name": "clearance",
+        "type": "numeric",
+        "value": 4
+      },
+      {
+        "name": "scores",
+        "type": "numeric",
+        "value": [
+          1.5,
+          2
+        ]
+      },
+      {
+        "name": "vip",
+        "type": "bool",
+        "value": false
+      },
+      {
+        "name": "flags",
+        "type": "bool",
+        "value": [
+          true,
+          false
+        ]
+      },
+      {
+        "name": "issuedAt",
+        "type": "datetime",
+        "value": "2026-11-05T03:00:00Z"
+      },
+      {
+        "name": "windows",
+        "type": "datetime",
+        "value": [
+          "2026-11-05T00:00:00Z",
+          "2026-11-06T00:00:00Z"
+        ]
+      },
+      {
+        "name": "none",
+        "type": "string",
+        "value": []
+      }
+    ]
   },
   "exchanges": [
     {
@@ -47,17 +98,68 @@
               }
             ]
           },
+          "serviceName": "books",
           "resource": "/books/123",
           "action": "get",
-          "attributes": {
-            "team": "engineering",
-            "nested": [
-              null,
-              {
-                "enabled": true
-              }
-            ]
-          }
+          "attributes": [
+            {
+              "name": "team",
+              "type": "string",
+              "value": "engineering"
+            },
+            {
+              "name": "tags",
+              "type": "string",
+              "value": [
+                "a",
+                "b"
+              ]
+            },
+            {
+              "name": "clearance",
+              "type": "numeric",
+              "value": 4
+            },
+            {
+              "name": "scores",
+              "type": "numeric",
+              "value": [
+                1.5,
+                2
+              ]
+            },
+            {
+              "name": "vip",
+              "type": "bool",
+              "value": false
+            },
+            {
+              "name": "flags",
+              "type": "bool",
+              "value": [
+                true,
+                false
+              ]
+            },
+            {
+              "name": "issuedAt",
+              "type": "datetime",
+              "value": "2026-11-05T03:00:00Z"
+            },
+            {
+              "name": "windows",
+              "type": "datetime",
+              "value": [
+                "2026-11-05T00:00:00Z",
+                "2026-11-06T00:00:00Z"
+              ]
+            },
+            {
+              "name": "none",
+              "type": "string",
+              "value": []
+            }
+          ]
         }
       },
       "response": {
