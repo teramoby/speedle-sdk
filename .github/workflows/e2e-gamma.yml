@@ -34,6 +34,13 @@ jobs:
           EVENT: ${{ github.event_name }}
           LANGUAGE: ${{ inputs.language }}
         run: |
+          # The gamma token is for code on main only. The gamma-e2e environment's
+          # branch restriction enforces this; this check makes a run from another
+          # ref fail visibly instead of waiting for or skipping the environment.
+          if [ "$GITHUB_REF" != refs/heads/main ]; then
+            echo "::error::e2e-gamma runs only from main, not $GITHUB_REF"
+            exit 1
+          fi
           if [ "$EVENT" = schedule ] || [ "$LANGUAGE" = all ]; then
             languages='["java","node","python","go","dotnet","rust"]'
           else
@@ -47,6 +54,7 @@ jobs:
   e2e:
     name: e2e (${{ matrix.language }})
     needs: plan
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: gamma-e2e

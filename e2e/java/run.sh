@@ -9,5 +9,12 @@ set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 root="$(cd "$here/../.." && pwd)"
 
-version="$(sed -n 's|^  <version>\(.*\)</version>$|\1|p' "$root/java/pom.xml" | head -n1)"
-exec java -cp "$root/java/target/speedle-sdk-$version.jar" "$here/E2eRunner.java" "${SPEEDLE_E2E_VECTORS:-$root/e2e/vectors.json}"
+jars=()
+for jar in "$root"/java/target/speedle-sdk-*.jar; do
+  case "$jar" in *-sources.jar | *-javadoc.jar | *"*"*) ;; *) jars+=("$jar") ;; esac
+done
+if [ "${#jars[@]}" -ne 1 ]; then
+  echo "java e2e: expected one SDK jar in $root/java/target, found ${#jars[@]}; run build.sh" >&2
+  exit 2
+fi
+exec java -cp "${jars[0]}" "$here/E2eRunner.java" "${SPEEDLE_E2E_VECTORS:-$root/e2e/vectors.json}"

@@ -9,4 +9,4 @@ set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 root="$(cd "$here/../.." && pwd)"
 
-mvn -B -ntp -q -f "$root/java/pom.xml" -DskipTests package
+mvn -B -ntp -q -f "$root/java/pom.xml" -DskipTests clean package

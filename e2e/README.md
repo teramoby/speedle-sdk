@@ -157,7 +157,7 @@ The workflow `e2e-gamma` runs the runners against `https://g.speedle.io`:
 - weekly on Mondays at 04:23 UTC, for every SDK.
 
 It runs on GitHub-hosted runners with `contents: read`, never on pull
-requests, and runs the SDKs one after another. The build step has no secrets;
+requests, only from `main`, and runs the SDKs one after another. The build step has no secrets;
 only the run step gets the token. Until both secrets exist, a scheduled run
 writes a warning and stops, and a manual run fails.
 
