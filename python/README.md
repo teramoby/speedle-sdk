@@ -28,11 +28,16 @@ with Client(
     auth=Auth.bearer(os.environ["SPEEDLE_TOKEN"]),
     service_name="books",  # the token's service
 ) as speedle:
-    if speedle.is_allowed("alice", "get", "/books/123", [
-        Attribute.string("team", "eng"),
-        Attribute.numeric("clearance", 4),
-        Attribute.datetime("issued_at", datetime.datetime(2026, 11, 5, 3, tzinfo=datetime.timezone.utc)),
-    ]):
+    if speedle.is_allowed(
+        "alice",
+        "get",
+        "/books/123",
+        [
+            Attribute.string("team", "eng"),
+            Attribute.numeric("clearance", 4),
+            Attribute.datetime("issued_at", datetime.datetime(2026, 11, 5, 3, tzinfo=datetime.timezone.utc)),
+        ],
+    ):
         ...
 ```
 
