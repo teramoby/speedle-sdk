@@ -12,7 +12,7 @@ permissions: {}
 jobs:
   route:
     name: Record inline comment pointer
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 1
     steps:
       - name: Complete pointer-only router
