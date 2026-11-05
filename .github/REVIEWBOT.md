@@ -7,11 +7,33 @@ ReviewBot as [teramoby/speedle-plus](https://github.com/teramoby/speedle-plus)
 under Apache 2.0. It never runs, builds or tests PR code. It reads the diff and
 sends it, with trusted prompts, to an Ark model.
 
+## Flow
+
+No workflow uses the privileged PR-target trigger. GitHub restricts it on public
+repositories from December 2, 2026, and flagged its runs for manual approval.
+ReviewBot follows the split from
+[cloud.speedle.io](https://github.com/teramoby/cloud.speedle.io) (`125f914`):
+
+1. **PR event (untrusted).** `reviewbot.yml` ("ReviewBot PR Event") runs on
+   `pull_request` on `ubuntu-24.04` with `permissions: {}`, no checkout and no
+   secrets. Its successful run is only a pointer to the PR and its head SHA.
+2. **Review (trusted).** `reviewbot-review.yml` ("ReviewBot") runs on
+   `workflow_run` from `main`. Its `prepare` job (`ubuntu-24.04`) checks that the
+   source run is a successful `pull_request` run of `reviewbot.yml` from this
+   repository, and that the PR is open, not a draft, from this repository and
+   still at that head SHA. Only then do `review` and `publish` run on the
+   self-hosted runner.
+3. **Commands.** `reviewbot-command.yml` runs on `issue_comment` and, for
+   code-line comments, on `workflow_run` from the pointer-only
+   `reviewbot-inline.yml` (`pull_request_review_comment`). Both trusted paths
+   run from `main`. Comments that do not mention `@reviewbot` or are not from a
+   user skip the job.
+
 ## What it does
 
 - **Automatic review.** Opening, updating, reopening or marking a PR ready for
-  review starts an analysis. Draft PRs are skipped. Each new head commit gets one
-  `COMMENT` review that names the commit and the model ID. A bot review that
+  review starts an analysis. Draft PRs and fork PRs are skipped. Each new head
+  commit gets one `COMMENT` review that names the commit and the model ID. A bot review that
   already exists for that commit suppresses a second model call.
 - **Comment commands** (below) start a review, a recheck or an explanation.
 - Reviews never approve, request changes in GitHub's sense, or merge anything.
@@ -59,17 +81,27 @@ notice, sends no code and publishes nothing.
 
 The endpoint is `https://ark.cn-beijing.volces.com/api/plan/v3/responses`.
 GitHub reads and writes use the job's `GITHUB_TOKEN`; no PAT or GitHub App is
-needed. The workflows become active once they are on `main`, because
-`pull_request_target`, `issue_comment` and `workflow_run` always run the
-default-branch version.
+needed. The trusted workflows become active once they are on `main`, because
+`issue_comment` and `workflow_run` always run the default-branch version.
+
+The `aliyun-reviewbot` runner group must allow exactly these workflows on
+`main` of `teramoby/speedle-sdk`, the trusted ones whose jobs use the
+self-hosted runner:
+
+- `.github/workflows/reviewbot-review.yml`
+- `.github/workflows/reviewbot-command.yml`
+
+`reviewbot.yml` and `reviewbot-inline.yml` run PR-triggered events on
+`ubuntu-24.04` and must not be in the group.
 
 ## Security model
 
-- **No PR code with secrets.** `reviewbot.yml` uses `pull_request_target` and
-  checks out the PR head only to compute a merge-base `git diff`. It deletes the
-  PR's `.gitattributes` files so they cannot hide changes, and runs only helper
-  scripts read with `git show` from the trusted workflow commit. The command
-  workflow checks out the trusted workflow commit, not the PR head.
+- **No PR code with secrets.** The PR-triggered workflows (`reviewbot.yml`,
+  `reviewbot-inline.yml`) have no token scopes, checkout or secrets. The trusted
+  workflows check out the trusted workflow commit, fetch the base and head
+  commits by SHA as objects only, and compute a merge-base `git diff` with
+  `--no-ext-diff --no-textconv`. They run only helper scripts from the trusted
+  commit, so PR `.gitattributes` and helpers have no effect.
 - **Write-permission commands only.** `reviewbot-command.yml` checks the
   commenter's repository permission through the API before doing anything else.
 - **Inline-comment bridge.** `pull_request_review_comment` runs at the PR merge
@@ -92,25 +124,23 @@ default-branch version.
 - Actions are pinned to full commit SHAs and every job declares its permissions.
 - **Runners.** Self-hosted jobs select the labels `self-hosted`, `aliyun-ecs`
   and `reviewbot`, served by the dedicated runner `ecs-light-teramoby` in the
-  `aliyun-reviewbot` runner group. That group is restricted: only
-  `reviewbot.yml`, `reviewbot-command.yml` and `reviewbot-inline.yml` on `main`
-  of this repository may use it. Command authorization and inline routing run on
-  GitHub-hosted `ubuntu-24.04`, so public comments never reach the self-hosted
-  runner. Automatic reviews use the self-hosted runner only for same-repository
-  PRs opened by a user or bot; fork PRs fall back to `ubuntu-24.04`.
+  `aliyun-reviewbot` runner group (see Owner setup for the allowed workflows).
+  PR event routing, PR event validation, command authorization and inline
+  routing run on GitHub-hosted `ubuntu-24.04`, so public PRs and comments reach
+  the self-hosted runner only after validation.
 
 Data sent to Ark: the trusted prompts, `AGENTS.md` from the base revision if it
 exists, commit metadata and the static diff. Commands also send the comment
-text, its code context and, for `recheck`, earlier bot output. Automatic reviews
-also run for fork PRs (the diff is still only read). To stop model calls, remove
-the secret or disable the workflows.
+text, its code context and, for `recheck`, earlier bot output. Fork PRs are not
+reviewed. To stop model calls, remove the secret or disable the workflows.
 
 ## Differences from speedle-plus
 
+- Trigger: the `pull_request` + `workflow_run` split from cloud.speedle.io
+  replaces speedle-plus's PR-target review. Fork PRs are no longer
+  reviewed automatically.
 - Runners: the dedicated `aliyun-reviewbot` group (labels `aliyun-ecs`,
-  `reviewbot`) instead of the shared `speedle-runner`; same expression and
-  GitHub-hosted fallback as speedle-plus, with the `runs-on` repository guard
-  naming `teramoby/speedle-sdk`.
+  `reviewbot`) instead of the shared `speedle-runner`.
 - The report handoff and the lowercase `github_token` key fix come from
   [cloud.speedle.io#118](https://github.com/teramoby/cloud.speedle.io/pull/118)
   and [#130](https://github.com/teramoby/cloud.speedle.io/pull/130). They
@@ -123,7 +153,8 @@ the secret or disable the workflows.
 
 ## Files
 
-- `.github/workflows/reviewbot.yml`, `reviewbot-command.yml`, `reviewbot-inline.yml`
+- `.github/workflows/reviewbot.yml`, `reviewbot-review.yml`, `reviewbot-command.yml`,
+  `reviewbot-inline.yml`
 - `.github/actionlint.yaml`: the `aliyun-ecs` and `reviewbot` self-hosted labels
 - `.github/codex/reviewbot_response.py`, `.github/codex/reviewbot_handoff.py`
 - `.github/codex/prompts/reviewbot.md`, `.github/codex/prompts/reviewbot-command.md`
