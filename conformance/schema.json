@@ -1,0 +1,236 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/teramoby/speedle-sdk/conformance/schema.json",
+  "title": "Speedle SDK conformance vector",
+  "description": "One is-allowed call made by an SDK against the conformance mock server, the HTTP exchanges the mock expects and replays, and the outcome the SDK must produce.",
+  "type": "object",
+  "required": ["id", "description", "backend", "config", "call", "exchanges", "expect"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": {
+      "description": "Unique id; equal to the file name without .json.",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "description": { "type": "string", "minLength": 1 },
+    "backend": { "enum": ["speedle-cloud", "speedle-plus"] },
+    "config": {
+      "description": "Client options. The runner supplies the endpoint (the mock base URL) and the mock's test CA.",
+      "type": "object",
+      "required": ["auth"],
+      "additionalProperties": false,
+      "properties": {
+        "auth": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": ["type"],
+              "additionalProperties": false,
+              "properties": { "type": { "const": "none" } }
+            },
+            {
+              "type": "object",
+              "required": ["type", "token"],
+              "additionalProperties": false,
+              "properties": {
+                "type": { "const": "bearer" },
+                "token": { "type": "string", "minLength": 1 }
+              }
+            }
+          ]
+        },
+        "serviceName": { "type": "string", "minLength": 1 },
+        "timeoutMs": { "type": "integer", "minimum": 1 },
+        "retry": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "maxAttempts": { "type": "integer", "minimum": 1 },
+            "baseDelayMs": { "type": "integer", "minimum": 0 },
+            "maxDelayMs": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "call": {
+      "type": "object",
+      "required": ["method", "subject", "action", "resource"],
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "description": "isAllowed returns a boolean; check returns a Decision. Language runners map these to their own names (is_allowed, IsAllowed, Check).",
+          "enum": ["isAllowed", "check"]
+        },
+        "subject": {
+          "oneOf": [
+            { "description": "One user principal.", "type": "string", "minLength": 1 },
+            {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["name"],
+                "additionalProperties": false,
+                "properties": {
+                  "type": { "type": "string" },
+                  "name": { "type": "string", "minLength": 1 },
+                  "idd": { "type": "string" }
+                }
+              }
+            }
+          ]
+        },
+        "action": { "type": "string" },
+        "resource": { "type": "string" },
+        "attributes": {
+          "description": "Name to JSON value, passed to the SDK as the language's native map.",
+          "type": "object"
+        }
+      }
+    },
+    "exchanges": {
+      "description": "Requests the SDK must send, in order, and what the mock answers. An extra request, a missing request or a mismatch fails the vector. An empty list means the SDK must not send anything.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/exchange" }
+    },
+    "expect": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["result"],
+          "additionalProperties": false,
+          "properties": { "result": { "type": "boolean" } }
+        },
+        {
+          "type": "object",
+          "required": ["decision"],
+          "additionalProperties": false,
+          "properties": {
+            "decision": {
+              "type": "object",
+              "required": ["allowed", "reason"],
+              "additionalProperties": false,
+              "properties": {
+                "allowed": { "type": "boolean" },
+                "reason": { "type": "integer", "minimum": 0 },
+                "errorMessage": { "type": ["string", "null"] },
+                "quotaDailyRemaining": { "type": ["integer", "null"], "minimum": 0 }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["error"],
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "description": "The raised error. Fields that are present must match; absent fields are not checked, except that null means the value must be empty.",
+              "type": "object",
+              "required": ["type"],
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "enum": [
+                    "ConfigurationError",
+                    "InvalidRequestError",
+                    "UnauthorizedError",
+                    "ForbiddenError",
+                    "RequestTooLargeError",
+                    "TooManyRequestsError",
+                    "RateLimitedError",
+                    "QuotaExceededError",
+                    "ServiceUnavailableError",
+                    "ServerError",
+                    "HttpError",
+                    "UnexpectedResponseError",
+                    "NetworkError",
+                    "TimeoutError"
+                  ]
+                },
+                "status": { "type": ["integer", "null"] },
+                "code": { "type": ["string", "null"] },
+                "retryAfterSeconds": { "type": ["number", "null"], "minimum": 0 },
+                "quotaDailyRemaining": { "type": ["integer", "null"], "minimum": 0 }
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "headerMatcher": {
+      "oneOf": [
+        { "description": "Exact value.", "type": "string" },
+        {
+          "type": "object",
+          "required": ["absent"],
+          "additionalProperties": false,
+          "properties": { "absent": { "const": true } }
+        },
+        {
+          "type": "object",
+          "required": ["pattern"],
+          "additionalProperties": false,
+          "properties": { "pattern": { "description": "ECMAScript regular expression matched against the whole value.", "type": "string" } }
+        }
+      ]
+    },
+    "exchange": {
+      "type": "object",
+      "required": ["request", "response"],
+      "additionalProperties": false,
+      "properties": {
+        "request": {
+          "type": "object",
+          "required": ["method", "path", "body"],
+          "additionalProperties": false,
+          "properties": {
+            "method": { "const": "POST" },
+            "path": { "const": "/authz-check/v1/is-allowed" },
+            "headers": {
+              "description": "Header names are case-insensitive. Headers not listed are not checked.",
+              "type": "object",
+              "additionalProperties": { "$ref": "#/$defs/headerMatcher" }
+            },
+            "body": { "description": "Compared as parsed JSON: key order is ignored, array order is significant unless listed in unorderedArrays." },
+            "unorderedArrays": {
+              "description": "JSON Pointers (RFC 6901) into body whose arrays are compared as multisets.",
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "response": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": ["status"],
+              "additionalProperties": false,
+              "properties": {
+                "status": { "type": "integer", "minimum": 100, "maximum": 599 },
+                "headers": { "type": "object", "additionalProperties": { "type": "string" } },
+                "body": { "description": "Sent as JSON with Content-Type application/json." },
+                "rawBody": { "description": "Sent as is, for malformed-response vectors.", "type": "string" }
+              },
+              "not": { "required": ["body", "rawBody"] }
+            },
+            {
+              "type": "object",
+              "required": ["fault"],
+              "additionalProperties": false,
+              "properties": {
+                "fault": {
+                  "description": "connection_reset closes the connection after reading the request; no_response keeps it open without answering until the client times out.",
+                  "enum": ["connection_reset", "no_response"]
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

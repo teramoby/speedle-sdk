@@ -1,0 +1,105 @@
+{
+  "$schema": "../schema.json",
+  "id": "cloud-5xx-then-success",
+  "description": "The first attempt gets 503 snapshot_unavailable; the SDK retries after a jittered delay and the second attempt is allowed.",
+  "backend": "speedle-cloud",
+  "config": {
+    "auth": {
+      "type": "bearer",
+      "token": "spdl_018bcfe5-6800-7000-8000-000000000001_0000000000000000000000000000000000000000000"
+    },
+    "retry": {
+      "maxAttempts": 3,
+      "baseDelayMs": 1,
+      "maxDelayMs": 5
+    }
+  },
+  "call": {
+    "method": "isAllowed",
+    "subject": "alice",
+    "action": "get",
+    "resource": "/books/123"
+  },
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/authz-check/v1/is-allowed",
+        "headers": {
+          "Authorization": "Bearer spdl_018bcfe5-6800-7000-8000-000000000001_0000000000000000000000000000000000000000000",
+          "Content-Type": {
+            "pattern": "^application/json(;.*)?$"
+          },
+          "User-Agent": {
+            "pattern": "^speedle-sdk-[a-z]+/[0-9]+\\.[0-9]+\\.[0-9]+.*$"
+          }
+        },
+        "body": {
+          "subject": {
+            "principals": [
+              {
+                "type": "user",
+                "name": "alice"
+              }
+            ]
+          },
+          "resource": "/books/123",
+          "action": "get"
+        }
+      },
+      "response": {
+        "status": 503,
+        "headers": {
+          "Cache-Control": "no-store",
+          "X-RateLimit-Limit": "600",
+          "X-Quota-Daily-Remaining": "9997"
+        },
+        "body": {
+          "error": "snapshot_unavailable"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/authz-check/v1/is-allowed",
+        "headers": {
+          "Authorization": "Bearer spdl_018bcfe5-6800-7000-8000-000000000001_0000000000000000000000000000000000000000000",
+          "Content-Type": {
+            "pattern": "^application/json(;.*)?$"
+          },
+          "User-Agent": {
+            "pattern": "^speedle-sdk-[a-z]+/[0-9]+\\.[0-9]+\\.[0-9]+.*$"
+          }
+        },
+        "body": {
+          "subject": {
+            "principals": [
+              {
+                "type": "user",
+                "name": "alice"
+              }
+            ]
+          },
+          "resource": "/books/123",
+          "action": "get"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Cache-Control": "no-store",
+          "X-RateLimit-Limit": "600",
+          "X-Quota-Daily-Remaining": "9996"
+        },
+        "body": {
+          "allowed": true,
+          "reason": 0
+        }
+      }
+    }
+  ],
+  "expect": {
+    "result": true
+  }
+}

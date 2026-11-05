@@ -1,0 +1,72 @@
+{
+  "$schema": "../schema.json",
+  "id": "cloud-daily-quota-exceeded",
+  "description": "Speedle Cloud returns 429 daily_quota_exceeded. The SDK raises QuotaExceededError carrying Retry-After and does not retry.",
+  "backend": "speedle-cloud",
+  "config": {
+    "auth": {
+      "type": "bearer",
+      "token": "spdl_018bcfe5-6800-7000-8000-000000000001_0000000000000000000000000000000000000000000"
+    },
+    "retry": {
+      "maxAttempts": 3,
+      "baseDelayMs": 1,
+      "maxDelayMs": 5
+    }
+  },
+  "call": {
+    "method": "isAllowed",
+    "subject": "alice",
+    "action": "get",
+    "resource": "/books/123"
+  },
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/authz-check/v1/is-allowed",
+        "headers": {
+          "Authorization": "Bearer spdl_018bcfe5-6800-7000-8000-000000000001_0000000000000000000000000000000000000000000",
+          "Content-Type": {
+            "pattern": "^application/json(;.*)?$"
+          },
+          "User-Agent": {
+            "pattern": "^speedle-sdk-[a-z]+/[0-9]+\\.[0-9]+\\.[0-9]+.*$"
+          }
+        },
+        "body": {
+          "subject": {
+            "principals": [
+              {
+                "type": "user",
+                "name": "alice"
+              }
+            ]
+          },
+          "resource": "/books/123",
+          "action": "get"
+        }
+      },
+      "response": {
+        "status": 429,
+        "headers": {
+          "Cache-Control": "no-store",
+          "X-RateLimit-Limit": "600",
+          "Retry-After": "3600"
+        },
+        "body": {
+          "error": "daily_quota_exceeded"
+        }
+      }
+    }
+  ],
+  "expect": {
+    "error": {
+      "type": "QuotaExceededError",
+      "status": 429,
+      "code": "daily_quota_exceeded",
+      "retryAfterSeconds": 3600,
+      "quotaDailyRemaining": null
+    }
+  }
+}

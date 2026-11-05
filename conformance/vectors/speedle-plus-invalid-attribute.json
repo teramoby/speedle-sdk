@@ -1,0 +1,28 @@
+{
+  "$schema": "../schema.json",
+  "id": "speedle-plus-invalid-attribute",
+  "description": "A null attribute value cannot be sent to Speedle+. The SDK raises InvalidRequestError without sending a request.",
+  "backend": "speedle-plus",
+  "config": {
+    "auth": {
+      "type": "none"
+    },
+    "serviceName": "books"
+  },
+  "call": {
+    "method": "isAllowed",
+    "subject": "alice",
+    "action": "get",
+    "resource": "/books/123",
+    "attributes": {
+      "team": null
+    }
+  },
+  "exchanges": [],
+  "expect": {
+    "error": {
+      "type": "InvalidRequestError",
+      "status": null
+    }
+  }
+}
