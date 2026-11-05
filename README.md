@@ -17,12 +17,19 @@ yet. The design is tracked in
   the Authorization Decision Service you run yourself, with no client
   authentication or with mutual TLS.
 
-## Planned languages
+## Planned packages
 
-- Batch 1: Node.js/TypeScript, Python, Java, Go.
-- Batch 2 (planned): C#, Rust.
+All six SDKs are built together, with the same API, retry behaviour and
+conformance suite. Nothing is published yet.
 
-Package names and registries are not decided yet.
+| Language | Package |
+| --- | --- |
+| Node.js/TypeScript | npm `@speedle/sdk` |
+| Python | PyPI `speedle` |
+| Java | Maven Central `io.speedle:speedle-sdk` |
+| Go | `github.com/teramoby/speedle-sdk/go` |
+| C# | NuGet `Speedle.Sdk` |
+| Rust | crates.io `speedle` |
 
 ## Security
 
@@ -31,4 +38,5 @@ mobile apps or any other client you do not control.
 
 ## License
 
-[Apache License 2.0](LICENSE).
+[Universal Permissive License (UPL), Version 1.0](LICENSE), the same
+license as [Speedle+](https://github.com/teramoby/speedle-plus).
