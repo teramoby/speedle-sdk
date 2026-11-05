@@ -7,7 +7,7 @@ import { Auth } from "../src/auth.js";
 import { createClientForTesting } from "../src/client.js";
 import { SpeedleError } from "../src/errors.js";
 import { VirtualClock } from "../test/helpers.js";
-import { InProcessMock, type MockServer } from "./mock.js";
+import { GoMock } from "./go-mock.js";
 import type { Vector, VectorCall, VectorExpect } from "./vector.js";
 
 const VECTORS = new URL("../../../conformance/vectors/", import.meta.url);
@@ -79,7 +79,7 @@ async function runCall(
   if (expect.delaysMs) assert.deepEqual(clock.sleeps, expect.delaysMs, `${where}: delaysMs`);
 }
 
-const mock: MockServer = new InProcessMock();
+const mock = new GoMock();
 after(() => mock.close());
 
 const files = readdirSync(VECTORS)
@@ -122,7 +122,7 @@ for (const file of files) {
         clock.advance((step as { advanceMs?: number }).advanceMs ?? 0);
         await runCall(client, clock, step.call, step.expect, vector.steps ? `steps[${i}]` : "call");
       }
-      assert.deepEqual(mock.verify(), [], "mock exchanges");
+      assert.deepEqual(await mock.verify(), [], "mock exchanges");
       if (vector.events) {
         assert.equal(events.length, vector.events.length, `events: got ${JSON.stringify(events)}`);
         vector.events.forEach((want, i) => fieldsMatch(`events[${i}]`, want, events[i] ?? {}));
