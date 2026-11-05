@@ -1,0 +1,109 @@
+# The e2e local proof on every change to e2e/ or an SDK: each SDK runner
+# against a Speedle+ REST ADS built from teramoby/speedle-plus at the commit
+# recorded in e2e/vectors.json. No secrets and no network calls to Speedle
+# Cloud; the gamma run is e2e-gamma.yml. See e2e/README.md.
+name: e2e-local
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "e2e/**"
+      - "java/**"
+      - "node/**"
+      - "python/**"
+      - "go/**"
+      - "dotnet/**"
+      - "rust/**"
+      - ".github/workflows/e2e-local.yml"
+  pull_request:
+    paths:
+      - "e2e/**"
+      - "java/**"
+      - "node/**"
+      - "python/**"
+      - "go/**"
+      - "dotnet/**"
+      - "rust/**"
+      - ".github/workflows/e2e-local.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-local-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: e2e local (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [java, node, python, go, dotnet, rust]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Speedle+ commit of the recorded expectations
+        id: speedle-plus
+        run: |
+          commit="$(jq -r .speedlePlus e2e/vectors.json)"
+          if ! [[ "$commit" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::e2e/vectors.json speedlePlus is not a commit SHA: $commit"
+            exit 1
+          fi
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+      # Fetch only upstream master, then build the pinned commit only if it is
+      # on master, so a PR cannot point CI at a commit from a fork.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: teramoby/speedle-plus
+          ref: master
+          fetch-depth: 0
+          path: .speedle-plus
+          persist-credentials: false
+      - name: Check out the pinned Speedle+ commit from master
+        env:
+          COMMIT: ${{ steps.speedle-plus.outputs.commit }}
+        run: |
+          if ! git -C .speedle-plus merge-base --is-ancestor "$COMMIT" HEAD 2>/dev/null; then
+            echo "::error::Speedle+ commit $COMMIT is not on teramoby/speedle-plus master"
+            exit 1
+          fi
+          git -C .speedle-plus checkout -q --detach "$COMMIT"
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.26.x"
+          cache: false
+
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        if: matrix.language == 'java'
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: matrix.language == 'node'
+        with:
+          node-version: "22"
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        if: matrix.language == 'python'
+        with:
+          python-version: "3.10"
+          enable-cache: false
+      - uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
+        if: matrix.language == 'dotnet'
+        with:
+          dotnet-version: "8.0.x"
+      - name: Rust toolchain
+        if: matrix.language == 'rust'
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup override set stable
+
+      - name: Local proof (Speedle+ raw HTTP, then the ${{ matrix.language }} SDK)
+        env:
+          LANGUAGE: ${{ matrix.language }}
+        run: SPEEDLE_PLUS_DIR="$GITHUB_WORKSPACE/.speedle-plus" e2e/speedle-plus/run-local.sh "$LANGUAGE"
