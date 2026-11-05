@@ -115,10 +115,19 @@ jobs:
     permissions:
       id-token: write # npm trusted publishing and provenance
     steps:
+      # No `registry-url` here. With it, setup-node (src/authutil.ts in v7.1.0)
+      # always writes `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}` to
+      # $RUNNER_TEMP/.npmrc and points NPM_CONFIG_USERCONFIG at it, so an unset
+      # or empty NODE_AUTH_TOKEN still leaves an (empty) _authToken entry. npm
+      # tries OIDC first and falls back to that configured token
+      # (https://docs.npmjs.com/trusted-publishers), and its OIDC code
+      # (lib/utils/oidc.js) returns quietly on a failed exchange, so a broken
+      # trust setup would surface as a misleading auth error. Trusted
+      # publishing needs no token, and npm's default registry is
+      # registry.npmjs.org.
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "24"
-          registry-url: https://registry.npmjs.org
           package-manager-cache: false
       - name: npm supports trusted publishing (11.5.1 or later)
         run: |
@@ -129,13 +138,35 @@ jobs:
           name: node-dist
           path: dist
       # NPM_BOOTSTRAP_TOKEN is only for the first release, before the package
-      # exists and trusted publishing can be configured (RELEASING.md). When it
-      # is unset, npm authenticates through OIDC.
-      - name: npm publish
+      # exists and trusted publishing can be configured (RELEASING.md).
+      - name: Authentication mode
+        id: mode
+        env:
+          NPM_BOOTSTRAP_TOKEN: ${{ secrets.NPM_BOOTSTRAP_TOKEN }}
+        run: |
+          if [ -n "$NPM_BOOTSTRAP_TOKEN" ]; then
+            echo "mode=bootstrap-token" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=trusted-publishing" >> "$GITHUB_OUTPUT"
+          fi
+      - name: npm publish (trusted publishing)
+        if: steps.mode.outputs.mode == 'trusted-publishing'
+        env:
+          VERSION: ${{ needs.verify.outputs.version }}
+        run: npm publish "dist/speedle-sdk-$VERSION.tgz" --provenance --access public --ignore-scripts --registry https://registry.npmjs.org/
+      # Bootstrap only: a step-local userconfig with the same line setup-node
+      # would write. npm expands ${NODE_AUTH_TOKEN} from the environment when
+      # it reads the file, so the token itself never lands on disk.
+      - name: npm publish (one-time bootstrap token)
+        if: steps.mode.outputs.mode == 'bootstrap-token'
         env:
           VERSION: ${{ needs.verify.outputs.version }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_BOOTSTRAP_TOKEN }}
-        run: npm publish "dist/speedle-sdk-$VERSION.tgz" --provenance --access public --ignore-scripts
+          NPM_CONFIG_USERCONFIG: ${{ runner.temp }}/npm-bootstrap.npmrc
+        run: |
+          # shellcheck disable=SC2016 # the literal ${NODE_AUTH_TOKEN} is for npm to expand
+          printf '%s\n' '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}' > "$NPM_CONFIG_USERCONFIG"
+          npm publish "dist/speedle-sdk-$VERSION.tgz" --provenance --access public --ignore-scripts --registry https://registry.npmjs.org/
 
   # ----------------------------------------------------------------- Python
   python:
