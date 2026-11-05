@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## 0.1.0 (2026-11-05)
 
 - First version: `SpeedleClient` for `POST /authz-check/v1/is-allowed` on
   Speedle Cloud and Speedle+, typed and inferred attributes, pluggable auth

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.0 (2026-11-05)
 
 - Initial Rust SDK: async `Client` (`is_allowed`, `check` and the `_with`
   variants) for Speedle Cloud and Speedle+ on `tokio` and `reqwest` with
