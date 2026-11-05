@@ -1,0 +1,63 @@
+{
+  "name": "@speedle/sdk",
+  "version": "0.1.0",
+  "description": "Speedle authorization SDK for Node.js: is-allowed checks against Speedle Cloud and Speedle+",
+  "license": "UPL-1.0",
+  "author": "The Speedle Authors",
+  "homepage": "https://github.com/teramoby/speedle-sdk/tree/main/node#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/teramoby/speedle-sdk.git",
+    "directory": "node"
+  },
+  "bugs": "https://github.com/teramoby/speedle-sdk/issues",
+  "keywords": [
+    "speedle",
+    "authorization",
+    "policy",
+    "access-control"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "sideEffects": false,
+  "main": "./dist/cjs/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "clean": "node scripts/clean.mjs",
+    "build": "node scripts/clean.mjs dist && tsc -p tsconfig.esm.json && tsc -p tsconfig.cjs.json && node scripts/write-cjs-package.mjs",
+    "build:test": "node scripts/clean.mjs build && tsc -p tsconfig.test.json",
+    "lint": "eslint . && tsc -p tsconfig.test.json --noEmit",
+    "test": "npm run build:test && node --test \"build/test/**/*.test.js\"",
+    "test:package": "npm run build && node scripts/smoke.cjs && node scripts/smoke.mjs",
+    "conformance": "npm run build:test && node --test --test-concurrency=1 \"build/conformance/**/*.test.js\""
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.20.5",
+    "eslint": "^10.14.0",
+    "globals": "^17.14.0",
+    "typescript": "~5.9",
+    "typescript-eslint": "^8.72.1"
+  }
+}
