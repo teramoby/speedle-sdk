@@ -197,7 +197,7 @@ jobs:
         if: steps.mode.outputs.mode == 'trusted-publishing'
         env:
           VERSION: ${{ needs.verify.outputs.version }}
-        run: npm publish "dist/speedle-sdk-$VERSION.tgz" --provenance --access public --ignore-scripts --registry https://registry.npmjs.org/
+        run: npm publish "./dist/speedle-sdk-$VERSION.tgz" --provenance --access public --ignore-scripts --registry https://registry.npmjs.org/
       # Bootstrap only: a step-local userconfig with the same line setup-node
       # would write. npm expands ${NODE_AUTH_TOKEN} from the environment when
       # it reads the file, so the token itself never lands on disk.
@@ -210,7 +210,7 @@ jobs:
         run: |
           # shellcheck disable=SC2016 # the literal ${NODE_AUTH_TOKEN} is for npm to expand
           printf '%s\n' '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}' > "$NPM_CONFIG_USERCONFIG"
-          npm publish "dist/speedle-sdk-$VERSION.tgz" --provenance --access public --ignore-scripts --registry https://registry.npmjs.org/
+          npm publish "./dist/speedle-sdk-$VERSION.tgz" --provenance --access public --ignore-scripts --registry https://registry.npmjs.org/
 
   # ----------------------------------------------------------------- Python
   python:
