@@ -8,7 +8,7 @@ Client for the `is-allowed` authorization check of
 - Java 17 or later. No runtime dependencies: transport is `java.net.http.HttpClient`.
 - License: UPL-1.0.
 
-Not published yet. The design is in [docs/design.md](../docs/design.md).
+Published on Maven Central: 0.1.0 (2026-11-05). The design is in [docs/design.md](../docs/design.md).
 
 ## Install
 

@@ -6,7 +6,7 @@ Python SDK for Speedle authorization checks: `is-allowed` against
 sync and asyncio clients, fully typed. The only runtime dependency is
 `httpx`. The behaviour follows [docs/design.md](../docs/design.md).
 
-> Not published yet. Version 0.1.0 is in development.
+> Published on PyPI: 0.1.0 (2026-11-05).
 
 ## Install
 

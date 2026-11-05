@@ -6,7 +6,7 @@ Node.js/TypeScript SDK for Speedle authorization checks: `is-allowed` against
 and CommonJS, no runtime dependencies. The behaviour follows
 [docs/design.md](../docs/design.md).
 
-> Not published yet. Version 0.1.0 is in development.
+> Not yet published on npm (0.1.0 pending).
 
 ## Install
 

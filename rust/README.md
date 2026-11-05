@@ -10,16 +10,16 @@ Rust client for the Speedle authorization decision service
 - Runtime and HTTP: `tokio` with `reqwest` (rustls with the platform's root
   store, HTTP/1.1 and HTTP/2), `serde`/`serde_json`
 - License: UPL-1.0, © 2026 The Speedle Authors
-- Status: 0.x, not yet published
+- Status: 0.1.0, published on crates.io (2026-11-05)
 
 ## Install
 
-Until the first release, use the repository:
+Install from crates.io:
 
 ```toml
 [dependencies]
-speedle = { git = "https://github.com/teramoby/speedle-sdk" }
-# speedle = { git = "https://github.com/teramoby/speedle-sdk", features = ["blocking"] }
+speedle = "0.1.0"
+# Optional blocking client: speedle = { version = "0.1.0", features = ["blocking"] }
 ```
 
 ## Quickstart: Speedle Cloud
