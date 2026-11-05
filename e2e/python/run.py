@@ -43,6 +43,8 @@ def to_datetime(value: str) -> datetime.datetime:
 
 def attribute(item: dict[str, Any]) -> speedle.Attribute:
     name, kind, value = item["name"], item["type"], item["value"]
+    # The factories take a single value or a list, and a list gives the array
+    # form (design §5.2). Only datetime strings need converting first.
     if kind == "string":
         return speedle.Attribute.string(name, value)
     if kind == "numeric":

@@ -133,7 +133,7 @@ Name one or more of `java`, `node`, `python`, `go`, `dotnet` and `rust`, or
 
 The `e2e-local` workflow runs the same script for each SDK on GitHub-hosted
 runners, with Speedle+ checked out at the `speedlePlus` commit in
-`vectors.json`.
+`vectors.json`. That commit must be on `teramoby/speedle-plus` `master`.
 
 After changing the policies or the vectors, record the parsed forms and the
 expectations again, then review the diff. Recording refuses a Speedle+
