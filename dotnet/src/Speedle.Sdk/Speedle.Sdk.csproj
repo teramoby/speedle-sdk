@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Speedle.Sdk</RootNamespace>
+    <AssemblyName>Speedle.Sdk</AssemblyName>
+    <IsAotCompatible>true</IsAotCompatible>
+    <IsTrimmable>true</IsTrimmable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <PackageId>Speedle.Sdk</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>The Speedle Authors</Authors>
+    <Company>The Speedle Authors</Company>
+    <Copyright>Copyright (c) 2026 The Speedle Authors</Copyright>
+    <Description>Client for the Speedle Cloud and Speedle+ is-allowed authorization check.</Description>
+    <PackageLicenseExpression>UPL-1.0</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/teramoby/speedle-sdk</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/teramoby/speedle-sdk</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>speedle;authorization;authz;policy</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../README.md" Pack="true" PackagePath="/" />
+    <None Include="../../../LICENSE" Pack="true" PackagePath="/" />
+    <InternalsVisibleTo Include="Speedle.Sdk.Tests" />
+  </ItemGroup>
+
+</Project>

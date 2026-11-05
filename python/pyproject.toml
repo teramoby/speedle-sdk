@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "speedle"
+version = "0.1.0"
+description = "Speedle authorization SDK for Python: is-allowed checks against Speedle Cloud and Speedle+"
+readme = "README.md"
+license = "UPL-1.0"
+license-files = ["LICENSE"]
+authors = [{ name = "The Speedle Authors" }]
+requires-python = ">=3.10"
+dependencies = ["httpx>=0.27,<1"]
+keywords = ["speedle", "authorization", "policy", "access-control"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Typing :: Typed",
+  "Framework :: AsyncIO",
+]
+
+[project.urls]
+Homepage = "https://github.com/teramoby/speedle-sdk/tree/main/python"
+Repository = "https://github.com/teramoby/speedle-sdk"
+Issues = "https://github.com/teramoby/speedle-sdk/issues"
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.8", "mypy>=1.13"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/speedle"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/speedle", "README.md", "LICENSE", "CHANGELOG.md", "pyproject.toml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "A", "S", "BLE", "RUF", "SIM", "PL"]
+ignore = ["PLR0917", "PLR0911", "PLR0912", "PLR0913", "PLR0915", "PLR2004", "UP007", "SIM108"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["E501", "S101", "S105", "S106", "S603", "S607", "PLC0415", "BLE001"]
+
+[tool.mypy]
+strict = true
+python_version = "3.10"
+files = ["src", "tests"]
