@@ -247,7 +247,8 @@ async fn cancellation_during_a_real_delay() {
         })
         .failure_mode(FailureMode::Closed)
         .hooks(rec.clone())
-        .build()
+        // Real clock, fixed jitter: the delay is the full 1 s.
+        .build_with(Arc::new(crate::clock::SystemClock), Arc::new(FixedRandom(1.0)))
         .unwrap();
     let started = std::time::Instant::now();
     let r = tokio::time::timeout(Duration::from_millis(200), c.is_allowed(&alice(), "get", "/r", &[])).await;
