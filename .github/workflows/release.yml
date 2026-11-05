@@ -141,13 +141,25 @@ jobs:
           name: node-dist
           path: dist
       # NPM_BOOTSTRAP_TOKEN is only for the first release, before the package
-      # exists and trusted publishing can be configured (RELEASING.md).
+      # exists and trusted publishing can be configured (RELEASING.md). Once
+      # the package exists on npm, a still-set token fails the job, so it can
+      # never silently replace trusted publishing.
       - name: Authentication mode
         id: mode
         env:
           NPM_BOOTSTRAP_TOKEN: ${{ secrets.NPM_BOOTSTRAP_TOKEN }}
         run: |
           if [ -n "$NPM_BOOTSTRAP_TOKEN" ]; then
+            status=$(curl -sS -o /dev/null -w '%{http_code}' https://registry.npmjs.org/@speedle%2fsdk) || status=error
+            case "$status" in
+              404) ;;
+              200)
+                echo "::error::@speedle/sdk already exists on npm but the release environment secret NPM_BOOTSTRAP_TOKEN is still set. Delete that secret (and revoke the token on npmjs.com) so this release uses trusted publishing (RELEASING.md, npm)."
+                exit 1 ;;
+              *)
+                echo "::error::could not check whether @speedle/sdk exists on npm (HTTP $status); refusing to publish with NPM_BOOTSTRAP_TOKEN"
+                exit 1 ;;
+            esac
             echo "mode=bootstrap-token" >> "$GITHUB_OUTPUT"
           else
             echo "mode=trusted-publishing" >> "$GITHUB_OUTPUT"
@@ -534,13 +546,28 @@ jobs:
           rustup toolchain install stable --profile minimal
           rustup override set stable
       # CARGO_BOOTSTRAP_TOKEN is only for the first release, before the crate
-      # exists and trusted publishing can be configured (RELEASING.md).
+      # exists and trusted publishing can be configured (RELEASING.md). Once
+      # the crate exists on crates.io, a still-set token fails the job, so it
+      # can never silently replace trusted publishing.
       - name: Authentication mode
         id: mode
         env:
           CARGO_BOOTSTRAP_TOKEN: ${{ secrets.CARGO_BOOTSTRAP_TOKEN }}
         run: |
           if [ -n "$CARGO_BOOTSTRAP_TOKEN" ]; then
+            # crates.io rejects API requests without a User-Agent.
+            status=$(curl -sS -o /dev/null -w '%{http_code}' \
+              -A "speedle-sdk release workflow (https://github.com/$GITHUB_REPOSITORY)" \
+              https://crates.io/api/v1/crates/speedle) || status=error
+            case "$status" in
+              404) ;;
+              200)
+                echo "::error::the crate speedle already exists on crates.io but the release environment secret CARGO_BOOTSTRAP_TOKEN is still set. Delete that secret (and revoke the token on crates.io) so this release uses trusted publishing (RELEASING.md, crates.io)."
+                exit 1 ;;
+              *)
+                echo "::error::could not check whether the crate speedle exists on crates.io (HTTP $status); refusing to publish with CARGO_BOOTSTRAP_TOKEN"
+                exit 1 ;;
+            esac
             echo "mode=bootstrap-token" >> "$GITHUB_OUTPUT"
           else
             echo "mode=trusted-publishing" >> "$GITHUB_OUTPUT"

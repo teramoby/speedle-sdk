@@ -64,10 +64,25 @@ def go() -> dict[str, str]:
     return {"go/speedle.go Version": regex("go/speedle.go", r'^const Version = "([^"]+)"')}
 
 
+DOTNET_CSPROJ = "dotnet/src/Speedle.Sdk/Speedle.Sdk.csproj"
+
+
+def csproj_version(path: str) -> str:
+    """The <Version> of a project, from any PropertyGroup.
+
+    Returns a `<...>` marker, which never equals a tag version, when there is
+    no <Version> or when several PropertyGroups set different values.
+    """
+    values = {(v.text or "").strip() for v in ET.parse(path).getroot().iterfind(".//PropertyGroup/Version")}
+    if not values:
+        return "<missing>"
+    if len(values) > 1:
+        return f"<conflicting: {', '.join(sorted(values))}>"
+    return values.pop()
+
+
 def dotnet() -> dict[str, str]:
-    csproj = "dotnet/src/Speedle.Sdk/Speedle.Sdk.csproj"
-    version = ET.parse(csproj).getroot().findtext("PropertyGroup/Version")
-    return {f"{csproj} Version": version or "<missing>"}
+    return {f"{DOTNET_CSPROJ} Version": csproj_version(DOTNET_CSPROJ)}
 
 
 def rust() -> dict[str, str]:

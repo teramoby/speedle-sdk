@@ -140,7 +140,12 @@ first release uses a bootstrap token:
    `NPM_BOOTSTRAP_TOKEN`, then cut `node/v0.1.0`. The workflow still publishes
    with `--provenance`.
 2. Right after that release: delete the `NPM_BOOTSTRAP_TOKEN` secret and
-   revoke the token on npmjs.com.
+   revoke the token on npmjs.com. The workflow enforces this: when
+   `NPM_BOOTSTRAP_TOKEN` is set, the publish job first checks
+   `https://registry.npmjs.org/@speedle%2fsdk` (read-only, no token) and fails
+   with "delete the bootstrap secret" if the package already exists, or if the
+   check gets any answer other than 404. A lingering token therefore blocks the
+   release instead of silently replacing trusted publishing.
 3. On the day of the next Node.js release (a new configuration expires if it
    has no successful publish within 2 days), open `@speedle/sdk` → Settings →
    Trusted publishing → GitHub Actions and enter:
@@ -243,8 +248,12 @@ release uses a bootstrap token:
    the `release` environment secret `CARGO_BOOTSTRAP_TOKEN`, then cut
    `rust/v0.1.0`.
 2. Right after that release: delete the `CARGO_BOOTSTRAP_TOKEN` secret and
-   revoke the token on crates.io. While the secret exists the workflow uses
-   it instead of trusted publishing.
+   revoke the token on crates.io. The workflow enforces this: when
+   `CARGO_BOOTSTRAP_TOKEN` is set, the publish job first checks
+   `https://crates.io/api/v1/crates/speedle` (read-only, no token) and fails
+   with "delete the bootstrap secret" if the crate already exists, or if the
+   check gets any answer other than 404. A lingering token therefore blocks the
+   release instead of silently replacing trusted publishing.
 3. On crates.io → `speedle` → Settings → Trusted Publishing → Add → GitHub:
    - Repository owner: `teramoby`
    - Repository name: `speedle-sdk`
