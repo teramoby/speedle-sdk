@@ -22,7 +22,8 @@ jobs:
   prepare:
     name: Authorize ReviewBot command
     if: >-
-      (github.event_name == 'issue_comment' && github.event.issue.pull_request != null) ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request != null &&
+       github.event.comment.user.type == 'User' && contains(github.event.comment.body, '@reviewbot')) ||
       github.event_name == 'workflow_run'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
