@@ -14,12 +14,12 @@ Rust client for the Speedle authorization decision service
 
 ## Install
 
-Until the first release, use the repository:
+Install from crates.io:
 
 ```toml
 [dependencies]
-speedle = { git = "https://github.com/teramoby/speedle-sdk" }
-# speedle = { git = "https://github.com/teramoby/speedle-sdk", features = ["blocking"] }
+speedle = "0.1.0"
+# Optional blocking client: speedle = { version = "0.1.0", features = ["blocking"] }
 ```
 
 ## Quickstart: Speedle Cloud
