@@ -26,7 +26,8 @@ A pushed tag that matches one of the patterns above starts one run:
    against `conformance/mock`, and builds the package. This job has no
    secrets and no OIDC token, and no caches are used.
 3. **`publish-<language>`**: runs in the GitHub environment `release`, so it
-   waits for a required reviewer. It publishes the package built in step 2
+   waits for a required reviewer. Go has no publish job and no approval: the
+   tag push is the Go release (see Go below), and `go-proxy` only confirms it. It publishes the package built in step 2
    (Java and Rust rebuild from the same commit: Maven signs while it deploys,
    and `cargo publish` packages from source with `--no-verify`).
 
@@ -59,9 +60,9 @@ only on GitHub-hosted `ubuntu-latest` runners.
    git push origin node/v0.2.0
    ```
 
-   Pushing a Go tag publishes the Go module at once (see Go below), so tag
-   Go only when the commit is final.
-4. **Approve** the `publish-<language>` job in the run (Actions → release →
+   Pushing a Go tag publishes the Go module at once and no approval follows
+   (see Go below). Before you push a `go/v*` tag, do the Go pre-tag check.
+4. **Approve** (not Go) the `publish-<language>` job in the run (Actions → release →
    Review deployments) after checking that:
    - the run is for the tag you pushed and its commit is the merge commit;
    - `verify` printed `... is on main` and an `ok:` line for every version source;
@@ -83,9 +84,9 @@ Repository `teramoby/speedle-sdk`, Settings:
    - Required reviewers: the owner (and any other release approver). With
      more than one approver, enable "Prevent self-review".
    - Clear "Allow administrators to bypass configured protection rules".
-   - Deployment branches and tags: "Selected branches and tags", with six
-     rules of type **Tag**: `node/v*`, `python/v*`, `java/v*`, `go/v*`,
-     `dotnet/v*`, `rust/v*`.
+   - Deployment branches and tags: "Selected branches and tags", with five
+     rules of type **Tag**: `node/v*`, `python/v*`, `java/v*`, `dotnet/v*`,
+     `rust/v*` (no Go job uses this environment).
    - Environment secrets and variables from the table below.
 2. **Tag ruleset** (Rules → Rulesets → New tag ruleset), name `release tags`,
    enforcement Active, bypass list: Repository admin. Target tags: include
@@ -259,6 +260,21 @@ Nothing to register. Decide the module path before the first `go/v0.1.0` tag
 (design §12.1; the repository path is the default). The tag itself is the
 release: once it is pushed anyone can fetch the version, and
 `proxy.golang.org` and `sum.golang.org` keep it even if the tag is deleted.
-After approval, `publish-go` runs `go mod download` for the version through
-`proxy.golang.org`, which also checks it against `sum.golang.org` and makes it
-appear on pkg.go.dev.
+No gate can apply to Go: there is no registry upload to hold back, and the
+`release` environment can only pause jobs that start after the push, while the
+proxy can fetch the tag as soon as it exists. So the workflow has no
+`publish-go` job and no approval for Go. The tag push is the publish act, and
+the deliberate step is the maintainer's pre-tag check:
+
+1. The `go` CI workflow is green on the exact `main` commit you will tag.
+2. `const Version` in `go/speedle.go` on that commit equals `X.Y.Z`
+   (`python3 .github/scripts/release-version.py go/vX.Y.Z` prints `ok:`).
+3. The module path in `go/go.mod` is final and the commit is on `main`
+   (`git merge-base --is-ancestor <sha> origin/main`).
+
+Only then push the tag (only admins can, by the tag ruleset). The run then
+repeats `verify` and the `go` build and test job, and `go-proxy` runs
+`go mod download` for the version through `proxy.golang.org`, which checks it
+against `sum.golang.org` and makes it appear on pkg.go.dev. A red run after
+the push cannot undo the release: retract the version in `go/go.mod` and
+release the next patch.

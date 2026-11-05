@@ -6,7 +6,10 @@
 #                   the package artifact; no secrets and no OIDC token
 #   publish-<lang>  in the protected `release` environment, publishes only that
 #                   artifact (npm, PyPI, NuGet, crates.io: trusted publishing;
-#                   Maven Central: user token and GPG key; Go: proxy fetch)
+#                   Maven Central: user token and GPG key)
+#   Go has no publish job: the tag push is the release (RELEASING.md, Go).
+#   go-proxy        after the build and test job, without the `release`
+#                   environment, confirms the version on proxy.golang.org
 #
 # Only tag pushes trigger it: no pull_request, workflow_run or manual trigger,
 # so PR code never runs here. Caches are off so a release never restores state
@@ -331,17 +334,17 @@ jobs:
       - name: Conformance (every vector against conformance/mock)
         run: go test -race -count=1 -run '^TestConformance$' -v .
 
-  # The tag itself is the Go release. This job, after approval, asks
-  # proxy.golang.org for the version and checks it against sum.golang.org.
-  publish-go:
-    name: Fetch github.com/teramoby/speedle-sdk/go through proxy.golang.org
+  # The pushed tag is already the Go release: anyone can fetch it through
+  # proxy.golang.org before any job here runs, so a `release` environment
+  # approval would gate nothing. This job only confirms the published version
+  # on proxy.golang.org and sum.golang.org. The gate for Go is the maintainer
+  # check before the tag push (RELEASING.md, Go).
+  go-proxy:
+    name: Confirm github.com/teramoby/speedle-sdk/go on proxy.golang.org
     needs: [verify, go]
     if: needs.verify.outputs.language == 'go'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    environment:
-      name: release
-      url: https://pkg.go.dev/github.com/teramoby/speedle-sdk/go@v${{ needs.verify.outputs.version }}
     permissions: {}
     steps:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
