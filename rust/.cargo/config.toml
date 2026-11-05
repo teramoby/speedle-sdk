@@ -1,0 +1,4 @@
+# Resolve dependencies to versions that support rust-version (1.75), so the
+# committed Cargo.lock builds on the MSRV. Read by Cargo 1.84 and later.
+[resolver]
+incompatible-rust-versions = "fallback"
