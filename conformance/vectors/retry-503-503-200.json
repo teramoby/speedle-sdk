@@ -1,0 +1,174 @@
+{
+  "$schema": "../schema.json",
+  "id": "retry-503-503-200",
+  "description": "Two 503 responses, then an allow. Retried with full-jitter backoff (jitterFraction 1: 100 ms, then 200 ms); succeeds on attempt 3.",
+  "backend": "speedle-cloud",
+  "config": {
+    "auth": {
+      "type": "bearer",
+      "token": "spdl_018bcfe5-6800-7000-8000-000000000001_0000000000000000000000000000000000000000000"
+    }
+  },
+  "jitterFraction": 1,
+  "call": {
+    "method": "isAllowed",
+    "subject": "alice",
+    "action": "get",
+    "resource": "/books/123"
+  },
+  "expect": {
+    "result": true,
+    "delaysMs": [
+      100,
+      200
+    ]
+  },
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/authz-check/v1/is-allowed",
+        "headers": {
+          "Authorization": "Bearer spdl_018bcfe5-6800-7000-8000-000000000001_0000000000000000000000000000000000000000000",
+          "Content-Type": {
+            "pattern": "^application/json(;.*)?$"
+          },
+          "User-Agent": {
+            "pattern": "^speedle-sdk-[a-z]+/[0-9]+\\.[0-9]+\\.[0-9]+.*$"
+          }
+        },
+        "body": {
+          "subject": {
+            "principals": [
+              {
+                "type": "user",
+                "name": "alice"
+              }
+            ]
+          },
+          "resource": "/books/123",
+          "action": "get"
+        }
+      },
+      "response": {
+        "status": 503,
+        "headers": {
+          "Cache-Control": "no-store",
+          "X-RateLimit-Limit": "600",
+          "X-Quota-Daily-Remaining": "9997"
+        },
+        "body": {
+          "error": "snapshot_unavailable"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/authz-check/v1/is-allowed",
+        "headers": {
+          "Authorization": "Bearer spdl_018bcfe5-6800-7000-8000-000000000001_0000000000000000000000000000000000000000000",
+          "Content-Type": {
+            "pattern": "^application/json(;.*)?$"
+          },
+          "User-Agent": {
+            "pattern": "^speedle-sdk-[a-z]+/[0-9]+\\.[0-9]+\\.[0-9]+.*$"
+          }
+        },
+        "body": {
+          "subject": {
+            "principals": [
+              {
+                "type": "user",
+                "name": "alice"
+              }
+            ]
+          },
+          "resource": "/books/123",
+          "action": "get"
+        }
+      },
+      "response": {
+        "status": 503,
+        "headers": {
+          "Cache-Control": "no-store",
+          "X-RateLimit-Limit": "600"
+        },
+        "body": {
+          "error": "quota_unavailable"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/authz-check/v1/is-allowed",
+        "headers": {
+          "Authorization": "Bearer spdl_018bcfe5-6800-7000-8000-000000000001_0000000000000000000000000000000000000000000",
+          "Content-Type": {
+            "pattern": "^application/json(;.*)?$"
+          },
+          "User-Agent": {
+            "pattern": "^speedle-sdk-[a-z]+/[0-9]+\\.[0-9]+\\.[0-9]+.*$"
+          }
+        },
+        "body": {
+          "subject": {
+            "principals": [
+              {
+                "type": "user",
+                "name": "alice"
+              }
+            ]
+          },
+          "resource": "/books/123",
+          "action": "get"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Cache-Control": "no-store",
+          "X-RateLimit-Limit": "600",
+          "X-Quota-Daily-Remaining": "9996"
+        },
+        "body": {
+          "allowed": true,
+          "reason": 0
+        }
+      }
+    }
+  ],
+  "events": [
+    {
+      "type": "attempt",
+      "attempt": 1,
+      "status": 503,
+      "errorType": "ServiceUnavailableError"
+    },
+    {
+      "type": "retry",
+      "attempt": 2,
+      "delayMs": 100,
+      "errorType": "ServiceUnavailableError"
+    },
+    {
+      "type": "attempt",
+      "attempt": 2,
+      "status": 503,
+      "errorType": "ServiceUnavailableError"
+    },
+    {
+      "type": "retry",
+      "attempt": 3,
+      "delayMs": 200,
+      "errorType": "ServiceUnavailableError"
+    },
+    {
+      "type": "attempt",
+      "attempt": 3,
+      "status": 200,
+      "errorType": null
+    }
+  ]
+}

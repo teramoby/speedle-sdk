@@ -1,0 +1,308 @@
+{
+  "$schema": "../schema.json",
+  "id": "breaker-opens-and-recovers",
+  "description": "Breaker with failureThreshold 2 and coolDownMs 30000, no retries. Two 503 calls open it; the third call fails fast with no request; after the cool-down a half-open trial succeeds and closes it.",
+  "backend": "speedle-cloud",
+  "config": {
+    "auth": {
+      "type": "bearer",
+      "token": "spdl_018bcfe5-6800-7000-8000-000000000001_0000000000000000000000000000000000000000000"
+    },
+    "retry": {
+      "maxAttempts": 1
+    },
+    "circuitBreaker": {
+      "failureThreshold": 2,
+      "coolDownMs": 30000
+    }
+  },
+  "steps": [
+    {
+      "call": {
+        "method": "isAllowed",
+        "subject": "alice",
+        "action": "get",
+        "resource": "/books/123"
+      },
+      "expect": {
+        "error": {
+          "type": "ServiceUnavailableError",
+          "status": 503,
+          "code": "snapshot_unavailable"
+        },
+        "delaysMs": []
+      }
+    },
+    {
+      "call": {
+        "method": "isAllowed",
+        "subject": "alice",
+        "action": "get",
+        "resource": "/books/123"
+      },
+      "expect": {
+        "error": {
+          "type": "ServiceUnavailableError",
+          "status": 503,
+          "code": "snapshot_unavailable"
+        },
+        "delaysMs": []
+      }
+    },
+    {
+      "call": {
+        "method": "isAllowed",
+        "subject": "alice",
+        "action": "get",
+        "resource": "/books/123"
+      },
+      "expect": {
+        "error": {
+          "type": "CircuitOpenError",
+          "status": null
+        },
+        "delaysMs": []
+      }
+    },
+    {
+      "advanceMs": 30000,
+      "call": {
+        "method": "isAllowed",
+        "subject": "alice",
+        "action": "get",
+        "resource": "/books/123"
+      },
+      "expect": {
+        "result": true,
+        "delaysMs": []
+      }
+    },
+    {
+      "call": {
+        "method": "isAllowed",
+        "subject": "alice",
+        "action": "get",
+        "resource": "/books/123"
+      },
+      "expect": {
+        "result": true,
+        "delaysMs": []
+      }
+    }
+  ],
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/authz-check/v1/is-allowed",
+        "headers": {
+          "Authorization": "Bearer spdl_018bcfe5-6800-7000-8000-000000000001_0000000000000000000000000000000000000000000",
+          "Content-Type": {
+            "pattern": "^application/json(;.*)?$"
+          },
+          "User-Agent": {
+            "pattern": "^speedle-sdk-[a-z]+/[0-9]+\\.[0-9]+\\.[0-9]+.*$"
+          }
+        },
+        "body": {
+          "subject": {
+            "principals": [
+              {
+                "type": "user",
+                "name": "alice"
+              }
+            ]
+          },
+          "resource": "/books/123",
+          "action": "get"
+        }
+      },
+      "response": {
+        "status": 503,
+        "headers": {
+          "Cache-Control": "no-store",
+          "X-RateLimit-Limit": "600",
+          "X-Quota-Daily-Remaining": "9997"
+        },
+        "body": {
+          "error": "snapshot_unavailable"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/authz-check/v1/is-allowed",
+        "headers": {
+          "Authorization": "Bearer spdl_018bcfe5-6800-7000-8000-000000000001_0000000000000000000000000000000000000000000",
+          "Content-Type": {
+            "pattern": "^application/json(;.*)?$"
+          },
+          "User-Agent": {
+            "pattern": "^speedle-sdk-[a-z]+/[0-9]+\\.[0-9]+\\.[0-9]+.*$"
+          }
+        },
+        "body": {
+          "subject": {
+            "principals": [
+              {
+                "type": "user",
+                "name": "alice"
+              }
+            ]
+          },
+          "resource": "/books/123",
+          "action": "get"
+        }
+      },
+      "response": {
+        "status": 503,
+        "headers": {
+          "Cache-Control": "no-store",
+          "X-RateLimit-Limit": "600",
+          "X-Quota-Daily-Remaining": "9996"
+        },
+        "body": {
+          "error": "snapshot_unavailable"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/authz-check/v1/is-allowed",
+        "headers": {
+          "Authorization": "Bearer spdl_018bcfe5-6800-7000-8000-000000000001_0000000000000000000000000000000000000000000",
+          "Content-Type": {
+            "pattern": "^application/json(;.*)?$"
+          },
+          "User-Agent": {
+            "pattern": "^speedle-sdk-[a-z]+/[0-9]+\\.[0-9]+\\.[0-9]+.*$"
+          }
+        },
+        "body": {
+          "subject": {
+            "principals": [
+              {
+                "type": "user",
+                "name": "alice"
+              }
+            ]
+          },
+          "resource": "/books/123",
+          "action": "get"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Cache-Control": "no-store",
+          "X-RateLimit-Limit": "600",
+          "X-Quota-Daily-Remaining": "9995"
+        },
+        "body": {
+          "allowed": true,
+          "reason": 0
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/authz-check/v1/is-allowed",
+        "headers": {
+          "Authorization": "Bearer spdl_018bcfe5-6800-7000-8000-000000000001_0000000000000000000000000000000000000000000",
+          "Content-Type": {
+            "pattern": "^application/json(;.*)?$"
+          },
+          "User-Agent": {
+            "pattern": "^speedle-sdk-[a-z]+/[0-9]+\\.[0-9]+\\.[0-9]+.*$"
+          }
+        },
+        "body": {
+          "subject": {
+            "principals": [
+              {
+                "type": "user",
+                "name": "alice"
+              }
+            ]
+          },
+          "resource": "/books/123",
+          "action": "get"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Cache-Control": "no-store",
+          "X-RateLimit-Limit": "600",
+          "X-Quota-Daily-Remaining": "9994"
+        },
+        "body": {
+          "allowed": true,
+          "reason": 0
+        }
+      }
+    }
+  ],
+  "events": [
+    {
+      "type": "attempt",
+      "attempt": 1,
+      "status": 503,
+      "errorType": "ServiceUnavailableError"
+    },
+    {
+      "type": "giveUp",
+      "attempts": 1,
+      "reason": "attempts_exhausted",
+      "errorType": "ServiceUnavailableError"
+    },
+    {
+      "type": "attempt",
+      "attempt": 1,
+      "status": 503,
+      "errorType": "ServiceUnavailableError"
+    },
+    {
+      "type": "giveUp",
+      "attempts": 1,
+      "reason": "attempts_exhausted",
+      "errorType": "ServiceUnavailableError"
+    },
+    {
+      "type": "breaker",
+      "from": "closed",
+      "to": "open"
+    },
+    {
+      "type": "giveUp",
+      "attempts": 0,
+      "reason": "circuit_open",
+      "errorType": "CircuitOpenError"
+    },
+    {
+      "type": "breaker",
+      "from": "open",
+      "to": "half_open"
+    },
+    {
+      "type": "attempt",
+      "attempt": 1,
+      "status": 200,
+      "errorType": null
+    },
+    {
+      "type": "breaker",
+      "from": "half_open",
+      "to": "closed"
+    },
+    {
+      "type": "attempt",
+      "attempt": 1,
+      "status": 200,
+      "errorType": null
+    }
+  ]
+}

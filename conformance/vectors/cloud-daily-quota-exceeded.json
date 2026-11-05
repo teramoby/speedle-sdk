@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
   "id": "cloud-daily-quota-exceeded",
-  "description": "Speedle Cloud returns 429 daily_quota_exceeded. The SDK raises QuotaExceededError carrying Retry-After and does not retry.",
+  "description": "Speedle Cloud returns 429 daily_quota_exceeded. The SDK identifies the daily quota by its error code, raises QuotaExceededError carrying Retry-After, and never retries, although attempts remain.",
   "backend": "speedle-cloud",
   "config": {
     "auth": {
@@ -9,9 +9,7 @@
       "token": "spdl_018bcfe5-6800-7000-8000-000000000001_0000000000000000000000000000000000000000000"
     },
     "retry": {
-      "maxAttempts": 3,
-      "baseDelayMs": 1,
-      "maxDelayMs": 5
+      "maxAttempts": 3
     }
   },
   "call": {
@@ -67,6 +65,21 @@
       "code": "daily_quota_exceeded",
       "retryAfterSeconds": 3600,
       "quotaDailyRemaining": null
+    },
+    "delaysMs": []
+  },
+  "events": [
+    {
+      "type": "attempt",
+      "attempt": 1,
+      "status": 429,
+      "errorType": "QuotaExceededError"
+    },
+    {
+      "type": "giveUp",
+      "attempts": 1,
+      "reason": "non_retryable",
+      "errorType": "QuotaExceededError"
     }
-  }
+  ]
 }

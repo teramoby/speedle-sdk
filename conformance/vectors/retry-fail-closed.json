@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
-  "id": "cloud-5xx-then-success",
-  "description": "The first attempt gets 503 snapshot_unavailable; the SDK retries after a jittered delay and the second attempt is allowed.",
+  "id": "retry-fail-closed",
+  "description": "failureMode closed with maxAttempts 2: both attempts get 503. isAllowed returns false instead of raising; onGiveUp still reports the error.",
   "backend": "speedle-cloud",
   "config": {
     "auth": {
@@ -9,16 +9,22 @@
       "token": "spdl_018bcfe5-6800-7000-8000-000000000001_0000000000000000000000000000000000000000000"
     },
     "retry": {
-      "maxAttempts": 3,
-      "baseDelayMs": 1,
-      "maxDelayMs": 5
-    }
+      "maxAttempts": 2
+    },
+    "failureMode": "closed"
   },
+  "jitterFraction": 1,
   "call": {
     "method": "isAllowed",
     "subject": "alice",
     "action": "get",
     "resource": "/books/123"
+  },
+  "expect": {
+    "result": false,
+    "delaysMs": [
+      100
+    ]
   },
   "exchanges": [
     {
@@ -86,20 +92,42 @@
         }
       },
       "response": {
-        "status": 200,
+        "status": 503,
         "headers": {
           "Cache-Control": "no-store",
           "X-RateLimit-Limit": "600",
           "X-Quota-Daily-Remaining": "9996"
         },
         "body": {
-          "allowed": true,
-          "reason": 0
+          "error": "snapshot_unavailable"
         }
       }
     }
   ],
-  "expect": {
-    "result": true
-  }
+  "events": [
+    {
+      "type": "attempt",
+      "attempt": 1,
+      "status": 503,
+      "errorType": "ServiceUnavailableError"
+    },
+    {
+      "type": "retry",
+      "attempt": 2,
+      "delayMs": 100,
+      "errorType": "ServiceUnavailableError"
+    },
+    {
+      "type": "attempt",
+      "attempt": 2,
+      "status": 503,
+      "errorType": "ServiceUnavailableError"
+    },
+    {
+      "type": "giveUp",
+      "attempts": 2,
+      "reason": "attempts_exhausted",
+      "errorType": "ServiceUnavailableError"
+    }
+  ]
 }

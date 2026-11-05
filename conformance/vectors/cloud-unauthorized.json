@@ -60,6 +60,21 @@
       "status": 401,
       "code": "unauthorized",
       "quotaDailyRemaining": null
+    },
+    "delaysMs": []
+  },
+  "events": [
+    {
+      "type": "attempt",
+      "attempt": 1,
+      "status": 401,
+      "errorType": "UnauthorizedError"
+    },
+    {
+      "type": "giveUp",
+      "attempts": 1,
+      "reason": "non_retryable",
+      "errorType": "UnauthorizedError"
     }
-  }
+  ]
 }

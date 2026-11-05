@@ -1,0 +1,120 @@
+{
+  "$schema": "../schema.json",
+  "id": "retry-network-error-then-200",
+  "description": "Speedle+: the first connection is reset after the request is read (a network error); the retry is allowed.",
+  "backend": "speedle-plus",
+  "config": {
+    "auth": {
+      "type": "none"
+    },
+    "serviceName": "books"
+  },
+  "jitterFraction": 1,
+  "call": {
+    "method": "isAllowed",
+    "subject": "alice",
+    "action": "get",
+    "resource": "/books/123"
+  },
+  "expect": {
+    "result": true,
+    "delaysMs": [
+      100
+    ]
+  },
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/authz-check/v1/is-allowed",
+        "headers": {
+          "Authorization": {
+            "absent": true
+          },
+          "Content-Type": {
+            "pattern": "^application/json(;.*)?$"
+          },
+          "User-Agent": {
+            "pattern": "^speedle-sdk-[a-z]+/[0-9]+\\.[0-9]+\\.[0-9]+.*$"
+          }
+        },
+        "body": {
+          "subject": {
+            "principals": [
+              {
+                "type": "user",
+                "name": "alice"
+              }
+            ]
+          },
+          "serviceName": "books",
+          "resource": "/books/123",
+          "action": "get"
+        }
+      },
+      "response": {
+        "fault": "connection_reset"
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/authz-check/v1/is-allowed",
+        "headers": {
+          "Authorization": {
+            "absent": true
+          },
+          "Content-Type": {
+            "pattern": "^application/json(;.*)?$"
+          },
+          "User-Agent": {
+            "pattern": "^speedle-sdk-[a-z]+/[0-9]+\\.[0-9]+\\.[0-9]+.*$"
+          }
+        },
+        "body": {
+          "subject": {
+            "principals": [
+              {
+                "type": "user",
+                "name": "alice"
+              }
+            ]
+          },
+          "serviceName": "books",
+          "resource": "/books/123",
+          "action": "get"
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=UTF-8"
+        },
+        "body": {
+          "allowed": true,
+          "reason": 0
+        }
+      }
+    }
+  ],
+  "events": [
+    {
+      "type": "attempt",
+      "attempt": 1,
+      "status": null,
+      "errorType": "NetworkError"
+    },
+    {
+      "type": "retry",
+      "attempt": 2,
+      "delayMs": 100,
+      "errorType": "NetworkError"
+    },
+    {
+      "type": "attempt",
+      "attempt": 2,
+      "status": 200,
+      "errorType": null
+    }
+  ]
+}
