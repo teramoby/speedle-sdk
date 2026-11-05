@@ -1,0 +1,366 @@
+# Adapted from Pavu a7b458e; modified for Speedle+. Apache-2.0; see .github/codex/PAVU-LICENSE.txt.
+# Copied from teramoby/speedle-plus 46a4f90 for speedle-sdk: GitHub-hosted runners,
+# report handoff from teramoby/cloud.speedle.io#118/#130; see .github/REVIEWBOT.md.
+name: ReviewBot
+
+on:
+  pull_request_target: # zizmor: ignore[dangerous-triggers] reviewed: trusted workflow, static diff only, no PR code executes; see .github/REVIEWBOT.md
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reviewbot-${{ github.event.pull_request.number || github.ref }}-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  review:
+    name: Analyze pull request
+    if: github.event_name == 'pull_request_target' && github.event.pull_request.draft == false
+    runs-on: >-
+      ${{ github.repository == 'teramoby/speedle-sdk' && github.event.pull_request.head.repo.full_name == github.repository && (github.event.pull_request.user.type == 'User' || github.event.pull_request.user.type == 'Bot') && fromJSON('["self-hosted","aliyun-ecs","reviewbot"]') || 'ubuntu-24.04' }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: read
+    # The report travels as a validated same-run artifact, not a job output:
+    # GitHub drops job outputs that match a registered secret mask
+    # (teramoby/cloud.speedle.io#118).
+    outputs:
+      enabled: ${{ steps.configuration.outputs.enabled }}
+      should_review: ${{ steps.existing_review.outputs.should_review }}
+    steps:
+      - name: Check ReviewBot configuration
+        id: configuration
+        env:
+          REVIEWBOT_API_KEY: ${{ secrets.ARK_API_KEY }}
+        run: |
+          if [[ -n "${REVIEWBOT_API_KEY}" ]]; then
+            echo "enabled=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "enabled=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Report disabled ReviewBot
+        if: steps.configuration.outputs.enabled != 'true'
+        run: echo "::notice::ReviewBot is disabled until the ARK_API_KEY repository secret is configured."
+
+      - name: Check for an existing review of this commit
+        id: existing_review
+        if: steps.configuration.outputs.enabled == 'true'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          REVIEWED_COMMIT: ${{ github.event.pull_request.head.sha }}
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const commit = process.env.REVIEWED_COMMIT;
+            const marker = `<!-- speedle-plus-reviewbot:${commit} -->`;
+            const reviews = await github.paginate(github.rest.pulls.listReviews, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              per_page: 100,
+            });
+            const exists = reviews.some(
+              (review) =>
+                review.user?.login === "github-actions[bot]" &&
+                review.commit_id === commit &&
+                review.body?.startsWith(`${marker}\n`),
+            );
+
+            core.setOutput("should_review", exists ? "false" : "true");
+            if (exists) {
+              core.notice(`ReviewBot already reviewed ${commit}; skipping Ark analysis.`);
+            }
+
+      - name: Check out pull request head ref for static diff
+        if: steps.configuration.outputs.enabled == 'true' && steps.existing_review.outputs.should_review == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/pull/${{ github.event.pull_request.number }}/head
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify captured pull request head
+        if: steps.configuration.outputs.enabled == 'true' && steps.existing_review.outputs.should_review == 'true'
+        shell: bash
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$(git rev-parse HEAD)" != "${HEAD_SHA}" ]]; then
+            echo 'Pull request head advanced before checkout; refusing stale analysis.' >&2
+            exit 1
+          fi
+
+      # A pull request can commit `* -diff` (or a path-specific rule) and make
+      # `git diff` report "Binary files differ" instead of its changes. Drop
+      # the worktree attribute files so git's built-in detection applies.
+      - name: Ignore pull request diff attributes
+        if: steps.configuration.outputs.enabled == 'true' && steps.existing_review.outputs.should_review == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' path; do
+            rm -f -- "${path}"
+          done < <(git ls-files -z -- '*.gitattributes')
+
+      - name: Run ReviewBot with Ark
+        id: review
+        if: steps.configuration.outputs.enabled == 'true' && steps.existing_review.outputs.should_review == 'true'
+        shell: bash
+        env:
+          ARK_API_KEY: ${{ secrets.ARK_API_KEY }}
+          ARK_MODEL: ${{ vars.ARK_REVIEW_MODEL || 'kimi-k3' }}
+          TRUSTED_SHA: ${{ github.workflow_sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          review_input="${RUNNER_TEMP}/reviewbot-input.txt"
+          request_body="${RUNNER_TEMP}/reviewbot-request.json"
+          response_body="${RUNNER_TEMP}/reviewbot-response.json"
+          merge_base=$(git merge-base "${BASE_SHA}" "${HEAD_SHA}")
+
+          build_review_input() {
+            {
+              git show "${BASE_SHA}:.github/codex/prompts/reviewbot.md"
+              printf '\n\n## Trusted policy from the base revision\n\n'
+              git show "${BASE_SHA}:AGENTS.md" || printf 'No AGENTS.md exists at the base revision.\n'
+              printf '\n\n## Pull request metadata\n\n'
+              # shellcheck disable=SC2016 # Literal Markdown backticks, not command substitution.
+              printf 'Base commit: `%s`\nHead commit: `%s`\nMerge base: `%s`\n\n' "${BASE_SHA}" "${HEAD_SHA}" "${merge_base}"
+              git diff --stat "${merge_base}" "${HEAD_SHA}"
+              printf '\n\n## Unified diff\n\n```diff\n'
+              git diff --no-ext-diff --find-renames --find-copies --unified="${1}" "${merge_base}" "${HEAD_SHA}"
+              printf '\n```\n'
+            } > "${review_input}"
+          }
+          build_review_input 80
+
+          input_limit=750000
+          # Execute only the helper from the immutable trusted workflow revision,
+          # never its potentially modified copy in the PR head worktree.
+          response_parser="${RUNNER_TEMP}/reviewbot-response.py"
+          review_result="${RUNNER_TEMP}/reviewbot-result.json"
+          git show "${TRUSTED_SHA}:.github/codex/reviewbot_response.py" > "${response_parser}"
+          request_deadline=$((SECONDS + 600))
+          for attempt in 1 2; do
+            input_size=$(wc -c < "${review_input}")
+            if (( input_size > input_limit )); then
+              limited_input="${RUNNER_TEMP}/reviewbot-input-limited.txt"
+              head -c "${input_limit}" "${review_input}" > "${limited_input}"
+              printf '\n\n[Review input truncated at %s bytes. Report this as a validation gap.]\n' "${input_limit}" >> "${limited_input}"
+              mv "${limited_input}" "${review_input}"
+            fi
+
+            jq -n \
+              --arg model "${ARK_MODEL}" \
+              --rawfile input "${review_input}" \
+              '{model: $model, input: $input, max_output_tokens: 8192, reasoning: {effort: "medium"}}' \
+              > "${request_body}"
+
+            # Both attempts share the original 600-second HTTP time budget.
+            request_timeout=$((request_deadline - SECONDS))
+            if (( request_timeout <= 0 )); then
+              echo 'ReviewBot reason_code=request_timeout' >&2
+              exit 1
+            fi
+            http_code=$(curl \
+              --silent \
+              --show-error \
+              --connect-timeout 20 \
+              --max-time "${request_timeout}" \
+              --output "${response_body}" \
+              --write-out '%{http_code}' \
+              'https://ark.cn-beijing.volces.com/api/plan/v3/responses' \
+              -H "Authorization: Bearer ${ARK_API_KEY}" \
+              -H 'Content-Type: application/json' \
+              --data-binary "@${request_body}")
+
+            if [[ ! "${http_code}" =~ ^2[0-9][0-9]$ ]]; then
+              if [[ "${http_code}" =~ ^[0-9][0-9][0-9]$ ]]; then
+                echo "ReviewBot reason_code=http_error HTTP ${http_code} (response body omitted)" >&2
+              else
+                echo 'ReviewBot reason_code=http_error invalid_status (response body omitted)' >&2
+              fi
+              exit 1
+            fi
+
+            if python3 "${response_parser}" "${response_body}" "${review_result}" "${ARK_MODEL}"; then
+              break
+            else
+              response_status=$?
+            fi
+            if (( response_status != 10 )); then
+              exit 1
+            fi
+            if (( attempt == 2 )); then
+              echo 'ReviewBot reason_code=retry_exhausted' >&2
+              exit 1
+            fi
+            echo '::notice::ReviewBot output token limit; retrying once with unified=3 diff context.'
+            build_review_input 3
+          done
+
+          if (( attempt == 2 )); then
+            echo "retried=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "retried=false" >> "${GITHUB_OUTPUT}"
+          fi
+
+      # The PR head is checked out here, so run only the guard from the
+      # immutable trusted workflow revision, like the response parser above.
+      - name: Validate and seal review handoff
+        if: steps.configuration.outputs.enabled == 'true' && steps.existing_review.outputs.should_review == 'true'
+        shell: bash
+        env:
+          # Only this trusted, network-free guard sees all secrets, never the model.
+          REVIEWBOT_SECRETS: ${{ toJSON(secrets) }} # zizmor: ignore[overprovisioned-secrets] the guard must reject every available secret before artifact upload, including future/inherited secrets
+          GH_TOKEN: ${{ github.token }}
+          TRUSTED_SHA: ${{ github.workflow_sha }}
+          REVIEWBOT_RETRIED: ${{ steps.review.outputs.retried }}
+          PULL_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          COMMAND: review
+        run: |
+          set -euo pipefail
+          handoff_guard="${RUNNER_TEMP}/reviewbot-handoff.py"
+          git show "${TRUSTED_SHA}:.github/codex/reviewbot_handoff.py" > "${handoff_guard}"
+          python3 "${handoff_guard}" \
+            "${RUNNER_TEMP}/reviewbot-result.json" \
+            "${RUNNER_TEMP}/reviewbot-handoff/report.json"
+
+      - name: Upload validated review handoff
+        if: steps.configuration.outputs.enabled == 'true' && steps.existing_review.outputs.should_review == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: reviewbot-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/reviewbot-handoff/report.json
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Remove review input
+        if: always()
+        run: |
+          rm -rf -- "${RUNNER_TEMP}/reviewbot-handoff"
+          rm -f "${RUNNER_TEMP}"/reviewbot-*
+
+  publish:
+    name: Publish pull request review
+    needs: review
+    if: >-
+      always() && github.event_name == 'pull_request_target' &&
+      github.event.pull_request.draft == false
+    runs-on: >-
+      ${{ github.repository == 'teramoby/speedle-sdk' && github.event.pull_request.head.repo.full_name == github.repository && (github.event.pull_request.user.type == 'User' || github.event.pull_request.user.type == 'Bot') && fromJSON('["self-hosted","aliyun-ecs","reviewbot"]') || 'ubuntu-24.04' }}
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Require successful analysis outcome
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          ANALYZE_RESULT: ${{ needs.review.result }}
+          REVIEWBOT_ENABLED: ${{ needs.review.outputs.enabled }}
+          SHOULD_REVIEW: ${{ needs.review.outputs.should_review }}
+        with:
+          script: |
+            if (process.env.ANALYZE_RESULT !== "success" ||
+                !["true", "false"].includes(process.env.REVIEWBOT_ENABLED) ||
+                (process.env.REVIEWBOT_ENABLED === "true" && !["true", "false"].includes(process.env.SHOULD_REVIEW))) {
+              core.setFailed("ReviewBot analysis did not produce a publishable outcome. See the analyze job; no model text will be published.");
+            }
+
+      - name: Download validated review handoff from this run only
+        if: needs.review.result == 'success' && needs.review.outputs.enabled == 'true' && needs.review.outputs.should_review == 'true'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: reviewbot-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/reviewbot-handoff
+
+      - name: Create ReviewBot review for commit
+        if: needs.review.result == 'success' && needs.review.outputs.enabled == 'true' && needs.review.outputs.should_review == 'true'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          COMMAND: review
+          REVIEWED_COMMIT: ${{ github.event.pull_request.head.sha }}
+          PULL_NUMBER: ${{ github.event.pull_request.number }}
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const fs = require("node:fs");
+            const file = `${process.env.RUNNER_TEMP}/reviewbot-handoff/report.json`;
+            let report;
+            try {
+              const stat = fs.lstatSync(file);
+              if (!stat.isFile() || stat.isSymbolicLink() || stat.size > 262144) throw new Error();
+              const bytes = fs.readFileSync(file);
+              const text = bytes.toString("utf8");
+              if (!Buffer.from(text, "utf8").equals(bytes)) throw new Error();
+              report = JSON.parse(text);
+              const keys = ["version", "message", "model", "run_id", "run_attempt", "pull_number", "head_sha", "command"];
+              if (!report || Array.isArray(report) || Object.keys(report).length !== keys.length ||
+                  !keys.every((key) => Object.hasOwn(report, key)) || report.version !== 1 ||
+                  typeof report.message !== "string" || !report.message.trim() ||
+                  Buffer.byteLength(report.message, "utf8") > 241000 ||
+                  typeof report.model !== "string" || !/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,199}$/.test(report.model) ||
+                  report.run_id !== process.env.GITHUB_RUN_ID ||
+                  report.run_attempt !== process.env.GITHUB_RUN_ATTEMPT ||
+                  report.pull_number !== process.env.PULL_NUMBER ||
+                  report.head_sha !== process.env.HEAD_SHA || report.command !== process.env.COMMAND) throw new Error();
+            } catch {
+              throw new Error("ReviewBot handoff is missing, oversized, malformed or bound to a different review; no report published.");
+            }
+            const message = report.message.trim();
+            const modelId = report.model;
+            const commit = process.env.REVIEWED_COMMIT;
+            const marker = `<!-- speedle-plus-reviewbot:${commit} -->`;
+            const modelFooter = modelId
+              ? `\n\n_Model ID: \`${modelId.replaceAll("`", "\\`").replace(/[\r\n]/g, " ")}\`_`
+              : "";
+            const suffix = `\n\n_Reviewed commit: \`${commit}\`_${modelFooter}`;
+            const maximumLength = 65_000;
+            const prefix = `${marker}\n`;
+            let body = `${prefix}${message}${suffix}`;
+
+            if (body.length > maximumLength) {
+              const notice = "\n\n_ReviewBot output was truncated to fit GitHub's comment limit._";
+              const budget = Math.max(0, maximumLength - prefix.length - notice.length - suffix.length);
+              body = `${prefix}${message.slice(0, budget)}${notice}${suffix}`;
+            }
+
+            const reviews = await github.paginate(github.rest.pulls.listReviews, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              per_page: 100,
+            });
+            const existing = reviews.find(
+              (review) =>
+                review.user?.login === "github-actions[bot]" &&
+                review.commit_id === commit &&
+                review.body?.startsWith(`${marker}\n`),
+            );
+
+            if (existing) {
+              core.notice(`ReviewBot already published review ${existing.id} for ${commit}.`);
+              return;
+            }
+
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              commit_id: commit,
+              body,
+              event: "COMMENT",
+            });
+
+      - name: Remove downloaded review handoff
+        if: always()
+        run: rm -rf -- "${RUNNER_TEMP}/reviewbot-handoff"
