@@ -1,2 +1,3 @@
 # Build output of the e2e runners.
 .build/
+rust/target/
