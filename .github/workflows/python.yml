@@ -43,6 +43,10 @@ jobs:
           python-version: ${{ matrix.python }}
           enable-cache: true
           cache-dependency-glob: python/uv.lock
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: conformance/mock/go.mod
+          cache-dependency-path: conformance/mock/go.mod
       - run: uv sync --locked
       - name: Lint
         run: |

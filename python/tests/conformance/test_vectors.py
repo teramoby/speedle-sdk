@@ -26,7 +26,7 @@ from speedle import (
 from speedle._client import _create_for_testing
 
 from ..helpers import VirtualClock
-from .mock import InProcessMock
+from .mock import GoMock
 
 VECTORS = Path(__file__).resolve().parents[3] / "conformance" / "vectors"
 FILES = sorted(VECTORS.glob("*.json"))
@@ -34,8 +34,8 @@ assert FILES, f"no conformance vectors in {VECTORS}"
 
 
 @pytest.fixture(scope="module")
-def mock() -> Iterator[InProcessMock]:
-    m = InProcessMock()
+def mock() -> Iterator[GoMock]:
+    m = GoMock()
     yield m
     m.close()
 
@@ -88,7 +88,7 @@ async def _invoke(client: Any, call: dict[str, Any]) -> Any:
     return await result if asyncio.iscoroutine(result) else result
 
 
-async def _run_vector(vector: dict[str, Any], mock: InProcessMock, use_async: bool) -> None:
+async def _run_vector(vector: dict[str, Any], mock: GoMock, use_async: bool) -> None:
     mock.load(vector)
     clock = VirtualClock()
     events: list[dict[str, Any]] = []
@@ -178,7 +178,7 @@ async def _run_vector(vector: dict[str, Any], mock: InProcessMock, use_async: bo
 
 @pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
 @pytest.mark.parametrize("path", FILES, ids=[f.stem for f in FILES])
-def test_vector(path: Path, use_async: bool, mock: InProcessMock) -> None:
+def test_vector(path: Path, use_async: bool, mock: GoMock) -> None:
     vector = json.loads(path.read_text())
     assert vector["id"] == path.stem
     asyncio.run(_run_vector(vector, mock, use_async))
