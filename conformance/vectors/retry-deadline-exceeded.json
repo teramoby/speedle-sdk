@@ -1,0 +1,131 @@
+{
+  "$schema": "../schema.json",
+  "id": "retry-deadline-exceeded",
+  "description": "deadlineMs 300: attempt 1 gets 503, the SDK sleeps 100 ms (virtual), attempt 2 gets no answer and is cut by the deadline after about 200 ms of real time. The SDK raises DeadlineExceededError.",
+  "backend": "speedle-cloud",
+  "config": {
+    "auth": {
+      "type": "bearer",
+      "token": "spdl_018bcfe5-6800-7000-8000-000000000001_0000000000000000000000000000000000000000000"
+    },
+    "serviceName": "books",
+    "retry": {
+      "deadlineMs": 300
+    }
+  },
+  "jitterFraction": 1,
+  "call": {
+    "method": "isAllowed",
+    "subject": "alice",
+    "action": "get",
+    "resource": "/books/123"
+  },
+  "expect": {
+    "error": {
+      "type": "DeadlineExceededError",
+      "status": null,
+      "code": null
+    },
+    "delaysMs": [
+      100
+    ]
+  },
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/authz-check/v1/is-allowed",
+        "headers": {
+          "Authorization": "Bearer spdl_018bcfe5-6800-7000-8000-000000000001_0000000000000000000000000000000000000000000",
+          "Content-Type": {
+            "pattern": "^application/json(;.*)?$"
+          },
+          "User-Agent": {
+            "pattern": "^speedle-sdk-[a-z]+/[0-9]+\\.[0-9]+\\.[0-9]+.*$"
+          }
+        },
+        "body": {
+          "subject": {
+            "principals": [
+              {
+                "type": "user",
+                "name": "alice"
+              }
+            ]
+          },
+          "serviceName": "books",
+          "resource": "/books/123",
+          "action": "get"
+        }
+      },
+      "response": {
+        "status": 503,
+        "headers": {
+          "Cache-Control": "no-store",
+          "X-RateLimit-Limit": "600",
+          "X-Quota-Daily-Remaining": "9997"
+        },
+        "body": {
+          "error": "snapshot_unavailable"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "POST",
+        "path": "/authz-check/v1/is-allowed",
+        "headers": {
+          "Authorization": "Bearer spdl_018bcfe5-6800-7000-8000-000000000001_0000000000000000000000000000000000000000000",
+          "Content-Type": {
+            "pattern": "^application/json(;.*)?$"
+          },
+          "User-Agent": {
+            "pattern": "^speedle-sdk-[a-z]+/[0-9]+\\.[0-9]+\\.[0-9]+.*$"
+          }
+        },
+        "body": {
+          "subject": {
+            "principals": [
+              {
+                "type": "user",
+                "name": "alice"
+              }
+            ]
+          },
+          "serviceName": "books",
+          "resource": "/books/123",
+          "action": "get"
+        }
+      },
+      "response": {
+        "fault": "no_response"
+      }
+    }
+  ],
+  "events": [
+    {
+      "type": "attempt",
+      "attempt": 1,
+      "status": 503,
+      "errorType": "ServiceUnavailableError"
+    },
+    {
+      "type": "retry",
+      "attempt": 2,
+      "delayMs": 100,
+      "errorType": "ServiceUnavailableError"
+    },
+    {
+      "type": "attempt",
+      "attempt": 2,
+      "status": null,
+      "errorType": "DeadlineExceededError"
+    },
+    {
+      "type": "giveUp",
+      "attempts": 2,
+      "reason": "deadline",
+      "errorType": "DeadlineExceededError"
+    }
+  ]
+}

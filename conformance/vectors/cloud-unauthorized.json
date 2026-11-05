@@ -1,0 +1,82 @@
+{
+  "$schema": "../schema.json",
+  "id": "cloud-unauthorized",
+  "description": "Speedle Cloud returns 401 for an unknown token. Not charged, so no quota header. No retry.",
+  "backend": "speedle-cloud",
+  "config": {
+    "auth": {
+      "type": "bearer",
+      "token": "spdl_018bcfe5-6800-7000-8000-000000000001_0000000000000000000000000000000000000000000"
+    },
+    "serviceName": "books"
+  },
+  "call": {
+    "method": "isAllowed",
+    "subject": "alice",
+    "action": "get",
+    "resource": "/books/123"
+  },
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/authz-check/v1/is-allowed",
+        "headers": {
+          "Authorization": "Bearer spdl_018bcfe5-6800-7000-8000-000000000001_0000000000000000000000000000000000000000000",
+          "Content-Type": {
+            "pattern": "^application/json(;.*)?$"
+          },
+          "User-Agent": {
+            "pattern": "^speedle-sdk-[a-z]+/[0-9]+\\.[0-9]+\\.[0-9]+.*$"
+          }
+        },
+        "body": {
+          "subject": {
+            "principals": [
+              {
+                "type": "user",
+                "name": "alice"
+              }
+            ]
+          },
+          "serviceName": "books",
+          "resource": "/books/123",
+          "action": "get"
+        }
+      },
+      "response": {
+        "status": 401,
+        "headers": {
+          "Cache-Control": "no-store",
+          "WWW-Authenticate": "Bearer"
+        },
+        "body": {
+          "error": "unauthorized"
+        }
+      }
+    }
+  ],
+  "expect": {
+    "error": {
+      "type": "UnauthorizedError",
+      "status": 401,
+      "code": "unauthorized",
+      "quotaDailyRemaining": null
+    },
+    "delaysMs": []
+  },
+  "events": [
+    {
+      "type": "attempt",
+      "attempt": 1,
+      "status": 401,
+      "errorType": "UnauthorizedError"
+    },
+    {
+      "type": "giveUp",
+      "attempts": 1,
+      "reason": "non_retryable",
+      "errorType": "UnauthorizedError"
+    }
+  ]
+}

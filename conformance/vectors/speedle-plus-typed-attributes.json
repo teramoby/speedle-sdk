@@ -1,0 +1,183 @@
+{
+  "$schema": "../schema.json",
+  "id": "speedle-plus-typed-attributes",
+  "description": "The same typed attributes as cloud-allowed produce the same request body for Speedle+, without an Authorization header.",
+  "backend": "speedle-plus",
+  "config": {
+    "auth": {
+      "type": "none"
+    },
+    "serviceName": "books"
+  },
+  "call": {
+    "method": "check",
+    "subject": "alice",
+    "action": "get",
+    "resource": "/books/123",
+    "attributes": [
+      {
+        "name": "team",
+        "type": "string",
+        "value": "engineering"
+      },
+      {
+        "name": "tags",
+        "type": "string",
+        "value": [
+          "a",
+          "b"
+        ]
+      },
+      {
+        "name": "clearance",
+        "type": "numeric",
+        "value": 4
+      },
+      {
+        "name": "scores",
+        "type": "numeric",
+        "value": [
+          1.5,
+          2
+        ]
+      },
+      {
+        "name": "vip",
+        "type": "bool",
+        "value": false
+      },
+      {
+        "name": "flags",
+        "type": "bool",
+        "value": [
+          true,
+          false
+        ]
+      },
+      {
+        "name": "issuedAt",
+        "type": "datetime",
+        "value": "2026-11-05T03:00:00Z"
+      },
+      {
+        "name": "windows",
+        "type": "datetime",
+        "value": [
+          "2026-11-05T00:00:00Z",
+          "2026-11-06T00:00:00Z"
+        ]
+      },
+      {
+        "name": "none",
+        "type": "string",
+        "value": []
+      }
+    ]
+  },
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/authz-check/v1/is-allowed",
+        "headers": {
+          "Authorization": {
+            "absent": true
+          },
+          "Content-Type": {
+            "pattern": "^application/json(;.*)?$"
+          }
+        },
+        "body": {
+          "subject": {
+            "principals": [
+              {
+                "type": "user",
+                "name": "alice"
+              }
+            ]
+          },
+          "serviceName": "books",
+          "resource": "/books/123",
+          "action": "get",
+          "attributes": [
+            {
+              "name": "team",
+              "type": "string",
+              "value": "engineering"
+            },
+            {
+              "name": "tags",
+              "type": "string",
+              "value": [
+                "a",
+                "b"
+              ]
+            },
+            {
+              "name": "clearance",
+              "type": "numeric",
+              "value": 4
+            },
+            {
+              "name": "scores",
+              "type": "numeric",
+              "value": [
+                1.5,
+                2
+              ]
+            },
+            {
+              "name": "vip",
+              "type": "bool",
+              "value": false
+            },
+            {
+              "name": "flags",
+              "type": "bool",
+              "value": [
+                true,
+                false
+              ]
+            },
+            {
+              "name": "issuedAt",
+              "type": "datetime",
+              "value": "2026-11-05T03:00:00Z"
+            },
+            {
+              "name": "windows",
+              "type": "datetime",
+              "value": [
+                "2026-11-05T00:00:00Z",
+                "2026-11-06T00:00:00Z"
+              ]
+            },
+            {
+              "name": "none",
+              "type": "string",
+              "value": []
+            }
+          ]
+        }
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=UTF-8"
+        },
+        "body": {
+          "allowed": true,
+          "reason": 0
+        }
+      }
+    }
+  ],
+  "expect": {
+    "decision": {
+      "allowed": true,
+      "reason": 0,
+      "errorMessage": null,
+      "quotaDailyRemaining": null
+    }
+  }
+}

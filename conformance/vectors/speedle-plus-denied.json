@@ -1,0 +1,113 @@
+{
+  "$schema": "../schema.json",
+  "id": "speedle-plus-denied",
+  "description": "Speedle+ denies the request. The inferred form becomes typed items sorted by name; no Authorization header is sent.",
+  "backend": "speedle-plus",
+  "config": {
+    "auth": {
+      "type": "none"
+    },
+    "serviceName": "books"
+  },
+  "call": {
+    "method": "isAllowed",
+    "subject": [
+      {
+        "type": "user",
+        "name": "bob"
+      },
+      {
+        "type": "group",
+        "name": "readers"
+      }
+    ],
+    "action": "download",
+    "resource": "/books/HarryPotter",
+    "inferredAttributes": {
+      "clearance": 4,
+      "region": "eu",
+      "tags": [
+        "a",
+        "b"
+      ],
+      "vip": false
+    }
+  },
+  "exchanges": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/authz-check/v1/is-allowed",
+        "headers": {
+          "Authorization": {
+            "absent": true
+          },
+          "Content-Type": {
+            "pattern": "^application/json(;.*)?$"
+          },
+          "User-Agent": {
+            "pattern": "^speedle-sdk-[a-z]+/[0-9]+\\.[0-9]+\\.[0-9]+.*$"
+          }
+        },
+        "body": {
+          "subject": {
+            "principals": [
+              {
+                "type": "user",
+                "name": "bob"
+              },
+              {
+                "type": "group",
+                "name": "readers"
+              }
+            ]
+          },
+          "serviceName": "books",
+          "resource": "/books/HarryPotter",
+          "action": "download",
+          "attributes": [
+            {
+              "name": "clearance",
+              "type": "numeric",
+              "value": 4
+            },
+            {
+              "name": "region",
+              "type": "string",
+              "value": "eu"
+            },
+            {
+              "name": "tags",
+              "type": "string",
+              "value": [
+                "a",
+                "b"
+              ]
+            },
+            {
+              "name": "vip",
+              "type": "bool",
+              "value": false
+            }
+          ]
+        },
+        "unorderedArrays": [
+          "/attributes"
+        ]
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=UTF-8"
+        },
+        "body": {
+          "allowed": false,
+          "reason": 1
+        }
+      }
+    }
+  ],
+  "expect": {
+    "result": false
+  }
+}

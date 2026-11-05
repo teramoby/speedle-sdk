@@ -1,0 +1,963 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/teramoby/speedle-sdk/conformance/schema.json",
+  "title": "Speedle SDK conformance vector",
+  "description": "One or more is-allowed calls made by an SDK client against the conformance mock server, the scripted HTTP exchanges and faults the mock expects and replays, and the outcomes, retry delays and hook events the SDK must produce.",
+  "type": "object",
+  "required": [
+    "id",
+    "description",
+    "backend",
+    "config",
+    "exchanges"
+  ],
+  "oneOf": [
+    {
+      "required": [
+        "call",
+        "expect"
+      ],
+      "not": {
+        "required": [
+          "steps"
+        ]
+      }
+    },
+    {
+      "required": [
+        "steps"
+      ],
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "call"
+            ]
+          },
+          {
+            "required": [
+              "expect"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "id": {
+      "description": "Unique id; equal to the file name without .json.",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1
+    },
+    "backend": {
+      "enum": [
+        "speedle-cloud",
+        "speedle-plus"
+      ]
+    },
+    "config": {
+      "description": "Client options. The runner supplies the endpoint (the mock base URL) and the mock's test CA.",
+      "type": "object",
+      "required": [
+        "auth",
+        "serviceName"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "auth": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "type"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "const": "none"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "type",
+                "token"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "const": "bearer"
+                },
+                "token": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          ]
+        },
+        "serviceName": {
+          "description": "Required for both backends. Sent as serviceName on every call unless the call overrides it.",
+          "type": "string",
+          "minLength": 1
+        },
+        "retry": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Unset fields take the SDK defaults: 3, 100, 2000, 2000, 5000.",
+          "properties": {
+            "maxAttempts": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "baseDelayMs": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "maxDelayMs": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "attemptTimeoutMs": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "deadlineMs": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "failureMode": {
+          "enum": [
+            "error",
+            "closed"
+          ],
+          "description": "Default error."
+        },
+        "circuitBreaker": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Present means the breaker is on; unset fields take the defaults 5 and 30000.",
+          "properties": {
+            "failureThreshold": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "coolDownMs": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      }
+    },
+    "jitterFraction": {
+      "description": "Value in [0, 1] that the injected random source returns, so each backoff delay is jitterFraction x min(maxDelay, baseDelay x 2^(n-1)). Default 1.",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "call": {
+      "$ref": "#/$defs/call"
+    },
+    "expect": {
+      "$ref": "#/$defs/expect"
+    },
+    "steps": {
+      "description": "Several calls on the same client, in order. Use for breaker vectors.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "call",
+          "expect"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "advanceMs": {
+            "description": "Virtual time to add before this call.",
+            "type": "integer",
+            "minimum": 0
+          },
+          "call": {
+            "$ref": "#/$defs/call"
+          },
+          "expect": {
+            "$ref": "#/$defs/expect"
+          }
+        }
+      }
+    },
+    "exchanges": {
+      "description": "Requests the SDK must send across all calls, in order, and what the mock answers to each, including faults. An extra request, a missing request or a mismatch fails the vector. An empty list means the SDK must not send anything.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/exchange"
+      }
+    },
+    "events": {
+      "description": "Hook events the SDK must emit across all calls, in order and complete. Fields listed must match; unlisted fields are not checked. Absent means not checked.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/event"
+      }
+    }
+  },
+  "$defs": {
+    "headerMatcher": {
+      "oneOf": [
+        {
+          "description": "Exact value.",
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "required": [
+            "absent"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "absent": {
+              "const": true
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "pattern"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "pattern": {
+              "description": "ECMAScript regular expression matched against the whole value.",
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "exchange": {
+      "type": "object",
+      "required": [
+        "request",
+        "response"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "request": {
+          "type": "object",
+          "required": [
+            "method",
+            "path",
+            "body"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "method": {
+              "const": "POST"
+            },
+            "path": {
+              "const": "/authz-check/v1/is-allowed"
+            },
+            "headers": {
+              "description": "Header names are case-insensitive. Headers not listed are not checked.",
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/headerMatcher"
+              }
+            },
+            "body": {
+              "description": "Compared as parsed JSON: key order is ignored, array order is significant unless listed in unorderedArrays."
+            },
+            "unorderedArrays": {
+              "description": "JSON Pointers (RFC 6901) into body whose arrays are compared as multisets.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "response": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "status": {
+                  "type": "integer",
+                  "minimum": 100,
+                  "maximum": 599
+                },
+                "headers": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                },
+                "body": {
+                  "description": "Sent as JSON with Content-Type application/json."
+                },
+                "rawBody": {
+                  "description": "Sent as is, for malformed-response vectors.",
+                  "type": "string"
+                }
+              },
+              "not": {
+                "required": [
+                  "body",
+                  "rawBody"
+                ]
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "fault"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "fault": {
+                  "description": "connection_reset closes the connection after reading the request (a network error); no_response keeps it open without answering until the client gives up (real time, so keep attemptTimeoutMs or deadlineMs small).",
+                  "enum": [
+                    "connection_reset",
+                    "no_response"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "call": {
+      "type": "object",
+      "required": [
+        "method",
+        "subject",
+        "action",
+        "resource"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "description": "isAllowed returns a boolean; check returns a Decision. Language runners map these to their own names (is_allowed, IsAllowed, Check).",
+          "enum": [
+            "isAllowed",
+            "check"
+          ]
+        },
+        "subject": {
+          "oneOf": [
+            {
+              "description": "One user principal.",
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": [
+                  "name"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "idd": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "action": {
+          "type": "string"
+        },
+        "resource": {
+          "type": "string"
+        },
+        "serviceName": {
+          "description": "Per-call override of config.serviceName.",
+          "type": "string",
+          "minLength": 1
+        },
+        "attributes": {
+          "description": "Typed form: the runner builds each item with the SDK's factory for its type and form (single value or array), in this order.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/attribute"
+          }
+        },
+        "inferredAttributes": {
+          "description": "Inferred form: name to JSON value, passed to the SDK's inferred-map overload as the language's native map. Any JSON value is allowed so that rejection vectors can pass null, objects or mixed arrays.",
+          "type": "object"
+        }
+      },
+      "not": {
+        "required": [
+          "attributes",
+          "inferredAttributes"
+        ]
+      }
+    },
+    "attribute": {
+      "description": "One Speedle+ JsonAttribute {name, type, value}: a single value or an array of values of the type.",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "name",
+            "type",
+            "value"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "type": {
+              "const": "string"
+            },
+            "value": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "name",
+            "type",
+            "value"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "type": {
+              "const": "numeric"
+            },
+            "value": {
+              "oneOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "name",
+            "type",
+            "value"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "type": {
+              "const": "bool"
+            },
+            "value": {
+              "oneOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "boolean"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "name",
+            "type",
+            "value"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "type": {
+              "const": "datetime"
+            },
+            "value": {
+              "oneOf": [
+                {
+                  "description": "RFC 3339 in UTC with whole seconds. The runner parses it into the language's time type; the SDK must send it back in this exact form.",
+                  "type": "string",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "description": "RFC 3339 in UTC with whole seconds. The runner parses it into the language's time type; the SDK must send it back in this exact form.",
+                    "type": "string",
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "outcome": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "result"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "result": {
+              "type": "boolean"
+            },
+            "delaysMs": {
+              "description": "Exact durations, in order, of the retry sleeps this call requested from the virtual clock. Absent means not checked; [] means no sleep.",
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "decision"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "decision": {
+              "type": "object",
+              "required": [
+                "allowed",
+                "reason"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "allowed": {
+                  "type": "boolean"
+                },
+                "reason": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "errorMessage": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "quotaDailyRemaining": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0
+                }
+              }
+            },
+            "delaysMs": {
+              "description": "Exact durations, in order, of the retry sleeps this call requested from the virtual clock. Absent means not checked; [] means no sleep.",
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "error"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "description": "The raised error. Fields that are present must match; absent fields are not checked, except that null means the value must be empty.",
+              "type": "object",
+              "required": [
+                "type"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "enum": [
+                    "ConfigurationError",
+                    "InvalidRequestError",
+                    "UnauthorizedError",
+                    "ForbiddenError",
+                    "RequestTooLargeError",
+                    "TooManyRequestsError",
+                    "RateLimitedError",
+                    "QuotaExceededError",
+                    "ServiceUnavailableError",
+                    "ServerError",
+                    "HttpError",
+                    "UnexpectedResponseError",
+                    "NetworkError",
+                    "TimeoutError",
+                    "DeadlineExceededError",
+                    "CircuitOpenError"
+                  ]
+                },
+                "status": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "code": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "retryAfterSeconds": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0
+                },
+                "quotaDailyRemaining": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0
+                }
+              }
+            },
+            "delaysMs": {
+              "description": "Exact durations, in order, of the retry sleeps this call requested from the virtual clock. Absent means not checked; [] means no sleep.",
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "expect": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "result"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "result": {
+              "type": "boolean"
+            },
+            "delaysMs": {
+              "description": "Exact durations, in order, of the retry sleeps this call requested from the virtual clock. Absent means not checked; [] means no sleep.",
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "decision"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "decision": {
+              "type": "object",
+              "required": [
+                "allowed",
+                "reason"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "allowed": {
+                  "type": "boolean"
+                },
+                "reason": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "errorMessage": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "quotaDailyRemaining": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0
+                }
+              }
+            },
+            "delaysMs": {
+              "description": "Exact durations, in order, of the retry sleeps this call requested from the virtual clock. Absent means not checked; [] means no sleep.",
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "error"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "error": {
+              "description": "The raised error. Fields that are present must match; absent fields are not checked, except that null means the value must be empty.",
+              "type": "object",
+              "required": [
+                "type"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "enum": [
+                    "ConfigurationError",
+                    "InvalidRequestError",
+                    "UnauthorizedError",
+                    "ForbiddenError",
+                    "RequestTooLargeError",
+                    "TooManyRequestsError",
+                    "RateLimitedError",
+                    "QuotaExceededError",
+                    "ServiceUnavailableError",
+                    "ServerError",
+                    "HttpError",
+                    "UnexpectedResponseError",
+                    "NetworkError",
+                    "TimeoutError",
+                    "DeadlineExceededError",
+                    "CircuitOpenError"
+                  ]
+                },
+                "status": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "code": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "retryAfterSeconds": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0
+                },
+                "quotaDailyRemaining": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0
+                }
+              }
+            },
+            "delaysMs": {
+              "description": "Exact durations, in order, of the retry sleeps this call requested from the virtual clock. Absent means not checked; [] means no sleep.",
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "event": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "attempt"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "attempt"
+            },
+            "attempt": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "status": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "errorType": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "attempt"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "retry"
+            },
+            "attempt": {
+              "type": "integer",
+              "minimum": 2
+            },
+            "delayMs": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "errorType": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "reason"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "giveUp"
+            },
+            "attempts": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "reason": {
+              "enum": [
+                "non_retryable",
+                "attempts_exhausted",
+                "deadline",
+                "retry_after_exceeds_deadline",
+                "circuit_open"
+              ]
+            },
+            "errorType": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "from",
+            "to"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "const": "breaker"
+            },
+            "from": {
+              "enum": [
+                "closed",
+                "open",
+                "half_open"
+              ]
+            },
+            "to": {
+              "enum": [
+                "closed",
+                "open",
+                "half_open"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

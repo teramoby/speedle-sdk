@@ -1,0 +1,28 @@
+{
+  "$schema": "../schema.json",
+  "id": "attribute-null-rejected",
+  "description": "A null attribute value has no Speedle+ type. The inferred form rejects it with InvalidRequestError before any request is sent, on either backend.",
+  "backend": "speedle-plus",
+  "config": {
+    "auth": {
+      "type": "none"
+    },
+    "serviceName": "books"
+  },
+  "call": {
+    "method": "isAllowed",
+    "subject": "alice",
+    "action": "get",
+    "resource": "/books/123",
+    "inferredAttributes": {
+      "team": null
+    }
+  },
+  "exchanges": [],
+  "expect": {
+    "error": {
+      "type": "InvalidRequestError",
+      "status": null
+    }
+  }
+}
