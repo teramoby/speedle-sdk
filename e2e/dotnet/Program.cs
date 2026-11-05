@@ -37,8 +37,21 @@ internal static class Program
             throw Usage("usage: E2e VECTORS_JSON");
         }
 
-        using JsonDocument file = JsonDocument.Parse(File.ReadAllText(args[0]));
-        JsonElement[] vectors = file.RootElement.GetProperty("vectors").EnumerateArray().ToArray();
+        JsonElement[] vectors;
+        try
+        {
+            using JsonDocument file = JsonDocument.Parse(File.ReadAllText(args[0]));
+            vectors = file.RootElement.GetProperty("vectors").EnumerateArray().Select(v => v.Clone()).ToArray();
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException
+                                      or KeyNotFoundException or InvalidOperationException)
+        {
+            throw Usage($"cannot read {args[0]}: {e.GetType().Name}: {e.Message}");
+        }
+        if (vectors.Length == 0)
+        {
+            throw Usage(args[0] + " has no vectors");
+        }
         int failed = 0;
         SpeedleClient built;
         try
@@ -61,19 +74,15 @@ internal static class Program
             foreach (JsonElement vector in vectors)
             {
                 string name = vector.GetProperty("name").GetString()!;
-                string want = vector.TryGetProperty("expect", out JsonElement expect)
-                    ? Format(
-                        expect.GetProperty("allowed").GetBoolean(),
-                        expect.GetProperty("reason").GetInt32(),
-                        expect.TryGetProperty("errorMessage", out JsonElement m) ? m.GetString() : null)
-                    : "no expectation";
+                string want = Expected(vector);
                 string got;
                 try
                 {
                     got = await RunAsync(client, vector.GetProperty("request")).ConfigureAwait(false);
                 }
-                catch (SpeedleException e)
+                catch (Exception e)
                 {
+                    // SDK errors and malformed vectors alike fail this vector only.
                     got = e.GetType().Name + ": " + e.Message;
                 }
                 if (want == got)
@@ -88,7 +97,7 @@ internal static class Program
             }
         }
         Console.WriteLine($"dotnet: {vectors.Length - failed} passed, {failed} failed against {endpoint}");
-        return failed == 0 && vectors.Length > 0 ? 0 : 1;
+        return failed == 0 ? 0 : 1;
     }
 
     private static async Task<string> RunAsync(SpeedleClient client, JsonElement request)
@@ -140,6 +149,33 @@ internal static class Program
             default:
                 throw new InvalidOperationException("unknown attribute type " + a.GetProperty("type"));
         }
+    }
+
+    private static string Expected(JsonElement vector)
+    {
+        if (!vector.TryGetProperty("expect", out JsonElement expect))
+        {
+            return "no expectation";
+        }
+        if (expect.ValueKind != JsonValueKind.Object
+            || !expect.TryGetProperty("allowed", out JsonElement allowed)
+            || allowed.ValueKind is not (JsonValueKind.True or JsonValueKind.False)
+            || !expect.TryGetProperty("reason", out JsonElement reason)
+            || reason.ValueKind != JsonValueKind.Number
+            || !reason.TryGetInt32(out int code))
+        {
+            return "invalid expectation " + expect.GetRawText();
+        }
+        string? message = null;
+        if (expect.TryGetProperty("errorMessage", out JsonElement m))
+        {
+            if (m.ValueKind != JsonValueKind.String)
+            {
+                return "invalid expectation " + expect.GetRawText();
+            }
+            message = m.GetString();
+        }
+        return Format(allowed.GetBoolean(), code, message);
     }
 
     private static string Format(bool allowed, int reason, string? errorMessage)

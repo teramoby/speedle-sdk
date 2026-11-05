@@ -37,8 +37,8 @@ type vector struct {
 		} `json:"attributes"`
 	} `json:"request"`
 	Expect *struct {
-		Allowed      bool    `json:"allowed"`
-		Reason       int     `json:"reason"`
+		Allowed      *bool   `json:"allowed"`
+		Reason       *int    `json:"reason"`
 		ErrorMessage *string `json:"errorMessage"`
 	} `json:"expect"`
 }
@@ -83,6 +83,9 @@ func main() {
 	if err := json.Unmarshal(data, &file); err != nil {
 		usage(err.Error())
 	}
+	if len(file.Vectors) == 0 {
+		usage(os.Args[1] + " has no vectors")
+	}
 
 	auth := speedle.NoAuth()
 	if token != "" {
@@ -103,8 +106,11 @@ func main() {
 	failed := 0
 	for _, v := range file.Vectors {
 		want := "no expectation"
-		if v.Expect != nil {
-			want = format(v.Expect.Allowed, v.Expect.Reason, v.Expect.ErrorMessage)
+		switch e := v.Expect; {
+		case e != nil && (e.Allowed == nil || e.Reason == nil):
+			want = "invalid expectation"
+		case e != nil:
+			want = format(*e.Allowed, *e.Reason, e.ErrorMessage)
 		}
 		got, err := run(client, &v)
 		if err != nil {
@@ -118,7 +124,7 @@ func main() {
 		}
 	}
 	fmt.Printf("go: %d passed, %d failed against %s\n", len(file.Vectors)-failed, failed, endpoint)
-	if failed > 0 || len(file.Vectors) == 0 {
+	if failed > 0 {
 		os.Exit(1)
 	}
 }

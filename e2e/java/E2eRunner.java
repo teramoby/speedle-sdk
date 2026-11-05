@@ -29,7 +29,7 @@ public final class E2eRunner {
 
   private E2eRunner() {}
 
-  public static void main(String[] args) throws IOException {
+  public static void main(String[] args) {
     String endpoint = env("SPEEDLE_E2E_ENDPOINT", true);
     String service = env("SPEEDLE_E2E_SERVICE", true);
     String backendName = env("SPEEDLE_E2E_BACKEND", false);
@@ -49,8 +49,16 @@ public final class E2eRunner {
       throw usage("usage: E2eRunner VECTORS_JSON");
     }
 
-    Map<?, ?> file = (Map<?, ?>) new JsonReader(Files.readString(Path.of(args[0]))).read();
-    List<?> vectors = (List<?>) file.get("vectors");
+    List<?> vectors;
+    try {
+      Map<?, ?> file = (Map<?, ?>) new JsonReader(Files.readString(Path.of(args[0]))).read();
+      vectors = (List<?>) file.get("vectors");
+    } catch (IOException | RuntimeException e) {
+      throw usage("cannot read " + args[0] + ": " + e);
+    }
+    if (vectors == null || vectors.isEmpty()) {
+      throw usage(args[0] + " has no vectors");
+    }
     int failed = 0;
     SpeedleClient built;
     try {
@@ -73,7 +81,8 @@ public final class E2eRunner {
         String got;
         try {
           got = run(client, (Map<?, ?>) vector.get("request"));
-        } catch (SpeedleException e) {
+        } catch (RuntimeException e) {
+          // SDK errors and malformed vectors alike fail this vector only.
           got = e.getClass().getSimpleName() + ": " + e.getMessage();
         }
         if (want.equals(got)) {
@@ -86,7 +95,7 @@ public final class E2eRunner {
     }
     System.out.printf(
         "java: %d passed, %d failed against %s%n", vectors.size() - failed, failed, endpoint);
-    System.exit(failed == 0 && !vectors.isEmpty() ? 0 : 1);
+    System.exit(failed == 0 ? 0 : 1);
   }
 
   private static String run(SpeedleClient client, Map<?, ?> request) {
@@ -145,10 +154,12 @@ public final class E2eRunner {
     if (expect == null) {
       return "no expectation";
     }
-    return format(
-        (Boolean) expect.get("allowed"),
-        ((Double) expect.get("reason")).intValue(),
-        (String) expect.get("errorMessage"));
+    if (!(expect.get("allowed") instanceof Boolean allowed)
+        || !(expect.get("reason") instanceof Double reason)
+        || !(expect.get("errorMessage") == null || expect.get("errorMessage") instanceof String)) {
+      return "invalid expectation " + expect;
+    }
+    return format(allowed, reason.intValue(), (String) expect.get("errorMessage"));
   }
 
   private static String format(boolean allowed, int reason, String errorMessage) {

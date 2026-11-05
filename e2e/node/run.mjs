@@ -40,12 +40,31 @@ const factories = {
     Attr.datetime(name, Array.isArray(value) ? value.map((s) => new Date(s)) : new Date(value)),
 };
 
+function expected(expect) {
+  if (expect === undefined) return "no expectation";
+  const { allowed, reason, errorMessage } = expect ?? {};
+  if (
+    typeof allowed !== "boolean" ||
+    !Number.isInteger(reason) ||
+    !(errorMessage === undefined || typeof errorMessage === "string")
+  ) {
+    return `invalid expectation ${JSON.stringify(expect)}`;
+  }
+  return format(allowed, reason, errorMessage);
+}
+
 function format(allowed, reason, errorMessage) {
   const s = `{allowed: ${allowed}, reason: ${reason}`;
   return errorMessage === undefined ? `${s}}` : `${s}, errorMessage: ${JSON.stringify(errorMessage)}}`;
 }
 
-const { vectors } = JSON.parse(readFileSync(process.argv[2], "utf8"));
+let vectors;
+try {
+  ({ vectors } = JSON.parse(readFileSync(process.argv[2], "utf8")));
+} catch (e) {
+  usage(`cannot read ${process.argv[2]}: ${e}`);
+}
+if (!Array.isArray(vectors) || vectors.length === 0) usage(`${process.argv[2]} has no vectors`);
 let client;
 try {
   client = new SpeedleClient({
@@ -61,12 +80,10 @@ try {
 let failed = 0;
 try {
   for (const vector of vectors) {
-    const want = vector.expect
-      ? format(vector.expect.allowed, vector.expect.reason, vector.expect.errorMessage)
-      : "no expectation";
-    const { subject, action, resource, attributes = [] } = vector.request;
+    const want = expected(vector.expect);
     let got;
     try {
+      const { subject, action, resource, attributes = [] } = vector.request;
       const d = await client.check(
         subject.principals.map(({ type, name, idd }) => ({ type, name, idd })),
         action,
@@ -75,7 +92,8 @@ try {
       );
       got = format(d.allowed, d.reason, d.errorMessage);
     } catch (e) {
-      got = `${e.name}: ${e.message}`;
+      // SDK errors and malformed vectors alike fail this vector only.
+      got = `${e?.name}: ${e?.message}`;
     }
     if (want === got) {
       console.log(`PASS ${vector.name}`);
@@ -88,4 +106,4 @@ try {
   await client.close();
 }
 console.log(`node: ${vectors.length - failed} passed, ${failed} failed against ${endpoint}`);
-process.exit(failed === 0 && vectors.length > 0 ? 0 : 1);
+process.exit(failed === 0 ? 0 : 1);

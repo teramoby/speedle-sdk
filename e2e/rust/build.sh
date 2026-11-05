@@ -8,4 +8,7 @@ set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-cargo build --quiet --locked --release --manifest-path "$here/Cargo.toml"
+# Not --locked: cargo keeps the versions in Cargo.lock and changes only what
+# a change in ../../rust (its version or dependencies) requires, so an SDK
+# release does not break this build.
+cargo build --quiet --release --manifest-path "$here/Cargo.toml"

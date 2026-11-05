@@ -35,8 +35,10 @@ def usage(message: str) -> NoReturn:
 
 
 def to_datetime(value: str) -> datetime.datetime:
-    # Python 3.10 fromisoformat does not accept "Z".
-    return datetime.datetime.fromisoformat(value.replace("Z", "+00:00"))
+    # Not fromisoformat: before Python 3.11 it rejects "Z" and fractions that
+    # are not 3 or 6 digits. %f takes 1 to 6 digits and %z takes "Z".
+    layout = "%Y-%m-%dT%H:%M:%S.%f%z" if "." in value else "%Y-%m-%dT%H:%M:%S%z"
+    return datetime.datetime.strptime(value, layout)
 
 
 def attribute(item: dict[str, Any]) -> speedle.Attribute:
@@ -52,6 +54,15 @@ def attribute(item: dict[str, Any]) -> speedle.Attribute:
             return speedle.Attribute.datetime(name, [to_datetime(v) for v in value])
         return speedle.Attribute.datetime(name, to_datetime(value))
     raise ValueError(f"unknown attribute type {kind}")
+
+
+def expected(expect: Any) -> str:
+    if expect is None:
+        return "no expectation"
+    allowed, reason, message = expect.get("allowed"), expect.get("reason"), expect.get("errorMessage")
+    if not isinstance(allowed, bool) or type(reason) is not int or not (message is None or isinstance(message, str)):
+        return f"invalid expectation {expect}"
+    return fmt(allowed, reason, message)
 
 
 def fmt(allowed: bool, reason: int, error_message: str | None) -> str:
@@ -73,8 +84,13 @@ def main() -> None:
     if len(sys.argv) != 2:
         usage("usage: run.py VECTORS_JSON")
 
-    with open(sys.argv[1], encoding="utf-8") as f:
-        vectors = json.load(f)["vectors"]
+    try:
+        with open(sys.argv[1], encoding="utf-8") as f:
+            vectors = json.load(f)["vectors"]
+    except (OSError, ValueError, KeyError, TypeError) as e:
+        usage(f"cannot read {sys.argv[1]}: {e!r}")
+    if not isinstance(vectors, list) or not vectors:
+        usage(f"{sys.argv[1]} has no vectors")
     failed = 0
     try:
         client = speedle.Client(
@@ -88,8 +104,7 @@ def main() -> None:
         usage(f"{type(e).__name__}: {e}")
     with client:
         for vector in vectors:
-            expect = vector.get("expect")
-            want = fmt(expect["allowed"], expect["reason"], expect.get("errorMessage")) if expect else "no expectation"
+            want = expected(vector.get("expect"))
             request = vector["request"]
             try:
                 d = client.check(
@@ -102,7 +117,7 @@ def main() -> None:
                     [attribute(a) for a in request.get("attributes", [])],
                 )
                 got = fmt(d.allowed, int(d.reason), d.error_message)
-            except speedle.SpeedleError as e:
+            except Exception as e:  # noqa: BLE001 - SDK errors and malformed vectors fail this vector only
                 got = f"{type(e).__name__}: {e}"
             if want == got:
                 print(f"PASS {vector['name']}")
@@ -110,7 +125,7 @@ def main() -> None:
                 failed += 1
                 print(f"FAIL {vector['name']}: want {want}, got {got}")
     print(f"python: {len(vectors) - failed} passed, {failed} failed against {endpoint}")
-    sys.exit(0 if failed == 0 and vectors else 1)
+    sys.exit(0 if failed == 0 else 1)
 
 
 if __name__ == "__main__":

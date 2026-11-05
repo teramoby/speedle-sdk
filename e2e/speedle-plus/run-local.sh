@@ -40,7 +40,7 @@ service=sdk-e2e
 work="$(mktemp -d "${TMPDIR:-/tmp}/speedle-e2e.XXXXXX")"
 pids=()
 cleanup() {
-  for pid in "${pids[@]}"; do kill "$pid" 2>/dev/null || true; done
+  for pid in ${pids[@]+"${pids[@]}"}; do kill "$pid" 2>/dev/null || true; done
   wait 2>/dev/null || true
   rm -rf "$work"
 }
@@ -54,7 +54,7 @@ wait_up() {
       cat "$3" >&2
       exit 1
     fi
-    code="$(curl -s -o /dev/null -w '%{http_code}' "$1" || true)"
+    code="$(curl -s -m 2 -o /dev/null -w '%{http_code}' "$1" || true)"
     [ "$code" != 000 ] && return 0
     sleep 0.1
   done
@@ -65,13 +65,17 @@ wait_up() {
 
 # Refuse to start if something already listens, so we never test another server.
 for port in "$pms_port" "$ads_port"; do
-  if [ "$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$port/" || true)" != 000 ]; then
+  if [ "$(curl -s -m 2 -o /dev/null -w '%{http_code}' "http://127.0.0.1:$port/" || true)" != 000 ]; then
     echo "port $port is in use; set E2E_PMS_PORT or E2E_ADS_PORT" >&2
     exit 1
   fi
 done
 
 commit="$(git -C "$SPEEDLE_PLUS_DIR" rev-parse HEAD)"
+if [ "$record" = 1 ] && [ -n "$(git -C "$SPEEDLE_PLUS_DIR" status --porcelain)" ]; then
+  echo "refusing to record: $SPEEDLE_PLUS_DIR has uncommitted changes, so $commit would not describe the build" >&2
+  exit 1
+fi
 echo "== building Speedle+ $commit from $SPEEDLE_PLUS_DIR"
 go build -C "$SPEEDLE_PLUS_DIR" -mod=readonly -trimpath -o "$work/bin/" \
   ./cmd/speedle-pms ./cmd/speedle-ads ./cmd/spctl
@@ -112,7 +116,8 @@ fi
 failed=()
 for lang in ${langs[@]+"${langs[@]}"}; do
   echo "== $lang SDK against Speedle+ ADS"
-  if ! "$e2e/$lang/build.sh" || ! SPEEDLE_E2E_BACKEND=speedle-plus \
+  # The local ADS takes no token; never pass on one from the caller's shell.
+  if ! "$e2e/$lang/build.sh" || ! env -u SPEEDLE_E2E_TOKEN SPEEDLE_E2E_BACKEND=speedle-plus \
     SPEEDLE_E2E_ENDPOINT="http://127.0.0.1:$ads_port" \
     SPEEDLE_E2E_SERVICE="$service" \
     SPEEDLE_E2E_VECTORS="$e2e/vectors.json" \

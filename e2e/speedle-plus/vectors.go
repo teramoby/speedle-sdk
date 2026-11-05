@@ -36,6 +36,27 @@ type decision struct {
 	ErrorMessage string `json:"errorMessage,omitempty"`
 }
 
+// UnmarshalJSON requires allowed and reason, so that an expectation with a
+// missing field cannot match a deny by its zero value.
+func (d *decision) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		Allowed      *bool   `json:"allowed"`
+		Reason       *int    `json:"reason"`
+		ErrorMessage *string `json:"errorMessage"`
+	}
+	if err := decodeStrict(data, &raw); err != nil {
+		return err
+	}
+	if raw.Allowed == nil || raw.Reason == nil {
+		return errors.New("expect needs allowed and reason")
+	}
+	*d = decision{Allowed: *raw.Allowed, Reason: *raw.Reason}
+	if raw.ErrorMessage != nil {
+		d.ErrorMessage = *raw.ErrorMessage
+	}
+	return nil
+}
+
 // vectorRequest is a Speedle+ JsonContext without serviceName, which the
 // runners take from SPEEDLE_E2E_SERVICE.
 type vectorRequest struct {

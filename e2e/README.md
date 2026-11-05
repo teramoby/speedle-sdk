@@ -20,6 +20,7 @@ Tracking issue: [teramoby/cloud.speedle.io#212](https://github.com/teramoby/clou
 | `vectors.json` | The requests and the decision Speedle+ returned for each. |
 | `speedle-plus/` | The local proof: `run-local.sh` and a small Go tool (standard library only) that loads the policies with `spctl`, checks the parsed forms and checks or records the vectors with raw HTTP. |
 | `java/`, `node/`, `python/`, `go/`, `dotnet/`, `rust/` | One thin runner per SDK, each with `build.sh` and `run.sh`. Each builds the SDK from its directory in this repository. |
+| `../.github/workflows/e2e-local.yml` | The local proof for every SDK, on pull requests and pushes that touch `e2e/` or an SDK. No secrets. |
 | `../.github/workflows/e2e-gamma.yml` | The gamma workflow. |
 
 ## Policy set
@@ -104,14 +105,17 @@ Every `e2e/<language>/` directory has two scripts:
 
 The runners use the SDK defaults (3 attempts, 5 s deadline) and add
 `speedle-sdk-e2e` to the `User-Agent`. They print `PASS <name>` or
-`FAIL <name>: want ..., got ...` for each vector, then a summary line. The exit
-status is 0 when every vector passes, 1 on any mismatch or error, and 2 for a
-configuration error. They never print the token.
+`FAIL <name>: want ..., got ...` for each vector, then a summary line. An
+error while running one vector, from the SDK or from a malformed vector, fails
+that vector and the run goes on. An expectation without `allowed` or `reason`
+never passes. The exit status is 0 when every vector passes, 1 when any fails,
+and 2 for a configuration error or a vector file that is unreadable or has no
+vectors. They never print the token.
 
 ## Local proof
 
-Needs Go, curl, and the toolchains of the SDKs you name. Speedle+ is built
-from the checkout you point at; nothing is written into it.
+Needs Go, git, curl, and the toolchains of the SDKs you name. Speedle+ is
+built from the git checkout you point at; nothing is written into it.
 
 ```bash
 SPEEDLE_PLUS_DIR=/path/to/speedle-plus e2e/speedle-plus/run-local.sh all
@@ -122,12 +126,19 @@ The script builds `speedle-pms`, `speedle-ads` and `spctl`, starts PMS on
 policy from the SPDL in `policies.json` with `spctl`, and checks that the
 `parsed` form in the file is what PMS stored. It then starts a REST ADS on
 `127.0.0.1:16734` with the same store, checks every vector with raw HTTP, and
-runs the named SDK runners against it with `SPEEDLE_E2E_BACKEND=speedle-plus`.
+runs the named SDK runners against it with `SPEEDLE_E2E_BACKEND=speedle-plus`
+and no token (a `SPEEDLE_E2E_TOKEN` in your shell is not passed on).
 Name one or more of `java`, `node`, `python`, `go`, `dotnet` and `rust`, or
 `all`, or nothing to check only Speedle+.
 
+The `e2e-local` workflow runs the same script for each SDK on GitHub-hosted
+runners, with Speedle+ checked out at the `speedlePlus` commit in
+`vectors.json`.
+
 After changing the policies or the vectors, record the parsed forms and the
-expectations again, then review the diff:
+expectations again, then review the diff. Recording refuses a Speedle+
+checkout with uncommitted changes, because the recorded commit would not
+describe the build:
 
 ```bash
 SPEEDLE_PLUS_DIR=/path/to/speedle-plus e2e/speedle-plus/run-local.sh --record

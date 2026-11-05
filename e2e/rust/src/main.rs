@@ -44,6 +44,9 @@ fn main() {
     let text = std::fs::read_to_string(&args[1]).unwrap_or_else(|e| usage(&e.to_string()));
     let file: Value = serde_json::from_str(&text).unwrap_or_else(|e| usage(&e.to_string()));
     let vectors = file["vectors"].as_array().cloned().unwrap_or_default();
+    if vectors.is_empty() {
+        usage(&format!("{} has no vectors", args[1]));
+    }
 
     let auth = match token {
         Some(t) => Auth::bearer(t),
@@ -58,15 +61,7 @@ fn main() {
     for vector in &vectors {
         let name = vector["name"].as_str().unwrap_or_default();
         let expect = &vector["expect"];
-        let want = if expect.is_object() {
-            format_decision(
-                expect["allowed"].as_bool().unwrap_or_default(),
-                expect["reason"].as_i64().unwrap_or(-1),
-                expect["errorMessage"].as_str(),
-            )
-        } else {
-            "no expectation".to_string()
-        };
+        let want = expected(expect);
         let got = run(&client, &vector["request"]);
         if want == got {
             println!("PASS {name}");
@@ -81,11 +76,7 @@ fn main() {
         failed,
         endpoint
     );
-    exit(if failed == 0 && !vectors.is_empty() {
-        0
-    } else {
-        1
-    });
+    exit(if failed == 0 { 0 } else { 1 });
 }
 
 fn run(client: &Client, request: &Value) -> String {
@@ -204,6 +195,19 @@ fn parse_rfc3339_utc(s: &str) -> Option<SystemTime> {
     let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
     let days = u64::try_from(era * 146_097 + doe - 719_468).ok()?;
     Some(UNIX_EPOCH + Duration::new(days * 86_400 + hh * 3_600 + mm * 60 + ss, nanos))
+}
+
+fn expected(expect: &Value) -> String {
+    if expect.is_null() {
+        return "no expectation".to_string();
+    }
+    let message = &expect["errorMessage"];
+    match (expect["allowed"].as_bool(), expect["reason"].as_i64()) {
+        (Some(allowed), Some(reason)) if message.is_null() || message.is_string() => {
+            format_decision(allowed, reason, message.as_str())
+        }
+        _ => format!("invalid expectation {expect}"),
+    }
 }
 
 fn format_decision(allowed: bool, reason: i64, error_message: Option<&str>) -> String {
