@@ -1,0 +1,55 @@
+name: conformance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "conformance/**"
+      - ".github/workflows/conformance.yml"
+  pull_request:
+    paths:
+      - "conformance/**"
+      - ".github/workflows/conformance.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: conformance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mock:
+    name: mock (go ${{ matrix.go }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go: ["1.26.x", "1.27.x"]
+    defaults:
+      run:
+        working-directory: conformance/mock
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ matrix.go }}
+          cache: false
+      - name: gofmt
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then echo "gofmt needed: $unformatted"; exit 1; fi
+      - name: go vet
+        run: go vet ./...
+      - name: Tests (replays every vector)
+        run: go test -race -count=1 ./...
+      - name: Start-up smoke test
+        run: |
+          go build -o "$RUNNER_TEMP/mock" .
+          "$RUNNER_TEMP/mock" -exit-on-stdin-close < <(sleep 30) > "$RUNNER_TEMP/mock.out" &
+          for _ in $(seq 50); do [ -s "$RUNNER_TEMP/mock.out" ] && break; sleep 0.1; done
+          control="$(head -n1 "$RUNNER_TEMP/mock.out" | sed -E 's/.*"control":"([^"]+)".*/\1/')"
+          curl -fsS "$control/healthz"
+          curl -fsS -X POST "$control/shutdown"
