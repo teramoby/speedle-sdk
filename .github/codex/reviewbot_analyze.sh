@@ -14,7 +14,10 @@ fi
 # The checkout and this script are from the trusted workflow revision. Fetch the
 # reviewed commits as objects only; never check out or execute the PR head.
 auth=$(printf 'x-access-token:%s' "${GH_TOKEN}" | base64 -w0)
-git -c "http.extraheader=AUTHORIZATION: basic ${auth}" fetch --no-tags origin "${BASE_SHA}" "${HEAD_SHA}"
+GIT_CONFIG_COUNT=1 \
+GIT_CONFIG_KEY_0=http.extraheader \
+GIT_CONFIG_VALUE_0="AUTHORIZATION: basic ${auth}" \
+  git fetch --no-tags origin "${BASE_SHA}" "${HEAD_SHA}"
 merge_base=$(git merge-base "${BASE_SHA}" "${HEAD_SHA}")
 
 if [[ "${mode}" == review ]]; then
