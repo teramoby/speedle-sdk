@@ -23,11 +23,13 @@ ReviewBot follows the split from
    repository, and that the PR is open, not a draft, from this repository and
    still at that head SHA. Only then do `review` and `publish` run on the
    self-hosted runner.
-3. **Commands.** `reviewbot-command.yml` runs on `issue_comment` and, for
-   code-line comments, on `workflow_run` from the pointer-only
-   `reviewbot-inline.yml` (`pull_request_review_comment`). Both trusted paths
-   run from `main`. Comments that do not mention `@reviewbot` or are not from a
-   user skip the job.
+3. **Commands.** `reviewbot-comment.yml` ("ReviewBot Comment Command") runs on
+   `issue_comment` on `ubuntu-24.04` with `permissions: {}`, no checkout and no
+   secrets. Like `reviewbot-inline.yml` for code-line comments, it only records
+   the comment ID. `reviewbot-command.yml` runs on `workflow_run` from `main`
+   for both routers, re-reads the comment and authorizes it before analysis.
+   Comments that do not mention `@reviewbot` or are not from a user skip the
+   router job.
 
 ## What it does
 
@@ -91,25 +93,27 @@ self-hosted runner:
 - `.github/workflows/reviewbot-review.yml`
 - `.github/workflows/reviewbot-command.yml`
 
-`reviewbot.yml` and `reviewbot-inline.yml` run PR-triggered events on
-`ubuntu-24.04` and must not be in the group.
+`reviewbot.yml`, `reviewbot-comment.yml` and `reviewbot-inline.yml` route
+untrusted events on `ubuntu-24.04` and must not be in the group.
 
 ## Security model
 
-- **No PR code with secrets.** The PR-triggered workflows (`reviewbot.yml`,
-  `reviewbot-inline.yml`) have no token scopes, checkout or secrets. The trusted
-  workflows check out the trusted workflow commit, fetch the base and head
-  commits by SHA as objects only, and compute a merge-base `git diff` with
-  `--no-ext-diff --no-textconv`. They run only helper scripts from the trusted
-  commit, so PR `.gitattributes` and helpers have no effect.
+- **No untrusted event with secrets.** The event routers (`reviewbot.yml`,
+  `reviewbot-comment.yml`, `reviewbot-inline.yml`) have no token scopes,
+  checkout or secrets. The trusted workflows check out the trusted workflow
+  commit, fetch the base and head commits by SHA as objects only, and compute a
+  merge-base `git diff` with `--no-ext-diff --no-textconv`. They run only helper
+  scripts from the trusted commit, so PR `.gitattributes` and helpers have no
+  effect.
 - **Write-permission commands only.** `reviewbot-command.yml` checks the
   commenter's repository permission through the API before doing anything else.
-- **Inline-comment bridge.** `pull_request_review_comment` runs at the PR merge
-  revision, so `reviewbot-inline.yml` has `permissions: {}`, no checkout and no
-  secrets; it only records the comment ID in its run name. The default-branch
-  `workflow_run` handler in `reviewbot-command.yml` re-reads the comment through
-  the API and checks the run, actor, PR association and timing before the usual
-  permission check.
+- **Comment bridges.** `issue_comment` and `pull_request_review_comment` run
+  pointer-only routers with `permissions: {}`, no checkout and no secrets; they
+  only record the comment ID in the run name. The default-branch `workflow_run`
+  handler in `reviewbot-command.yml` re-reads either kind of comment through
+  the API and checks the router run, actor and timing. It also verifies the
+  issue is a PR or the inline run's PR association before the usual permission
+  check.
 - **Report handoff.** The analysis job has a read-only token and the Ark key;
   the publishing job has write permissions and no model key. The report moves
   between them as a same-run artifact (`report.json`, 256 KiB at most, one-day
@@ -117,7 +121,7 @@ self-hosted runner:
   rejects the report if it contains any repository secret value or the job
   token, logging the secret's name only. The publisher validates the schema and
   the run, attempt, PR, head and command binding before writing anything.
-- **Bounded requests.** Input is capped at 750,000 bytes and output at 8192
+- **Bounded requests.** Input is capped at 750,000 bytes and output at 32768
   tokens. A response cut off by the output-token limit is retried once with
   3 lines of diff context instead of 80, within one 600-second HTTP budget.
   Other bad responses fail without publishing partial text.
@@ -153,8 +157,8 @@ reviewed. To stop model calls, remove the secret or disable the workflows.
 
 ## Files
 
-- `.github/workflows/reviewbot.yml`, `reviewbot-review.yml`, `reviewbot-command.yml`,
-  `reviewbot-inline.yml`
+- `.github/workflows/reviewbot.yml`, `reviewbot-review.yml`, `reviewbot-comment.yml`,
+  `reviewbot-command.yml`, `reviewbot-inline.yml`
 - `.github/actionlint.yaml`: the `aliyun-ecs` and `reviewbot` self-hosted labels
 - `.github/codex/reviewbot_response.py`, `.github/codex/reviewbot_handoff.py`
 - `.github/codex/prompts/reviewbot.md`, `.github/codex/prompts/reviewbot-command.md`

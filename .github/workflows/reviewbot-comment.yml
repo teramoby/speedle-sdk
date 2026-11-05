@@ -1,0 +1,21 @@
+name: ReviewBot Comment Command
+run-name: ReviewBot comment ${{ github.event.comment.id }}
+
+on:
+  issue_comment: # zizmor: ignore[dangerous-triggers] pointer only: no token scopes, checkout, secrets, artifacts or PR code execution
+    types: [created]
+
+# This event carries untrusted comment context. It may only emit a pointer to
+# the comment ID: no checkout, repository writes, secrets, artifacts or PR code.
+# ReviewBot Commands (reviewbot-command.yml) authorizes it from the default branch.
+permissions: {}
+
+jobs:
+  route:
+    if: github.event.issue.pull_request != null && github.event.comment.user.type == 'User' && contains(github.event.comment.body, '@reviewbot')
+    name: Record comment pointer
+    runs-on: ubuntu-24.04
+    timeout-minutes: 1
+    steps:
+      - name: Complete pointer-only router
+        run: ':'

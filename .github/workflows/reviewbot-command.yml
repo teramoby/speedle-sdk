@@ -5,10 +5,8 @@
 name: ReviewBot Commands
 
 on:
-  issue_comment: # zizmor: ignore[dangerous-triggers] reviewed: write-permission commenters only, no PR code runs; see .github/REVIEWBOT.md
-    types: [created]
-  workflow_run: # default-branch bridge; never executes the source workflow or its artifacts
-    workflows: [ReviewBot Inline Command]
+  workflow_run: # zizmor: ignore[dangerous-triggers] validated pointer routers; comments re-read via API; no source artifacts or PR code executed
+    workflows: [ReviewBot Comment Command, ReviewBot Inline Command]
     types: [completed]
 
 permissions:
@@ -21,10 +19,7 @@ concurrency:
 jobs:
   prepare:
     name: Authorize ReviewBot command
-    if: >-
-      (github.event_name == 'issue_comment' && github.event.issue.pull_request != null &&
-       github.event.comment.user.type == 'User' && contains(github.event.comment.body, '@reviewbot')) ||
-      github.event_name == 'workflow_run'
+    if: github.event_name == 'workflow_run'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -56,65 +51,93 @@ jobs:
             let comment;
             let pullNumber;
             let sourceKind;
-            if (context.eventName === "issue_comment") {
-              comment = context.payload.comment;
-              pullNumber = context.payload.issue.number;
-              sourceKind = "issue_comment";
-            } else if (context.eventName === "workflow_run") {
-              // The source runs at a PR merge revision and is an untrusted ID
-              // pointer only. Resolve identities and comment context via GitHub.
-              const run = context.payload.workflow_run;
-              const repository = `${context.repo.owner}/${context.repo.repo}`;
-              if (run?.event !== "pull_request_review_comment" ||
-                  run.conclusion !== "success" ||
-                  run.name !== "ReviewBot Inline Command" ||
-                  run.path !== ".github/workflows/reviewbot-inline.yml" ||
-                  run.actor?.type !== "User" ||
-                  run.head_repository?.full_name !== repository) {
-                core.warning("Ignoring an invalid inline comment router run.");
-                return;
-              }
-              const pointer = typeof run.display_title === "string"
-                ? run.display_title.match(/^ReviewBot inline comment ([1-9][0-9]*)$/)
-                : null;
-              const commentId = pointer ? Number(pointer[1]) : NaN;
-              if (!Number.isSafeInteger(commentId)) {
-                core.warning("Ignoring an invalid inline comment pointer.");
-                return;
-              }
+            if (context.eventName !== "workflow_run") {
+              core.warning("ReviewBot commands require a comment router run.");
+              return;
+            }
+
+            // Router runs are untrusted ID pointers only. Resolve identities
+            // and comment context through GitHub before authorizing anything.
+            const run = context.payload.workflow_run;
+            const repository = `${context.repo.owner}/${context.repo.repo}`;
+            const issueRouter = run?.event === "issue_comment" &&
+              run.name === "ReviewBot Comment Command" &&
+              run.path === ".github/workflows/reviewbot-comment.yml";
+            const inlineRouter = run?.event === "pull_request_review_comment" &&
+              run.name === "ReviewBot Inline Command" &&
+              run.path === ".github/workflows/reviewbot-inline.yml";
+            if ((!issueRouter && !inlineRouter) ||
+                run.conclusion !== "success" ||
+                run.actor?.type !== "User" ||
+                run.head_repository?.full_name !== repository) {
+              core.warning("Ignoring an invalid comment router run.");
+              return;
+            }
+            const pointer = typeof run.display_title === "string"
+              ? run.display_title.match(issueRouter
+                ? /^ReviewBot comment ([1-9][0-9]*)$/
+                : /^ReviewBot inline comment ([1-9][0-9]*)$/)
+              : null;
+            const routerCommentId = pointer ? Number(pointer[1]) : NaN;
+            if (!Number.isSafeInteger(routerCommentId)) {
+              core.warning("Ignoring an invalid comment pointer.");
+              return;
+            }
+            if (issueRouter) {
+              ({ data: comment } = await github.rest.issues.getComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: routerCommentId,
+              }));
+            } else {
               ({ data: comment } = await github.rest.pulls.getReviewComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                comment_id: commentId,
+                comment_id: routerCommentId,
               }));
-              const commentTime = Date.parse(comment.created_at);
-              const runTime = Date.parse(run.created_at);
-              if (comment.id !== commentId ||
-                  !Number.isSafeInteger(comment.user?.id) ||
-                  comment.user.id !== run.actor?.id ||
-                  comment.user.login !== run.actor?.login ||
-                  !Number.isFinite(commentTime) || !Number.isFinite(runTime) ||
-                  commentTime > runTime || runTime - commentTime > 120_000) {
-                core.warning("Inline comment identity or creation time does not match the router run.");
+            }
+            const commentTime = Date.parse(comment.created_at);
+            const runTime = Date.parse(run.created_at);
+            if (comment.id !== routerCommentId ||
+                !Number.isSafeInteger(comment.user?.id) ||
+                comment.user.id !== run.actor?.id ||
+                comment.user.login !== run.actor?.login ||
+                !Number.isFinite(commentTime) || !Number.isFinite(runTime) ||
+                commentTime > runTime || runTime - commentTime > 120_000) {
+              core.warning("Comment identity or creation time does not match the router run.");
+              return;
+            }
+
+            let targetUrl;
+            try {
+              targetUrl = new URL(issueRouter ? comment.issue_url : comment.pull_request_url);
+            } catch {
+              core.warning("Comment does not identify its issue or pull request.");
+              return;
+            }
+            const prefix = `/repos/${repository}/${issueRouter ? "issues" : "pulls"}/`;
+            const number = targetUrl.pathname.startsWith(prefix)
+              ? targetUrl.pathname.slice(prefix.length) : "";
+            if (targetUrl.origin !== new URL(context.apiUrl).origin ||
+                targetUrl.search || targetUrl.hash || !/^[1-9][0-9]*$/.test(number) ||
+                !Number.isSafeInteger(Number(number))) {
+              core.warning("Comment points outside this repository.");
+              return;
+            }
+            pullNumber = Number(number);
+
+            if (issueRouter) {
+              const { data: issue } = await github.rest.issues.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pullNumber,
+              });
+              if (issue.number !== pullNumber || !issue.pull_request) {
+                core.warning("Comment router run does not identify a pull request.");
                 return;
               }
-              let pullUrl;
-              try {
-                pullUrl = new URL(comment.pull_request_url);
-              } catch {
-                core.warning("Inline comment does not identify a pull request.");
-                return;
-              }
-              const prefix = `/repos/${repository}/pulls/`;
-              const number = pullUrl.pathname.startsWith(prefix)
-                ? pullUrl.pathname.slice(prefix.length) : "";
-              if (pullUrl.origin !== new URL(context.apiUrl).origin ||
-                  pullUrl.search || pullUrl.hash || !/^[1-9][0-9]*$/.test(number) ||
-                  !Number.isSafeInteger(Number(number))) {
-                core.warning("Inline comment points outside this repository's pull requests.");
-                return;
-              }
-              pullNumber = Number(number);
+              sourceKind = "issue_comment";
+            } else {
               const associated = Array.isArray(run.pull_requests) ? run.pull_requests : [];
               let pulls = associated;
               if (pulls.length === 0) {
@@ -129,14 +152,11 @@ jobs:
                   per_page: 100,
                 });
               }
-              if (!pulls.some(pull => pull.number === pullNumber && pull.url === pullUrl.href)) {
+              if (!pulls.some(pull => pull.number === pullNumber && pull.url === targetUrl.href)) {
                 core.warning("Inline router run is not associated with this comment's pull request.");
                 return;
               }
               sourceKind = "review_comment";
-            } else {
-              core.warning("ReviewBot commands require a default-branch event.");
-              return;
             }
             const body = comment?.body ?? "";
             const mention = body.match(/(?:^|[^\w@-])@reviewbot(?![\w-])/i);
@@ -423,7 +443,7 @@ jobs:
             jq -n \
               --arg model "${ARK_MODEL}" \
               --rawfile input "${review_input}" \
-              '{model: $model, input: $input, max_output_tokens: 8192, reasoning: {effort: "medium"}}' \
+              '{model: $model, input: $input, max_output_tokens: 32768, reasoning: {effort: "medium"}}' \
               > "${request_body}"
 
             # Both attempts share the original 600-second HTTP time budget.
