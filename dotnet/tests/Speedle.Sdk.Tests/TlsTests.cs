@@ -157,7 +157,8 @@ public sealed class TlsTests : IDisposable
         }
 
         DateTimeOffset from = DateTimeOffset.UtcNow.AddMinutes(-5);
-        DateTimeOffset to = DateTimeOffset.UtcNow.AddDays(1);
+        // An issued certificate may not outlive its issuer (.NET 10 enforces this).
+        DateTimeOffset to = issuer is null ? DateTimeOffset.UtcNow.AddDays(1) : new DateTimeOffset(issuer.NotAfter);
         if (issuer is null)
         {
             using X509Certificate2 self = req.CreateSelfSigned(from, to);
