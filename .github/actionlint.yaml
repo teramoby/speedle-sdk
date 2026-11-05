@@ -1,3 +1,4 @@
 self-hosted-runner:
   labels:
-    - speedle-runner
+    - aliyun-ecs
+    - reviewbot
