@@ -1,7 +1,7 @@
 # Release one SDK per run; see RELEASING.md and design §12.3.
 #
 # A non-Go tag `<language>/vX.Y.Z` on a commit of `main` runs:
-#   preflight       the release environment exists and has required reviewers
+#   preflight       the release environment is readable; Go dispatch is admin-only
 #   verify          tag format, commit on main, tag version == package metadata
 #   <language>      build, unit tests, conformance against conformance/mock and
 #                   the package artifact; no secrets and no OIDC token
@@ -9,7 +9,7 @@
 #                   artifact (npm, PyPI, NuGet, crates.io: trusted publishing;
 #                   Maven Central: user token and GPG key)
 # Go uses workflow_dispatch with a version instead. After the same preflight,
-# verification, tests and environment approval, publish-go creates go/vX.Y.Z;
+# verification and tests, publish-go creates go/vX.Y.Z;
 # go-proxy then confirms it on proxy.golang.org. The public Go tag therefore
 # never exists before verification and tests pass in the same run.
 #
@@ -44,22 +44,36 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
+      # GITHUB_TOKEN's implicit metadata read covers the dispatcher check.
       actions: read # required to read environment protection rules
     steps:
-      - name: Release environment has required reviewers
+      - name: Release environment exists and is readable
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          environment="$RUNNER_TEMP/release-environment.json"
-          if ! gh api "repos/$GITHUB_REPOSITORY/environments/release" > "$environment"; then
-            echo "::error::The release environment is missing or unreadable. Create it with required reviewers before releasing (RELEASING.md, Owner setup on GitHub)."
+          if ! gh api "repos/$GITHUB_REPOSITORY/environments/release" > /dev/null; then
+            echo "::error::The release environment is missing or unreadable. Create it before releasing (RELEASING.md, Owner setup on GitHub)."
             exit 1
           fi
-          if ! jq -e 'any(.protection_rules[]?; .type == "required_reviewers" and ((.reviewers // []) | length > 0))' "$environment" > /dev/null; then
-            echo "::error::The release environment has no required reviewers. Add at least one required reviewer before releasing (RELEASING.md, Owner setup on GitHub)."
+          echo "The release environment exists and is readable"
+      # Tag pushes are admin-only through the tag rulesets. Go dispatches must
+      # check the triggering actor explicitly; no human approval is required.
+      - name: Go release dispatcher is a repository admin
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TRIGGERING_ACTOR: ${{ github.triggering_actor }}
+        run: |
+          permission="$RUNNER_TEMP/dispatcher-permission.json"
+          if ! gh api "repos/$GITHUB_REPOSITORY/collaborators/$TRIGGERING_ACTOR/permission" > "$permission"; then
+            echo "::error::Cannot verify repository permission for $TRIGGERING_ACTOR; only repository admins may dispatch a Go release"
             exit 1
           fi
-          echo "The release environment exists and has required reviewers"
+          if ! jq -e '.permission == "admin"' "$permission" > /dev/null; then
+            echo "::error::Only repository admins may dispatch a Go release; $TRIGGERING_ACTOR has $(jq -r '.permission // "none"' "$permission") permission"
+            exit 1
+          fi
+          echo "$TRIGGERING_ACTOR is a repository admin and may dispatch a Go release"
 
   verify:
     name: Verify release request
@@ -376,7 +390,7 @@ jobs:
         run: go test -race -count=1 -run '^TestConformance$' -v .
 
   # The tag ref is the irreversible Go publish act. Create it only after the
-  # verify and go jobs pass and the release environment approves this job.
+  # verify and go jobs pass and the release environment permits this job.
   # No checkout is needed: the API creates a lightweight tag at the verified
   # commit, and the GITHUB_TOKEN is exposed only to this step.
   publish-go:
