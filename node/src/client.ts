@@ -31,7 +31,7 @@ export interface Principal {
 /** A user name, or a list of principals. */
 export type Subject = string | Principal[];
 
-/** Constants for the Speedle+ principal types; any string is accepted. */
+/** Constants for the Speedle principal types; any string is accepted. */
 export const PrincipalType = Object.freeze({
   User: "user",
   Group: "group",

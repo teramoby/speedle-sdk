@@ -36,7 +36,7 @@ function isPem(value: unknown): value is string | Buffer {
 const BAD_TOKEN_CHARS = /[\s\u0000-\u001f\u007f-\u009f]/u;
 
 export const Auth = Object.freeze({
-  /** No credential: Speedle+ on a trusted network or loopback. */
+  /** No credential: self-hosted Speedle on a trusted network or loopback. */
   none(): Auth {
     return make("none", {});
   },

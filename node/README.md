@@ -1,9 +1,9 @@
 # @speedle/sdk
 
 Node.js/TypeScript SDK for Speedle authorization checks: `is-allowed` against
-[Speedle Cloud](https://cloud.speedle.io) and self-hosted
-[Speedle+](https://github.com/teramoby/speedle-plus). Node.js 22 or later, ESM
-and CommonJS, no runtime dependencies. The behaviour follows
+[Speedle Cloud](https://cloud.speedle.io) and [self-hosted
+Speedle](https://github.com/teramoby/speedle-plus). Node.js 22 or later, ESM and
+CommonJS, no runtime dependencies. The behaviour follows
 [docs/design.md](../docs/design.md).
 
 > Not yet published on npm (0.1.0 pending).
@@ -37,7 +37,7 @@ if (await speedle.isAllowed("alice", "get", "/books/123", [
 
 CommonJS works the same way: `const { SpeedleClient } = require("@speedle/sdk")`.
 
-## Quickstart: Speedle+
+## Quickstart: self-hosted Speedle
 
 ```ts
 import { readFileSync } from "node:fs";
@@ -56,9 +56,9 @@ const decision = await speedle.check("alice", "get", "/books/123", { team: "eng"
 ```
 
 `http://` is accepted only for `speedle-plus` with `Auth.none()`, and only for
-loopback hosts unless you set `allowInsecureHttp: true`. Speedle+ warns that
-an unauthenticated plaintext endpoint lets anyone on the network ask for
-decisions; prefer HTTPS.
+loopback hosts unless you set `allowInsecureHttp: true`. Self-hosted Speedle
+warns that an unauthenticated plaintext endpoint lets anyone on the network ask
+for decisions; prefer HTTPS.
 
 ## API
 
@@ -68,10 +68,10 @@ decisions; prefer HTTPS.
 - `isAllowed(subject, action, resource, attributes?, options?)` returns the
   server's `allowed` value.
 - `check(...)` returns a `Decision`: `allowed`, `reason` (a `Reason`, or an
-  unknown integer as is), `errorMessage` (Speedle+ evaluator errors) and
-  `quotaDailyRemaining` (Speedle Cloud).
+  unknown integer as is), `errorMessage` (self-hosted Speedle evaluator errors)
+  and `quotaDailyRemaining` (Speedle Cloud).
 - `subject` is a user name or a list of principals `{ type?, name, idd? }`;
-  `type` defaults to `"user"` (`PrincipalType` has the Speedle+ values).
+  `type` defaults to `"user"` (`PrincipalType` has the Speedle values).
 - `attributes` is either an array built with `Attr.string`, `Attr.numeric`,
   `Attr.bool` and `Attr.datetime` (each takes one value or an array), or a
   plain object whose types are inferred: string, number, boolean, `Date`, or
@@ -79,8 +79,8 @@ decisions; prefer HTTPS.
   looks like a date. Inferred attributes are sent sorted by name. Invalid
   values (empty or duplicate names, `null`, NaN, infinities, invalid dates,
   mixed or empty inferred arrays) raise `InvalidRequestError` before any
-  request. Numbers above 2^53 lose precision, because Speedle+ decodes
-  numbers as `float64`.
+  request. Numbers above 2^53 lose precision, because self-hosted Speedle
+  decodes numbers as `float64`.
 - `options.serviceName` overrides the client's `serviceName` for one call.
   On Speedle Cloud a service other than the token's fails with
   `ForbiddenError` (`code` `service_mismatch`); that call is charged.
