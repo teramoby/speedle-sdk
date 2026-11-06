@@ -5,7 +5,7 @@
 package io.speedle.sdk;
 
 /**
- * One principal of a subject. The type is an open string; the constants name the four Speedle+
+ * One principal of a subject. The type is an open string; the constants name the four Speedle
  * types.
  *
  * @param type the principal type; {@code null} or empty means {@link #USER}

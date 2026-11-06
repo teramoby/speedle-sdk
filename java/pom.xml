@@ -10,7 +10,7 @@
   <packaging>jar</packaging>
 
   <name>Speedle SDK for Java</name>
-  <description>Client for the Speedle Cloud and Speedle+ is-allowed authorization check.</description>
+  <description>Client for the Speedle Cloud and self-hosted Speedle is-allowed authorization check.</description>
   <url>https://github.com/teramoby/speedle-sdk</url>
 
   <licenses>

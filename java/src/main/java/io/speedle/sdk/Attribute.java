@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * One Speedle+ {@code JsonAttribute}: a name, a type and a single value or a list of values of that
+ * One Speedle {@code JsonAttribute}: a name, a type and a single value or a list of values of that
  * type. {@code null} names, values or list items, empty names and non-finite numbers throw {@link
  * InvalidRequestError}.
  *

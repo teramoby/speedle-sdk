@@ -4,15 +4,15 @@
  */
 package io.speedle.sdk;
 
-/** The four Speedle+ attribute types. */
+/** The four Speedle attribute types. */
 public enum AttributeType {
   /** A JSON string. */
   STRING("string"),
-  /** A JSON number, decoded by Speedle+ as a 64-bit float. */
+  /** A JSON number, decoded by self-hosted Speedle as a 64-bit float. */
   NUMERIC("numeric"),
   /** A JSON boolean. */
   BOOL("bool"),
-  /** A point in time, sent as RFC 3339 in UTC and stored by Speedle+ as Unix seconds. */
+  /** A point in time, sent as RFC 3339 in UTC and stored by self-hosted Speedle as Unix seconds. */
   DATETIME("datetime");
 
   private final String wireName;
