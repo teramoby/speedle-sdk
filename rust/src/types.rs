@@ -12,15 +12,15 @@ use crate::{Error, ErrorKind};
 pub enum Backend {
     /// Speedle Cloud (`https://cloud.speedle.io`).
     SpeedleCloud,
-    /// A self-hosted Speedle+ ADS.
+    /// A self-hosted Speedle ADS.
     SpeedlePlus,
 }
 
 /// One subject principal.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Principal {
-    /// Serialized as `"type"`; an empty value is sent as `"user"`. Speedle+
-    /// knows `user`, `group`, `role` and `entity`.
+    /// Serialized as `"type"`; an empty value is sent as `"user"`.
+    /// Speedle knows `user`, `group`, `role` and `entity`.
     pub kind: String,
     pub name: String,
     /// Sent only when set.
@@ -82,22 +82,23 @@ pub(crate) enum AuthKind {
 }
 
 impl Auth {
-    /// Sends no credential: Speedle+ on a trusted network or loopback.
+    /// Sends no credential: self-hosted Speedle on a trusted network or
+    /// loopback.
     pub fn none() -> Self {
         Auth(AuthKind::None)
     }
 
-    /// Sends `Authorization: Bearer <token>`: Speedle Cloud, or Speedle+
-    /// behind an authenticating gateway. Requires `https`. `build` rejects an
-    /// empty token and one with whitespace or control characters. The token
-    /// is never printed by `Debug`, hooks or errors.
+    /// Sends `Authorization: Bearer <token>`: Speedle Cloud, or
+    /// self-hosted Speedle behind an authenticating gateway. Requires `https`.
+    /// `build` rejects an empty token and one with whitespace or control
+    /// characters. The token is never printed by `Debug`, hooks or errors.
     pub fn bearer(token: impl Into<String>) -> Self {
         Auth(AuthKind::Bearer(token.into()))
     }
 
     /// Presents a client certificate (PEM certificate chain and PEM private
-    /// key) on the TLS handshake, for Speedle+ with `--client-cert` and
-    /// `--force-client-cert=true`. Server verification stays on. Requires
+    /// key) on the TLS handshake, for self-hosted Speedle with `--client-cert`
+    /// and `--force-client-cert=true`. Server verification stays on. Requires
     /// `https`.
     pub fn mutual_tls(cert_pem: &[u8], key_pem: &[u8]) -> Result<Self, Error> {
         let mut pem = cert_pem.to_vec();
@@ -316,7 +317,7 @@ impl Reason {
 pub struct Decision {
     pub allowed: bool,
     pub reason: Reason,
-    /// Speedle+ only: set when evaluation failed.
+    /// Self-hosted Speedle only: set when evaluation failed.
     pub error_message: Option<String>,
     /// Speedle Cloud only.
     pub quota_daily_remaining: Option<u64>,

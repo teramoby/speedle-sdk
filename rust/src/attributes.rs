@@ -9,7 +9,7 @@ use serde_json::{Map, Value};
 
 use crate::Error;
 
-/// One of the four Speedle+ attribute types. Wire names are `"string"`,
+/// One of the four Speedle attribute types. Wire names are `"string"`,
 /// `"numeric"`, `"bool"` and `"datetime"`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum AttributeType {
@@ -36,19 +36,21 @@ impl AttributeType {
 pub enum AttributeValue {
     String(String),
     Strings(Vec<String>),
-    /// NaN and infinities fail the call. Speedle+ decodes numbers as `f64`.
+    /// NaN and infinities fail the call. Self-hosted Speedle decodes numbers as
+    /// `f64`.
     Numeric(f64),
     Numerics(Vec<f64>),
     Bool(bool),
     Bools(Vec<bool>),
     /// Sent as RFC 3339 in UTC, with fractional seconds only when they are
-    /// not zero. Speedle+ stores Unix seconds and drops the fraction.
+    /// not zero. Self-hosted Speedle stores Unix seconds and drops the
+    /// fraction.
     Datetime(SystemTime),
     Datetimes(Vec<SystemTime>),
 }
 
 impl AttributeValue {
-    /// The Speedle+ type.
+    /// The Speedle type.
     pub fn attribute_type(&self) -> AttributeType {
         match self {
             AttributeValue::String(_) | AttributeValue::Strings(_) => AttributeType::String,
@@ -70,7 +72,7 @@ impl AttributeValue {
     }
 }
 
-/// One Speedle+ JsonAttribute `{name, type, value}`. Attributes are sent in
+/// One Speedle JsonAttribute `{name, type, value}`. Attributes are sent in
 /// the caller's order.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Attribute {

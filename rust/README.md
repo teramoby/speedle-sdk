@@ -2,8 +2,8 @@
 
 Rust client for the Speedle authorization decision service
 (`POST /authz-check/v1/is-allowed`) on
-[Speedle Cloud](https://cloud.speedle.io) and on self-hosted
-[Speedle+](https://github.com/teramoby/speedle-plus) ADS.
+[Speedle Cloud](https://cloud.speedle.io) and on
+[self-hosted Speedle](https://github.com/teramoby/speedle-plus) ADS.
 
 - Crate: `speedle` (`use speedle::Client`)
 - Rust: stable, MSRV 1.75, edition 2021
@@ -46,7 +46,7 @@ be the token's service, otherwise the call fails with `ErrorKind::Forbidden`
 and code `service_mismatch`. The token is a server-side secret: never ship it
 to browsers, mobile apps or desktop clients.
 
-## Quickstart: Speedle+
+## Quickstart: self-hosted Speedle
 
 ```rust
 use speedle::{Auth, Backend, Client, Principal, Subject};
@@ -62,17 +62,18 @@ println!("{} {:?} {:?}", decision.allowed, decision.reason, decision.error_messa
 
 For mutual TLS use `Auth::mutual_tls(cert_pem, key_pem)?`. `http://` is
 accepted only for `Backend::SpeedlePlus` with `Auth::none()`, and only for
-loopback hosts unless `allow_insecure_http(true)` is set. Speedle+ warns that
-a plaintext endpoint has no authentication; keep it on a trusted network.
-An unknown service on Speedle+ is not an error: the decision is a deny with
-reason `ServiceNotFound`.
+loopback hosts unless `allow_insecure_http(true)` is set. Self-hosted Speedle
+warns that a plaintext endpoint has no authentication; keep it on a trusted
+network. An unknown service on self-hosted Speedle is not an error: the
+decision is a deny with reason `ServiceNotFound`.
 
 ## Calls
 
 - `is_allowed(subject, action, resource, attributes)` returns the `allowed`
   value of a 200 response.
 - `check(...)` returns a `Decision` with `allowed`, `reason`, `error_message`
-  (Speedle+ evaluation errors) and `quota_daily_remaining` (Speedle Cloud).
+  (self-hosted Speedle evaluation errors) and `quota_daily_remaining`
+  (Speedle Cloud).
 - `is_allowed_with` and `check_with` take `CallOptions { service_name }` to
   override the service name for one call.
 - `Reason::DiscoverMode` comes with `allowed: true` but is not a production
@@ -84,7 +85,7 @@ during a retry delay; `tokio::time::timeout` gives a shorter bound.
 
 ## Attributes
 
-Each attribute has an explicit Speedle+ type: `Attribute::string`/`strings`,
+Each attribute has an explicit Speedle type: `Attribute::string`/`strings`,
 `numeric`/`numerics`, `bool`/`bools`, `datetime`/`datetimes` (a
 `SystemTime`, sent as RFC 3339 in UTC). They are sent in your order.
 
@@ -95,8 +96,8 @@ date stays a string. `null`, empty or mixed arrays and objects are rejected.
 
 A call fails with `ErrorKind::InvalidRequest`, without sending anything, for
 an empty or duplicate attribute name, a NaN or infinite number, or an empty
-subject. Speedle+ decodes numbers as `f64`, so integers above 2^53 lose
-precision.
+subject. Self-hosted Speedle decodes numbers as `f64`, so integers above
+2^53 lose precision.
 
 Subjects and attributes must come from your application's own authenticated
 context, never from untrusted client input.
@@ -178,7 +179,7 @@ deadline only.
 ## Requests on the wire
 
 `User-Agent: speedle-sdk-rust/0.1.0 (rust/<version>; <os>)`, plus
-`user_agent_suffix`. The body is the Speedle+ `JsonContext` for both
+`user_agent_suffix`. The body is the Speedle `JsonContext` for both
 backends. Server trust is the platform's root store plus any
 `add_root_certificate_pem` CAs; certificate verification cannot be disabled.
 Like `reqwest`, the client honours the standard `HTTPS_PROXY`/`NO_PROXY`

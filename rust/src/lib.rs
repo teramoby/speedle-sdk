@@ -3,7 +3,7 @@
 
 //! Client for the Speedle authorization decision service:
 //! `POST /authz-check/v1/is-allowed` on Speedle Cloud or on a self-hosted
-//! Speedle+ ADS.
+//! Speedle ADS.
 //!
 //! ```no_run
 //! use std::time::{Duration, UNIX_EPOCH};

@@ -41,7 +41,7 @@ impl Hooks for Rec {
 
 const OK: &str = r#"{"allowed":true,"reason":0}"#;
 
-/// A Speedle+ client over plain HTTP on loopback with a virtual clock.
+/// A self-hosted Speedle client over plain HTTP on loopback with a virtual clock.
 fn plus(srv: &TestServer, b: impl FnOnce(ClientBuilder) -> ClientBuilder) -> (Client, Arc<VirtualClock>) {
     let clock = Arc::new(VirtualClock::default());
     let c = b(Client::builder(Backend::SpeedlePlus, &srv.url("http"), Auth::none(), "books"))
@@ -143,7 +143,7 @@ async fn non_retryable_and_exhausted() {
     let srv = plain(vec![reply(500, ""), reply(429, ""), reply(502, ""), reply(502, ""), reply(502, "")]).await;
     let (c, _) = plus(&srv, |b| b.hooks(rec.clone()));
     assert_eq!(c.check(&alice(), "get", "/r", &[]).await.err().unwrap().kind(), ErrorKind::Server);
-    // A Speedle+ 429 without Retry-After is a burst 429 that is not retried.
+    // A self-hosted Speedle 429 without Retry-After is a burst 429 that is not retried.
     assert_eq!(c.check(&alice(), "get", "/r", &[]).await.err().unwrap().kind(), ErrorKind::RateLimited);
     assert_eq!(c.check(&alice(), "get", "/r", &[]).await.err().unwrap().status(), Some(502));
     assert_eq!(srv.count(), 5);
