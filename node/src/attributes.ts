@@ -2,7 +2,7 @@ import { InvalidRequestError } from "./errors.js";
 
 export type AttributeType = "string" | "numeric" | "bool" | "datetime";
 
-/** One Speedle+ `JsonAttribute`. Build it with the {@link Attr} factories. */
+/** One Speedle `JsonAttribute`. Build it with the {@link Attr} factories. */
 export type Attribute =
   | { readonly name: string; readonly type: "string"; readonly value: string | readonly string[] }
   | { readonly name: string; readonly type: "numeric"; readonly value: number | readonly number[] }
@@ -35,7 +35,7 @@ function freeze<T>(value: T | readonly T[]): T | readonly T[] {
 }
 
 /**
- * Factories for typed attributes, one per Speedle+ type. Each takes a single
+ * Factories for typed attributes, one per Speedle type. Each takes a single
  * value or an array. Values are checked when the attribute is sent.
  */
 export const Attr = Object.freeze({
@@ -124,7 +124,7 @@ function checkName(name: unknown, seen: Set<string>): string {
 }
 
 /**
- * Converts the caller's attributes to the Speedle+ wire array (design §3.2.1).
+ * Converts the caller's attributes to the Speedle wire array (design §3.2.1).
  * Raises InvalidRequestError for every check listed there.
  */
 export function toWireAttributes(attributes: Attributes | undefined | null): WireAttribute[] {

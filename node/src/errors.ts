@@ -44,7 +44,7 @@ export class TooManyRequestsError extends SpeedleError {
     this.retryAfter = fields.retryAfter;
   }
 }
-/** Burst 429 (Speedle Cloud `rate_limited`, or any 429 from a Speedle+ gateway). */
+/** Burst 429 (Speedle Cloud `rate_limited`, or any 429 from a self-hosted Speedle gateway). */
 export class RateLimitedError extends TooManyRequestsError {}
 /** Speedle Cloud daily quota (429 `daily_quota_exceeded`). Never retried. */
 export class QuotaExceededError extends TooManyRequestsError {}
