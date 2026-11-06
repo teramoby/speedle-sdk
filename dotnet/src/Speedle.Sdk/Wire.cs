@@ -40,7 +40,7 @@ internal static class Wire
 
     // ------------------------------------------------------------------ request
 
-    /// <summary>Builds the Speedle+ <c>JsonContext</c>; throws <see cref="InvalidRequestException"/>.</summary>
+    /// <summary>Builds the Speedle <c>JsonContext</c>; throws <see cref="InvalidRequestException"/>.</summary>
     internal static byte[] EncodeRequest(
         Subject subject, string serviceName, string resource, string action, IReadOnlyList<SpeedleAttribute>? attributes)
     {

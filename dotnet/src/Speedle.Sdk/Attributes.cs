@@ -14,11 +14,11 @@ public enum Backend
     /// <summary>Speedle Cloud ADS. Requires <see cref="Auth.Bearer"/>.</summary>
     SpeedleCloud,
 
-    /// <summary>A self-hosted Speedle+ ADS.</summary>
+    /// <summary>A self-hosted Speedle ADS.</summary>
     SpeedlePlus,
 }
 
-/// <summary>The four Speedle+ principal types; <see cref="Principal.Type"/> is an open string.</summary>
+/// <summary>The four Speedle principal types; <see cref="Principal.Type"/> is an open string.</summary>
 public static class PrincipalTypes
 {
     /// <summary><c>user</c>.</summary>
@@ -104,7 +104,7 @@ public sealed class Subject
     public override string ToString() => $"Subject[{Principals.Count} principal(s)]";
 }
 
-/// <summary>The four Speedle+ attribute types.</summary>
+/// <summary>The four Speedle attribute types.</summary>
 public enum AttributeType
 {
     /// <summary>Wire name <c>string</c>.</summary>
@@ -116,12 +116,12 @@ public enum AttributeType
     /// <summary>Wire name <c>bool</c>.</summary>
     Bool,
 
-    /// <summary>Wire name <c>datetime</c>: RFC 3339 in UTC, stored by Speedle+ as Unix seconds.</summary>
+    /// <summary>Wire name <c>datetime</c>: RFC 3339 in UTC, stored by self-hosted Speedle as Unix seconds.</summary>
     Datetime,
 }
 
 /// <summary>
-/// One Speedle+ <c>JsonAttribute</c>: a name, a type and one value or a list of values of that
+/// One Speedle <c>JsonAttribute</c>: a name, a type and one value or a list of values of that
 /// type. Named <c>SpeedleAttribute</c> to avoid <see cref="System.Attribute"/>. Null names, values
 /// or items, empty names and non-finite numbers throw <see cref="InvalidRequestException"/>.
 /// Integers above 2^53 lose precision on the server.

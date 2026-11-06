@@ -1,8 +1,8 @@
 # Speedle SDK for .NET
 
 Client for the `is-allowed` authorization check of
-[Speedle Cloud](https://cloud.speedle.io) and self-hosted
-[Speedle+](https://github.com/teramoby/speedle-plus) ADS.
+[Speedle Cloud](https://cloud.speedle.io) and
+[self-hosted Speedle](https://github.com/teramoby/speedle-plus) ADS.
 
 - NuGet `Speedle.Sdk`, namespace `Speedle.Sdk`, target `net8.0` (.NET 8 or later).
 - No dependencies: `HttpClient` over `SocketsHttpHandler` and `System.Text.Json`
@@ -47,7 +47,7 @@ await speedle.IsAllowedAsync("alice", "get", "/books/123",
 The token is a server-side secret. Never ship it to browsers, mobile apps or
 desktop clients.
 
-## Quickstart: Speedle+
+## Quickstart: self-hosted Speedle
 
 ```csharp
 await using var speedle = new SpeedleClient(new SpeedleClientOptions
@@ -66,21 +66,21 @@ Console.WriteLine($"{d.Allowed} {d.Reason}");
 
 `http://` is accepted only for `SpeedlePlus` with `Auth.None()`, and only for
 loopback hosts unless you set `AllowInsecureHttp = true`. A bearer token is
-never sent over plaintext. Speedle+ itself warns against unauthenticated
-plaintext endpoints; keep them on a trusted network.
+never sent over plaintext. Self-hosted Speedle itself warns against
+unauthenticated plaintext endpoints; keep them on a trusted network.
 
 ## API
 
 - `IsAllowedAsync(subject, action, resource, attributes?, options?, cancellationToken)`
   returns the server's `allowed` value.
 - `CheckAsync(...)` returns a `Decision`: `Allowed`, `Reason` (unknown codes are
-  kept as the cast integer), `ErrorMessage` (Speedle+ evaluator errors) and
-  `QuotaDailyRemaining` (Speedle Cloud).
+  kept as the cast integer), `ErrorMessage` (self-hosted Speedle evaluator
+  errors) and `QuotaDailyRemaining` (Speedle Cloud).
 - `Reason.DiscoverMode` means the server allows everything while it records
   requests. It is not a production grant.
 - Subjects: a string (one `user` principal), `Subject.User(name)` or
   `Subject.Of(principals)`. Principal types are open strings; `PrincipalTypes`
-  has the four Speedle+ values.
+  has the four Speedle values.
 - Typed attributes: `SpeedleAttribute.String/Strings`, `Numeric/Numerics`,
   `Bool/Bools`, `Datetime/Datetimes`. `Datetime` takes a `DateTimeOffset` and is
   sent as RFC 3339 in UTC. Numbers are sent as 64-bit floats; integers above
