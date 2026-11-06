@@ -1,4 +1,4 @@
-"""Speedle authorization SDK: ``is-allowed`` checks against Speedle Cloud and Speedle+."""
+"""Speedle authorization SDK: ``is-allowed`` checks against Speedle Cloud and self-hosted Speedle."""
 
 from ._attributes import Attribute, Attributes, AttributeType, InferredValue
 from ._auth import Auth

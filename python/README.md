@@ -1,10 +1,10 @@
 # speedle
 
 Python SDK for Speedle authorization checks: `is-allowed` against
-[Speedle Cloud](https://cloud.speedle.io) and self-hosted
-[Speedle+](https://github.com/teramoby/speedle-plus). Python 3.10 or later,
-sync and asyncio clients, fully typed. The only runtime dependency is
-`httpx`. The behaviour follows [docs/design.md](../docs/design.md).
+[Speedle Cloud](https://cloud.speedle.io) and [self-hosted
+Speedle](https://github.com/teramoby/speedle-plus). Python 3.10 or later, sync
+and asyncio clients, fully typed. The only runtime dependency is `httpx`.
+The behaviour follows [docs/design.md](../docs/design.md).
 
 > Published on PyPI: 0.1.0 (2026-11-05).
 
@@ -41,7 +41,7 @@ with Client(
         ...
 ```
 
-## Quickstart: Speedle+ with asyncio
+## Quickstart: self-hosted Speedle with asyncio
 
 ```python
 from speedle import AsyncClient, Auth
@@ -58,9 +58,9 @@ async with AsyncClient(
 ```
 
 `http://` is accepted only for `speedle-plus` with `Auth.none()`, and only for
-loopback hosts unless you pass `allow_insecure_http=True`. Speedle+ warns that
-an unauthenticated plaintext endpoint lets anyone on the network ask for
-decisions; prefer HTTPS.
+loopback hosts unless you pass `allow_insecure_http=True`. Self-hosted Speedle
+warns that an unauthenticated plaintext endpoint lets anyone on the network ask
+for decisions; prefer HTTPS.
 
 ## API
 
@@ -71,10 +71,10 @@ decisions; prefer HTTPS.
 - `is_allowed(subject, action, resource, attributes=None, *, deadline=None, service_name=None)`
   returns the server's `allowed` value.
 - `check(...)` returns a `Decision`: `allowed`, `reason` (a `Reason`, or an
-  unknown integer as is), `error_message` (Speedle+ evaluator errors) and
-  `quota_daily_remaining` (Speedle Cloud).
+  unknown integer as is), `error_message` (self-hosted Speedle evaluator
+  errors) and `quota_daily_remaining` (Speedle Cloud).
 - `subject` is a user name or a list of `Principal(name, type="user", idd=None)`
-  (`PrincipalType` has the Speedle+ values).
+  (`PrincipalType` has the Speedle values).
 - `attributes` is either a list built with `Attribute.string`,
   `Attribute.numeric`, `Attribute.boolean` (type `bool`) and
   `Attribute.datetime` (each takes one value or a list), or a mapping whose
@@ -84,7 +84,7 @@ decisions; prefer HTTPS.
   sorted by name. Invalid values (empty or duplicate names, `None`, NaN,
   infinities, `bool` as a number, naive datetimes, mixed or empty inferred
   lists) raise `InvalidRequestError` before any request. Numbers above 2^53
-  lose precision, because Speedle+ decodes numbers as `float64`.
+  lose precision, because self-hosted Speedle decodes numbers as `float64`.
 - `service_name=` overrides the client's service for one call. On Speedle
   Cloud a service other than the token's fails with `ForbiddenError` (`code`
   `service_mismatch`); that call is charged.

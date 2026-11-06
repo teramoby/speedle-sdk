@@ -47,7 +47,7 @@ class Auth:
 
     @staticmethod
     def none() -> Auth:
-        """No credential: Speedle+ on a trusted network or loopback."""
+        """No credential: self-hosted Speedle on a trusted network or loopback."""
         return Auth._make("none")
 
     @staticmethod
