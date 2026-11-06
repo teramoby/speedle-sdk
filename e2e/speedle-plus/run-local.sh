@@ -2,15 +2,15 @@
 # Copyright (c) 2026 The Speedle Authors
 # Licensed under the Universal Permissive License v 1.0 as shown at https://oss.oracle.com/licenses/upl.
 #
-# Local proof for the SDK end-to-end tests: builds Speedle+ PMS, ADS and spctl
-# from a Speedle+ checkout, loads e2e/policies.json through PMS with spctl,
+# Local proof for the SDK end-to-end tests: builds self-hosted Speedle PMS, ADS and spctl
+# from a self-hosted Speedle checkout, loads e2e/policies.json through PMS with spctl,
 # checks the parsed forms, starts a REST ADS on loopback and checks every
 # vector in e2e/vectors.json with raw HTTP. Then it runs the SDK runners named
 # on the command line against the same ADS.
 #
 # Usage: SPEEDLE_PLUS_DIR=/path/to/speedle-plus e2e/speedle-plus/run-local.sh [--record] [all | LANG ...]
-#   --record  write the Speedle+ parsed forms into policies.json and the
-#             Speedle+ decisions into vectors.json instead of checking them
+#   --record  write the self-hosted Speedle parsed forms into policies.json and the
+#             self-hosted Speedle decisions into vectors.json instead of checking them
 #   LANG      java, node, python, go, dotnet or rust
 # Environment: E2E_PMS_PORT (default 16733), E2E_ADS_PORT (default 16734).
 set -euo pipefail

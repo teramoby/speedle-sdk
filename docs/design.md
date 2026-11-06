@@ -12,7 +12,7 @@ two backends:
 | Backend id | What it is | Client authentication |
 | --- | --- | --- |
 | `speedle-cloud` | Speedle Cloud ADS (`https://cloud.speedle.io`, beta `https://b.speedle.io`) | Service-scoped bearer token |
-| `speedle-plus` | Self-hosted Speedle+ ADS (REST, default port 6734) | None, or mutual TLS |
+| `speedle-plus` | Self-hosted Speedle ADS (REST, default port 6734) | None, or mutual TLS |
 
 Languages, all built together with no phases (owner decision on #212):
 Node.js/TypeScript, Python, Java, Go, C# and Rust. Every SDK has the same API
@@ -25,17 +25,17 @@ observability hooks are part of the spec (§6).
 
 Out of scope for 0.x: the other ADS operations (`all-granted-roles`,
 `all-granted-permissions`, `diagnose`, `discover`), PMS, gRPC, browser use
-and Speedle+ token assertion (`subject.token`/`tokenType`, see §3.2).
+and Speedle token assertion (`subject.token`/`tokenType`, see §3.2).
 
 ## 2. Contract sources
 
 | Backend | Source of truth | Pinned at |
 | --- | --- | --- |
 | Speedle Cloud | `docs/openapi.yaml` in teramoby/cloud.speedle.io, operation `ads-is-allowed`, schemas `AdsRequest`, `AdsDecision`, `Ads*Error`, security scheme `apiToken` | `946eafbb` (contract version 0.4.0) |
-| Speedle+ | The handler `RESTService.IsAllowed` and its types in `pkg/svcs/adsrest/check.go`, error mapping in `pkg/httputils`, docs `docs/hugo/content/docs/decisions.md` and `security.md`, Swagger `docs/swagger/policy-check.yaml` | `46a4f90a` |
+| Self-hosted Speedle | The handler `RESTService.IsAllowed` and its types in `pkg/svcs/adsrest/check.go`, error mapping in `pkg/httputils`, docs `docs/hugo/content/docs/decisions.md` and `security.md`, Swagger `docs/swagger/policy-check.yaml` | `46a4f90a` |
 
-Where the Speedle+ Swagger and the handler disagree, the handler wins,
-because it is what clients observe. The one known disagreement is noted in
+Where the self-hosted Speedle Swagger and the handler disagree, the handler
+wins, because it is what clients observe. The one known disagreement is noted in
 §3.4.
 
 The Cloud operation description states that the contract "is not evidence of
@@ -47,13 +47,13 @@ and its schemas under `contract/` with the source commit. A scheduled CI job
 compares it with upstream and opens an issue when it changes. A change then
 goes through a normal PR that updates the copy, the vectors and each SDK.
 
-## 3. Cloud versus Speedle+: `is-allowed` field by field
+## 3. Cloud versus self-hosted Speedle: `is-allowed` field by field
 
 "SDK" in the last column describes what every SDK does.
 
 **One request format for both backends** (owner decision,
 [cloud.speedle.io#213](https://github.com/teramoby/cloud.speedle.io/issues/213)).
-Speedle Cloud is being changed to accept exactly the Speedle+ REST
+Speedle Cloud is being changed to accept exactly the self-hosted Speedle REST
 `JsonContext` from `pkg/svcs/adsrest/check.go` and to return the same body.
 The SDK sends only that format, to both backends. The "Speedle Cloud"
 column describes Cloud contract 0.4.0 as it is today; each difference that
@@ -67,15 +67,15 @@ does not code against it. The differences that stay are:
 
 The SDK handles Cloud's operational responses (413 `request_too_large`, 503
 `quota_unavailable` and `snapshot_unavailable`) by status, as it would from
-any gateway in front of Speedle+.
+any gateway in front of self-hosted Speedle.
 
 ### 3.1 Transport and request headers
 
-| Item | Speedle Cloud | Speedle+ ADS | SDK |
+| Item | Speedle Cloud | Self-hosted Speedle ADS | SDK |
 | --- | --- | --- | --- |
 | Method and path | `POST /authz-check/v1/is-allowed` | `POST /authz-check/v1/is-allowed` (`svcs.PolicyAtzPath`) | Same path for both; the endpoint setting is the base URL only. |
 | Scheme | HTTPS only | HTTPS by default; plaintext only with `--insecure=true` | Requires `https://`. `http://` is accepted only for `speedle-plus` with `Auth.none()`, and only for loopback hosts unless the caller sets `allowInsecureHttp`. |
-| `Authorization` | Required: `Bearer <AdsBearerToken>`; scheme case-insensitive, credential case-sensitive; otherwise 401 | Not read by ADS | Sent only with `Auth.bearer`. Never sent by `Auth.none()` or `Auth.mutualTls()`. A gateway in front of Speedle+ may still use `Auth.bearer`. |
+| `Authorization` | Required: `Bearer <AdsBearerToken>`; scheme case-insensitive, credential case-sensitive; otherwise 401 | Not read by ADS | Sent only with `Auth.bearer`. Never sent by `Auth.none()` or `Auth.mutualTls()`. A gateway in front of self-hosted Speedle may still use `Auth.bearer`. |
 | Client certificate | Not used | Required when the server runs with `--client-cert` and `--force-client-cert=true`; otherwise optional | `Auth.mutualTls(...)` presents it. A handshake failure is a `NetworkError` that is not retried. |
 | `Content-Type` | `application/json` | `application/json` (Swagger documents 415 otherwise) | Always `application/json`. |
 | Request size | 64 KiB before parsing, else 413 | No limit in the handler | No client-side size check; server limits can change and 413 is not charged. |
@@ -83,32 +83,32 @@ any gateway in front of Speedle+.
 
 ### 3.2 Request body
 
-The SDK sends a Speedle+ `JsonContext` with the fields in this order:
+The SDK sends a Speedle `JsonContext` with the fields in this order:
 `subject`, `serviceName`, `resource`, `action`, `attributes`.
 
-| Field | Speedle Cloud today (`AdsRequest`, 0.4.0) | Speedle+ (`JsonContext`) | SDK |
+| Field | Speedle Cloud today (`AdsRequest`, 0.4.0) | Self-hosted Speedle (`JsonContext`) | SDK |
 | --- | --- | --- | --- |
 | Unknown top-level fields | Rejected (`additionalProperties: false`), 400 `invalid_request`. Being removed by cloud.speedle.io#213 | Ignored by the Go decoder | Sends only the `JsonContext` fields below. |
 | `subject` | Optional object or `null`. Being removed by cloud.speedle.io#213 | Object; Swagger marks it required | Always sent. |
 | `subject.principals[]` | Array or `null`; items are `{type, name, idd}` or `null`; no extra keys. Being removed by cloud.speedle.io#213 | Array of `{type, name, idd}`, all `omitempty` | Sends a non-empty array of non-null items. `name` is required; `type` defaults to `user`; `idd` is sent only when set. |
-| Principal `type` values | Any string | `user`, `group`, `role`, `entity` (`api/ads/types.go`) | Open string with constants for the four Speedle+ values. |
+| Principal `type` values | Any string | `user`, `group`, `role`, `entity` (`api/ads/types.go`) | Open string with constants for the four Speedle values. |
 | `subject.token`, `subject.tokenType` | Non-empty value returns 400 `unsupported_token_assertion`. Being removed by cloud.speedle.io#213 | Used by the configured token asserter | Never sent in 0.x. Token assertion may come later as an option. |
 | `subject.asserted` | Boolean, accepted. Being removed by cloud.speedle.io#213 (not a `JsonContext` field) | Not a field; ignored | Never sent. |
 | `serviceName` | Optional; empty or omitted means the token's service. Being removed by cloud.speedle.io#213, which makes it required. Cloud-only and staying: a value other than the token's service returns 403 `service_mismatch` | Required by Swagger. An unknown name gives a 200 with reason 2 `SERVICE_NOT_FOUND` | Always sent and never empty. It comes from the client's `serviceName` setting, required for both backends, and can be overridden per call (§5). On Cloud it must be the token's service; otherwise the call fails with `ForbiddenError`, `code` `service_mismatch`, not retried and charged (§3.6). |
 | `resource`, `action` | String | String | Required string arguments. |
-| `attributes` | Object: name to any JSON value; at most 50 properties and 16,384 canonical UTF-8 bytes. Being removed by cloud.speedle.io#213, which takes the Speedle+ array | Array of `{name, type, value}`, converted by `DumpRequestAttributes` (§3.2.1) | Always the Speedle+ array, one item per typed attribute, in the caller's order. Omitted when there are no attributes, which Speedle+ treats like an empty array. |
+| `attributes` | Object: name to any JSON value; at most 50 properties and 16,384 canonical UTF-8 bytes. Being removed by cloud.speedle.io#213, which takes the Speedle array | Array of `{name, type, value}`, converted by `DumpRequestAttributes` (§3.2.1) | Always the Speedle array, one item per typed attribute, in the caller's order. Omitted when there are no attributes, which self-hosted Speedle treats like an empty array. |
 | Date and time attributes | No date type. Being removed by cloud.speedle.io#213 | `datetime` strings are converted to Unix seconds (`ConvSingleValue`) | `datetime` attributes, built from the language's time type (§3.2.1). |
 
-Integers above 2^53 lose precision (Speedle+ decodes numbers as `float64`).
-The SDK documents this and does not guard against it.
+Integers above 2^53 lose precision (self-hosted Speedle decodes numbers as
+`float64`). The SDK documents this and does not guard against it.
 
 #### 3.2.1 Typed attributes
 
-Each SDK attribute is a name, one of the four Speedle+ types, and either a
+Each SDK attribute is a name, one of the four Speedle types, and either a
 single value or an array of values of that type. It maps one-to-one onto a
 `JsonAttribute`, so callers state the type explicitly.
 
-| `type` | `value` on the wire | Speedle+ conversion | SDK input |
+| `type` | `value` on the wire | Speedle conversion | SDK input |
 | --- | --- | --- | --- |
 | `string` | JSON string | None | A string. |
 | `numeric` | JSON number | Must decode as `float64` | A number. NaN and infinities raise `InvalidRequestError`. |
@@ -116,14 +116,14 @@ single value or an array of values of that type. It maps one-to-one onto a
 | `datetime` | JSON string. The SDK writes RFC 3339 in UTC, for example `2026-11-05T03:00:00Z`, with fractional seconds only when they are not zero | Parsed with `time.RFC3339Nano`, `time.RubyDate` or `time.UnixDate`, then stored as Unix seconds (`float64`, fraction dropped) | The language's absolute time type (§5). Never a string, so a string is never taken for a date. Time values without a time zone (Python naive `datetime`) raise `InvalidRequestError`. |
 | Array form of each type | JSON array of values of that type, possibly empty, with the same `type` | Each item converted as above. `null` items and mixed item types return 400 | A list of the same input type. |
 
-Speedle+ also accepts an empty `type`, which skips conversion and lets any
-JSON value through, objects included. The SDK never sends it: every
+Self-hosted Speedle also accepts an empty `type`, which skips conversion and
+lets any JSON value through, objects included. The SDK never sends it: every
 attribute it sends has one of the four types.
 
-Checks before sending, each raising `InvalidRequestError` with no request
-sent: an empty attribute name; the same name twice (Speedle+ would keep the
-last one silently); a `null` value or item where the language allows one;
-a non-finite number; a time value without a time zone.
+Checks before sending, each raising `InvalidRequestError` with no request sent:
+an empty attribute name; the same name twice (self-hosted Speedle would keep the
+last one silently); a `null` value or item where the language allows one; a
+non-finite number; a time value without a time zone.
 
 Inferred form. As a convenience, every SDK also takes a map from name to a
 native value and builds the typed attributes from it: a string becomes
@@ -138,11 +138,11 @@ code point order, so the request does not depend on map iteration order.
 
 ### 3.3 Response body (HTTP 200)
 
-| Field | Speedle Cloud today (`AdsDecision`, 0.4.0) | Speedle+ (`IsAllowedResponse`) | SDK |
+| Field | Speedle Cloud today (`AdsDecision`, 0.4.0) | Self-hosted Speedle (`IsAllowedResponse`) | SDK |
 | --- | --- | --- | --- |
 | `allowed` | Required boolean | Boolean | `isAllowed` returns it. Anything other than JSON `true`/`false` raises `UnexpectedResponseError`. |
 | `reason` | Required integer 0 to 6 | `int32`, same codes | `Decision.reason`, an enum with a fallback that keeps unknown integers. |
-| `errorMessage` | Not allowed (`additionalProperties: false`). Being removed by cloud.speedle.io#213, which returns evaluator errors as Speedle+ does | Set, with HTTP 200, when the evaluator returns an error; the decision is then a denial, normally reason 4 `ERROR_IN_EVALUATION` | `Decision.errorMessage`, optional. `isAllowed` still returns the server's `allowed` value (false). |
+| `errorMessage` | Not allowed (`additionalProperties: false`). Being removed by cloud.speedle.io#213, which returns evaluator errors as self-hosted Speedle does | Set, with HTTP 200, when the evaluator returns an error; the decision is then a denial, normally reason 4 `ERROR_IN_EVALUATION` | `Decision.errorMessage`, optional. `isAllowed` still returns the server's `allowed` value (false). |
 | `requestContext`, `attributes`, `grantedRoles`, `rolePolicies`, `policies` | Optional in the schema (diagnostic shape); not in the examples. Being removed by cloud.speedle.io#213 | Never returned by `is-allowed` | Ignored. Not exposed in 0.x. |
 | Other fields | None allowed | None | Ignored, so a server can add fields without breaking clients. |
 
@@ -154,17 +154,17 @@ docs say so.
 
 ### 3.4 Errors
 
-Cloud error bodies are `{"error": "<code>"}` with a fixed code enum. Speedle+
-error bodies are `{"error": "<free-text message>"}` from
+Cloud error bodies are `{"error": "<code>"}` with a fixed code enum. Self-hosted
+Speedle error bodies are `{"error": "<free-text message>"}` from
 `httputils.HandleError`. The HTTP status selects the error type. For
-`speedle-cloud`, `error` is reported as `code` when it is one of the Cloud
-codes in this table and as `message` otherwise, so the SDK keeps working when
-#213 makes Cloud's 400 bodies match Speedle+. For `speedle-plus`, `error` is
-always `message` and `code` is empty. Error type names are in §7.
+`speedle-cloud`, `error` is reported as `code` when it is one of the Cloud codes
+in this table and as `message` otherwise, so the SDK keeps working when
+#213 makes Cloud's 400 bodies match self-hosted Speedle. For `speedle-plus`,
+`error` is always `message` and `code` is empty. Error type names are in §7.
 
-| Status | Speedle Cloud | Speedle+ ADS | SDK error | Retried |
+| Status | Speedle Cloud | Self-hosted Speedle ADS | SDK error | Retried |
 | --- | --- | --- | --- | --- |
-| 400 | `invalid_request`, `unsupported_token_assertion`. Being aligned with Speedle+ by cloud.speedle.io#213 | Invalid JSON or attribute conversion (`SPDL-0004`) | `InvalidRequestError` | No |
+| 400 | `invalid_request`, `unsupported_token_assertion`. Being aligned with self-hosted Speedle by cloud.speedle.io#213 | Invalid JSON or attribute conversion (`SPDL-0004`) | `InvalidRequestError` | No |
 | 401 | `unauthorized`, with `WWW-Authenticate: Bearer`; not charged | Not produced by ADS (a gateway may) | `UnauthorizedError` | No |
 | 403 | `service_mismatch`: `serviceName` is not the token's service (Cloud-only, stays) | `ExceedLimit` maps to 403; not expected on `is-allowed` | `ForbiddenError` | No |
 | 404 | Not declared | Wrong path or method | `HttpError` | No |
@@ -180,7 +180,7 @@ always `message` and `code` is empty. Error type names are in §7.
 
 ### 3.5 Response headers
 
-| Header | Speedle Cloud | Speedle+ ADS | SDK |
+| Header | Speedle Cloud | Self-hosted Speedle ADS | SDK |
 | --- | --- | --- | --- |
 | `Cache-Control` | `no-store` on every response | Not set | Never caches (§9). |
 | `X-RateLimit-Limit` | `"600"` after bearer verification | Not set | Not exposed; the value is a documented constant. |
@@ -202,7 +202,7 @@ state this, and `maxAttempts: 1` turns retries off.
 
 | | Generated core plus idiomatic layer | Hand-written thin client |
 | --- | --- | --- |
-| Fit with the contract | The Cloud schema is OpenAPI 3.1 with `anyOf`/`null` and recursive `$defs`; common generators handle these poorly and emit awkward types. The wire format is Speedle+'s `JsonContext`, which has no OpenAPI 3.1 contract of its own, and the typed attribute API (§3.2.1) would be hand-written anyway. | One operation, written once per language against both backends. |
+| Fit with the contract | The Cloud schema is OpenAPI 3.1 with `anyOf`/`null` and recursive `$defs`; common generators handle these poorly and emit awkward types. The wire format is Speedle's `JsonContext`, which has no OpenAPI 3.1 contract of its own, and the typed attribute API (§3.2.1) would be hand-written anyway. | One operation, written once per language against both backends. |
 | Dependencies | Generator runtimes pull in HTTP and JSON libraries per language (for example OkHttp/Gson in Java), which collide with user dependencies. | Standard library HTTP in Node, Java, Go and .NET; `httpx` in Python; `reqwest` on `tokio` in Rust. |
 | Idiomatic API, retries, typed errors | Still hand-written as the layer on top. | Hand-written. |
 | Cost of a contract change | Regenerate, review generated diffs, keep the generator version and templates pinned per language, then adjust the layer. | Edit roughly 50 to 100 lines per SDK, update vectors. |
@@ -230,12 +230,12 @@ It is safe for concurrent use. The positional order is always
   3 attempts, 100 ms base delay, 2 s cap, 2 s per attempt, 5 s overall
   deadline, failure mode `error`, no breaker, no hooks.
 - `check(...)` is the detailed form. It returns a `Decision` with `allowed`,
-  `reason`, `errorMessage` (Speedle+ only) and `quotaDailyRemaining` (Cloud
-  only).
+  `reason`, `errorMessage` (self-hosted Speedle only) and `quotaDailyRemaining`
+  (Cloud only).
 - A subject is either a string, meaning one `user` principal, or a list of
   principals.
 - Attributes are a list of typed attributes (§3.2.1), built with one factory
-  per Speedle+ type and form: `string`, `numeric`, `bool` and `datetime`,
+  per Speedle type and form: `string`, `numeric`, `bool` and `datetime`,
   each for a single value or a list. Every SDK also takes the inferred map
   form of §3.2.1.
 - `serviceName` is a required client setting. Every call can override it
@@ -825,7 +825,7 @@ const (
 type Decision struct {
 	Allowed             bool
 	Reason              Reason
-	ErrorMessage        string // Speedle+ only
+	ErrorMessage        string // self-hosted Speedle only
 	QuotaDailyRemaining *int64 // Speedle Cloud only
 }
 
@@ -1237,9 +1237,9 @@ API.
 
 | Implementation | Use | Behaviour |
 | --- | --- | --- |
-| `bearer(token)` | Speedle Cloud; Speedle+ behind an authenticating gateway | Sends `Authorization: Bearer <token>`. Rejects empty tokens and tokens with whitespace or control characters. It does not check the `spdl_` format, so a future token format keeps working. Requires HTTPS. |
-| `none()` | Speedle+ on a trusted network or loopback | Sends no credential. |
-| `mutualTls(...)` | Speedle+ with `--client-cert` and `--force-client-cert=true` | Presents the client certificate on the TLS handshake. Server verification stays on. |
+| `bearer(token)` | Speedle Cloud; self-hosted Speedle behind an authenticating gateway | Sends `Authorization: Bearer <token>`. Rejects empty tokens and tokens with whitespace or control characters. It does not check the `spdl_` format, so a future token format keeps working. Requires HTTPS. |
+| `none()` | Self-hosted Speedle on a trusted network or loopback | Sends no credential. |
+| `mutualTls(...)` | Self-hosted Speedle with `--client-cert` and `--force-client-cert=true` | Presents the client certificate on the TLS handshake. Server verification stays on. |
 
 Server trust uses the system roots plus an optional extra CA (`caCert`,
 `ca_file`, `trustStore`, `RootCAs`, `ExtraTrustedCertificates`,
@@ -1453,7 +1453,7 @@ service, and no caching of errors.
 - TLS verification cannot be disabled.
 - Subjects and attributes must come from the application's own authenticated
   context, not from untrusted client input. The docs say so, and repeat the
-  Speedle+ warning about unauthenticated plaintext endpoints.
+  self-hosted Speedle warning about unauthenticated plaintext endpoints.
 - Fail closed: no error path returns `true`, and fail-open is never offered
   (§6.5).
 - Tokens used in CI live only in GitHub encrypted secrets, are scoped to the
@@ -1579,8 +1579,8 @@ module path is written into `go.mod` and every import:
 ## 13. Docs plan
 
 - Each package README: install, a quickstart for Speedle Cloud and for
-  Speedle+, configuration, errors, retries, failure mode, breaker, hooks and
-  the security notes.
+  self-hosted Speedle, configuration, errors, retries, failure mode, breaker,
+  hooks and the security notes.
 - API reference from the source: TypeDoc, a Python doc site (tool to be
   chosen), Javadoc, pkg.go.dev, XML docs for NuGet, and docs.rs.
 - The Speedle Cloud console docs get a quickstart per language in English and

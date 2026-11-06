@@ -1,4 +1,4 @@
-// Adapted from Pavu a7b458e; modified for Speedle+. Apache-2.0; see .github/codex/PAVU-LICENSE.txt.
+// Adapted from Pavu a7b458e; modified for Speedle. Apache-2.0; see .github/codex/PAVU-LICENSE.txt.
 // Trusted GitHub API stages for the thin ReviewBot workflows.
 "use strict";
 

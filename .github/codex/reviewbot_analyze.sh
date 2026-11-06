@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Adapted from Pavu a7b458e; modified for Speedle+. Apache-2.0; see .github/codex/PAVU-LICENSE.txt.
+# Adapted from Pavu a7b458e; modified for Speedle. Apache-2.0; see .github/codex/PAVU-LICENSE.txt.
 # Build a static diff from immutable commits, then call the trusted Ark runner.
 set -euo pipefail
 

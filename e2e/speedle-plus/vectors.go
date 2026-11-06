@@ -29,7 +29,7 @@ type vector struct {
 	Expect      *decision       `json:"expect,omitempty"`
 }
 
-// decision is the Speedle+ IsAllowedResponse body.
+// decision is the Speedle IsAllowedResponse body.
 type decision struct {
 	Allowed      bool   `json:"allowed"`
 	Reason       int    `json:"reason"`
@@ -57,7 +57,7 @@ func (d *decision) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// vectorRequest is a Speedle+ JsonContext without serviceName, which the
+// vectorRequest is a Speedle JsonContext without serviceName, which the
 // runners take from SPEEDLE_E2E_SERVICE.
 type vectorRequest struct {
 	Subject struct {
@@ -184,7 +184,7 @@ func checkValue(a attribute) error {
 	return nil
 }
 
-// runVectors sends every vector to a Speedle+ REST ADS and checks the decision,
+// runVectors sends every vector to a self-hosted Speedle REST ADS and checks the decision,
 // or records it as the expectation (-write).
 func runVectors(args []string) error {
 	fs := newFlags("vectors")
@@ -192,7 +192,7 @@ func runVectors(args []string) error {
 	service := fs.String("service", defaultService, "serviceName to send")
 	path := fs.String("vectors", "e2e/vectors.json", "vector file")
 	write := fs.Bool("write", false, "record the decisions as the expectations")
-	commit := fs.String("commit", "", "Speedle+ commit the ADS was built from, recorded with -write")
+	commit := fs.String("commit", "", "self-hosted Speedle commit the ADS was built from, recorded with -write")
 	_ = fs.Parse(args)
 	if *endpoint == "" {
 		return errors.New("vectors: -endpoint is required")

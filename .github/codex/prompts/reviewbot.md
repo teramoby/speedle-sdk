@@ -10,7 +10,7 @@ Prioritize consequential issues:
 
 1. fail-open behavior: any path where `isAllowed` returns `true` without a 200 response whose `allowed` is `true`, or where an error, hook or failure mode turns into an allow;
 2. token or credential exposure (in errors, `toString`/`repr`, hook payloads or logs), bearer tokens over `http://`, followed redirects, disabled TLS verification, unsafe parsing of responses, and secrets in fixtures or workflows;
-3. divergence from `docs/design.md` or between SDKs: request and attribute encoding, Cloud versus Speedle+ backend differences, typed-error mapping, retry, deadline, `Retry-After`, circuit-breaker and failure-mode semantics;
+3. divergence from `docs/design.md` or between SDKs: request and attribute encoding, Cloud versus self-hosted Speedle backend differences, typed-error mapping, retry, deadline, `Retry-After`, circuit-breaker and failure-mode semantics;
 4. conformance regressions: vectors, `conformance/schema.json` or the mock server changed in ways that weaken coverage, and SDK changes that would fail or skip vectors;
 5. concurrency races, unbounded retries or resources, broken cancellation, and incompatible public API changes in any language;
 6. dependency upgrades with incompatible APIs, increased privileges, suspicious provenance, or missing lock/module updates;

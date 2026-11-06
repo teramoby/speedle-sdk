@@ -181,7 +181,7 @@ reviewed. To stop model calls, remove the secret or disable the workflows.
 - Not copied: the speedle-plus Dependabot auto-merge job and its merge
   eligibility marker, and the `workflow_dispatch` regression job. Both depend
   on speedle-plus CI, runners and test scripts.
-- The review prompt describes this repository instead of the Speedle+ server.
+- The review prompt describes this repository instead of the self-hosted Speedle server.
 
 ## Files
 

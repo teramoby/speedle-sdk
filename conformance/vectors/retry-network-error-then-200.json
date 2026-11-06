@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
   "id": "retry-network-error-then-200",
-  "description": "Speedle+: the first connection is reset after the request is read (a network error); the retry is allowed.",
+  "description": "Self-hosted Speedle: the first connection is reset after the request is read (a network error); the retry is allowed.",
   "backend": "speedle-plus",
   "config": {
     "auth": {
