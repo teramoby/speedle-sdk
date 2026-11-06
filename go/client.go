@@ -272,7 +272,7 @@ type wireSubject struct {
 	Principals []wirePrincipal `json:"principals"`
 }
 
-// wireRequest is the Speedle+ JsonContext, fields in the design's order.
+// wireRequest is the Speedle JsonContext, fields in the design's order.
 type wireRequest struct {
 	Subject     wireSubject     `json:"subject"`
 	ServiceName string          `json:"serviceName"`

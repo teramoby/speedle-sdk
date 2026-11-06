@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// AttributeType is one of the four Speedle+ attribute types.
+// AttributeType is one of the four Speedle attribute types.
 type AttributeType string
 
 const (
@@ -21,7 +21,7 @@ const (
 	TypeDatetime AttributeType = "datetime"
 )
 
-// Attribute is one Speedle+ JsonAttribute {name, type, value}: a name, a type
+// Attribute is one Speedle JsonAttribute {name, type, value}: a name, a type
 // and a single value or an array of values of that type. Build it with
 // [String], [Strings], [Numeric], [Numerics], [Bool], [Bools], [Datetime] or
 // [Datetimes]. The zero Attribute is invalid and fails the call.
@@ -43,7 +43,8 @@ func Strings(name string, values ...string) Attribute {
 }
 
 // Numeric is a single numeric attribute. NaN and infinities fail the call.
-// Speedle+ decodes numbers as float64, so integers above 2^53 lose precision.
+// Self-hosted Speedle decodes numbers as float64, so integers above 2^53 lose
+// precision.
 func Numeric(name string, value float64) Attribute {
 	return Attribute{name: name, typ: TypeNumeric, value: value}
 }
@@ -64,8 +65,8 @@ func Bools(name string, values ...bool) Attribute {
 }
 
 // Datetime is a single datetime attribute, sent as RFC 3339 in UTC with
-// fractional seconds only when they are not zero. Speedle+ stores it as Unix
-// seconds and drops the fraction.
+// fractional seconds only when they are not zero. Self-hosted Speedle stores it
+// as Unix seconds and drops the fraction.
 func Datetime(name string, value time.Time) Attribute {
 	return Attribute{name: name, typ: TypeDatetime, value: value}
 }

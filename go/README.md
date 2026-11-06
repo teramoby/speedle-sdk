@@ -2,8 +2,8 @@
 
 Go client for the Speedle authorization decision service
 (`POST /authz-check/v1/is-allowed`) on
-[Speedle Cloud](https://cloud.speedle.io) and on self-hosted
-[Speedle+](https://github.com/teramoby/speedle-plus) ADS.
+[Speedle Cloud](https://cloud.speedle.io) and on
+[self-hosted Speedle](https://github.com/teramoby/speedle-plus) ADS.
 
 - Module: `github.com/teramoby/speedle-sdk/go`, package `speedle`
 - Go: the two latest releases (1.26 and 1.27)
@@ -49,7 +49,7 @@ if ok {
 The Speedle Cloud token is a server-side secret. Never ship it to browsers,
 mobile apps or desktop clients.
 
-## Quickstart: Speedle+
+## Quickstart: self-hosted Speedle
 
 ```go
 client, err := speedle.NewClient(speedle.Config{
@@ -68,18 +68,18 @@ d, err := client.Check(ctx, speedle.Subject{
 ```
 
 `http://` is accepted only for `BackendSpeedlePlus` with `NoAuth()`, and only
-for loopback hosts unless `AllowInsecureHTTP` is set. Speedle+ warns that a
-plaintext endpoint has no authentication; keep it on a trusted network.
-An unknown service on Speedle+ is not an error: the decision is a deny with
-reason `ServiceNotFound`.
+for loopback hosts unless `AllowInsecureHTTP` is set. Self-hosted Speedle warns
+that a plaintext endpoint has no authentication; keep it on a trusted network.
+An unknown service on self-hosted Speedle is not an error: the decision is a
+deny with reason `ServiceNotFound`.
 
 ## Calls
 
 - `IsAllowed(ctx, subject, action, resource, attrs, opts...)` returns the
   `allowed` value of a 200 response.
 - `Check(...)` returns a `*Decision` with `Allowed`, `Reason`,
-  `ErrorMessage` (Speedle+ evaluation errors) and `QuotaDailyRemaining`
-  (Speedle Cloud).
+  `ErrorMessage` (self-hosted Speedle evaluation errors) and
+  `QuotaDailyRemaining` (Speedle Cloud).
 - `speedle.WithServiceName("orders")` overrides `Config.ServiceName` for one
   call.
 - `Reason` `DiscoverMode` comes with `Allowed` true but is not a production
@@ -90,7 +90,7 @@ and keeps a keep-alive connection pool. `Close` releases idle connections.
 
 ## Attributes
 
-Each attribute has an explicit Speedle+ type: `String`/`Strings`,
+Each attribute has an explicit Speedle type: `String`/`Strings`,
 `Numeric`/`Numerics`, `Bool`/`Bools`, `Datetime`/`Datetimes`
 (a `time.Time`, sent as RFC 3339 in UTC). They are sent in your order.
 
@@ -103,8 +103,8 @@ sorted by name.
 
 A call fails with `ErrInvalidRequest`, without sending anything, for an empty
 or duplicate attribute name, a NaN or infinite number, or a zero
-`Attribute`. Speedle+ decodes numbers as `float64`, so integers above 2^53
-lose precision.
+`Attribute`. Self-hosted Speedle decodes numbers as `float64`, so integers
+above 2^53 lose precision.
 
 Subjects and attributes must come from your application's own authenticated
 context, never from untrusted client input.
@@ -182,7 +182,7 @@ nothing but the is-allowed request: no telemetry, no logging.
 ## Requests on the wire
 
 `User-Agent: speedle-sdk-go/0.1.0 (go/<version>; <os>)`, plus
-`UserAgentSuffix`. The body is the Speedle+ `JsonContext` for both backends.
+`UserAgentSuffix`. The body is the Speedle `JsonContext` for both backends.
 The transport honours the standard `HTTPS_PROXY`/`NO_PROXY` environment
 variables, as `net/http` does. Certificate verification cannot be disabled;
 `RootCAs` replaces the system pool, so to add a CA to the system roots start

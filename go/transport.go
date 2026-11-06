@@ -171,7 +171,8 @@ func (c *Client) interpret(resp *http.Response, data []byte) attemptResult {
 }
 
 // errorBody reads {"error": "..."}. For Speedle Cloud a known contract code
-// becomes Code and anything else Message; for Speedle+ it is always Message.
+// becomes Code and anything else Message; for self-hosted Speedle it is always
+// Message.
 func (c *Client) errorBody(data []byte) (code, message string) {
 	var body struct {
 		Error *string `json:"error"`
