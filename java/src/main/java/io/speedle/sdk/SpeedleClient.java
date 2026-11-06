@@ -14,8 +14,8 @@ import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
 /**
- * A client for {@code POST /authz-check/v1/is-allowed} on Speedle Cloud or Speedle+. Create one per
- * endpoint and share it: it is thread-safe and owns one keep-alive connection pool.
+ * A client for {@code POST /authz-check/v1/is-allowed} on Speedle Cloud or self-hosted Speedle.
+ * Create one per endpoint and share it: it is thread-safe and owns one keep-alive connection pool.
  *
  * <p>Interrupting the calling thread aborts the attempt or the retry delay and throws {@link
  * CancelledError} with the interrupt flag restored.

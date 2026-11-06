@@ -1,8 +1,8 @@
 # Speedle SDK for Java
 
 Client for the `is-allowed` authorization check of
-[Speedle Cloud](https://cloud.speedle.io) and self-hosted
-[Speedle+](https://github.com/teramoby/speedle-plus) ADS.
+[Speedle Cloud](https://cloud.speedle.io) and
+[self-hosted Speedle](https://github.com/teramoby/speedle-plus) ADS.
 
 - Maven `io.speedle:speedle-sdk`, Java package and JPMS module `io.speedle.sdk`.
 - Java 17 or later. No runtime dependencies: transport is `java.net.http.HttpClient`.
@@ -52,7 +52,7 @@ try (SpeedleClient speedle = SpeedleClient.builder()
 The token is a server-side secret. Never ship it to browsers, mobile apps or
 desktop clients.
 
-## Quickstart: Speedle+
+## Quickstart: self-hosted Speedle
 
 ```java
 try (SpeedleClient speedle = SpeedleClient.builder()
@@ -70,16 +70,16 @@ try (SpeedleClient speedle = SpeedleClient.builder()
 
 `http://` is accepted only for `SPEEDLE_PLUS` with `Auth.none()`, and only for
 loopback hosts unless you set `allowInsecureHttp(true)`. A bearer token is
-never sent over plaintext. Speedle+ itself warns against unauthenticated
-plaintext endpoints; keep them on a trusted network.
+never sent over plaintext. Self-hosted Speedle itself warns against
+unauthenticated plaintext endpoints; keep them on a trusted network.
 
 ## API
 
 - `isAllowed(subject, action, resource[, attributes[, options]])` returns the
   server's `allowed` value.
 - `check(...)` returns a `Decision`: `allowed`, `reason` (enum; `UNKNOWN` keeps
-  unknown codes in `reasonCode`), `errorMessage` (Speedle+ evaluator errors)
-  and `quotaDailyRemaining` (Speedle Cloud).
+  unknown codes in `reasonCode`), `errorMessage` (self-hosted Speedle evaluator
+  errors) and `quotaDailyRemaining` (Speedle Cloud).
 - `Reason.DISCOVER_MODE` means the server allows everything while it records
   requests. It is not a production grant.
 - Subjects: `Subject.user(name)` or `Subject.of(principals...)`. Principal

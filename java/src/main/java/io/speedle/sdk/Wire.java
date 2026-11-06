@@ -43,7 +43,7 @@ final class Wire {
 
   // ------------------------------------------------------------ request
 
-  /** Builds the Speedle+ {@code JsonContext}; throws {@link InvalidRequestError}. */
+  /** Builds the Speedle {@code JsonContext}; throws {@link InvalidRequestError}. */
   static String encodeRequest(
       Subject subject,
       String serviceName,

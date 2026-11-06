@@ -16,7 +16,7 @@ import javax.net.ssl.KeyManagerFactory;
 public sealed interface Auth permits Auth.None, Auth.Bearer, Auth.MutualTls {
 
   /**
-   * No credential: Speedle+ on a trusted network or loopback.
+   * No credential: self-hosted Speedle on a trusted network or loopback.
    *
    * @return the auth
    */
@@ -25,9 +25,9 @@ public sealed interface Auth permits Auth.None, Auth.Bearer, Auth.MutualTls {
   }
 
   /**
-   * {@code Authorization: Bearer <token>}: Speedle Cloud, or Speedle+ behind an authenticating
-   * gateway. Requires an {@code https://} endpoint. The token is a server-side secret: never ship
-   * it to browsers, mobile apps or desktop clients.
+   * {@code Authorization: Bearer <token>}: Speedle Cloud, or self-hosted Speedle behind an
+   * authenticating gateway. Requires an {@code https://} endpoint. The token is a server-side
+   * secret: never ship it to browsers, mobile apps or desktop clients.
    *
    * @param token the token; not empty, without whitespace or control characters
    * @return the auth

@@ -13,7 +13,8 @@ import java.util.OptionalLong;
  * @param allowed the server's {@code allowed} value
  * @param reason the reason, {@link Reason#UNKNOWN} for codes this SDK does not know
  * @param reasonCode the reason as sent by the server
- * @param errorMessage the evaluator error (Speedle+), in which case {@code allowed} is false
+ * @param errorMessage the evaluator error (self-hosted Speedle), in which case {@code allowed} is
+ *     false
  * @param quotaDailyRemaining Speedle Cloud's {@code X-Quota-Daily-Remaining} header, when present
  */
 public record Decision(

@@ -6,7 +6,7 @@ package io.speedle.sdk;
 
 /**
  * A burst HTTP 429 ({@code rate_limited} on Speedle Cloud, any 429 from a gateway in front of
- * Speedle+). Retried only when {@code Retry-After} fits the remaining deadline.
+ * self-hosted Speedle). Retried only when {@code Retry-After} fits the remaining deadline.
  */
 public class RateLimitedError extends TooManyRequestsError {
   private static final long serialVersionUID = 1L;
