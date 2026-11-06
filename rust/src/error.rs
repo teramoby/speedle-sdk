@@ -23,7 +23,7 @@ pub enum ErrorKind {
     RequestTooLarge,
     /// HTTP 429 with an unknown Speedle Cloud code.
     TooManyRequests,
-    /// A burst 429 (Speedle Cloud `rate_limited`, or any 429 for Speedle+).
+    /// A burst 429 (Speedle Cloud `rate_limited`, or any 429 for self-hosted Speedle).
     RateLimited,
     /// Speedle Cloud `daily_quota_exceeded`.
     QuotaExceeded,
@@ -152,7 +152,7 @@ impl Error {
     }
 
     /// The Speedle Cloud error code, such as `service_mismatch`. Always
-    /// `None` for Speedle+.
+    /// `None` for self-hosted Speedle.
     pub fn code(&self) -> Option<&str> {
         self.0.code.as_deref()
     }

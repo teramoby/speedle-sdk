@@ -173,7 +173,8 @@ pub(crate) fn parse_retry_after(v: &str) -> Option<Duration> {
 }
 
 /// Reads `{"error": "..."}`. For Speedle Cloud a known contract code becomes
-/// the code and anything else the message; for Speedle+ it is the message.
+/// the code and anything else the message; for self-hosted Speedle it is the
+/// message.
 fn error_body(backend: Backend, body: &[u8]) -> (Option<String>, String) {
     let text = match serde_json::from_slice::<Value>(body) {
         Ok(Value::Object(map)) => match map.get("error") {

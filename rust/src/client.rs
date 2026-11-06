@@ -60,7 +60,7 @@ struct WireSubject<'a> {
     principals: Vec<WirePrincipal<'a>>,
 }
 
-/// The Speedle+ JsonContext, fields in the design's order.
+/// The Speedle JsonContext, fields in the design's order.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct WireRequest<'a> {
