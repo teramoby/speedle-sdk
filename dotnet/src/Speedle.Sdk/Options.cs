@@ -14,7 +14,7 @@ public abstract class Auth
 {
     internal Auth() { }
 
-    /// <summary>No credential: Speedle+ on a trusted network or loopback.</summary>
+    /// <summary>No credential: self-hosted Speedle on a trusted network or loopback.</summary>
     /// <returns>The auth.</returns>
     public static Auth None() => NoneAuth.Instance;
 
@@ -244,7 +244,7 @@ public sealed class SpeedleClientOptions
     /// <summary>Extra trust anchors, used in addition to the system roots. Verification cannot be disabled.</summary>
     public X509Certificate2Collection? ExtraTrustedCertificates { get; init; }
 
-    /// <summary>Allows <c>http://</c> to non-loopback hosts for Speedle+ with <see cref="Auth.None"/>.</summary>
+    /// <summary>Allows <c>http://</c> to non-loopback hosts for self-hosted Speedle with <see cref="Auth.None"/>.</summary>
     public bool AllowInsecureHttp { get; init; }
 
     /// <summary>Appended to the <c>User-Agent</c> after a space; printable ASCII.</summary>
@@ -286,6 +286,6 @@ public enum Reason
 /// <summary>The server's answer to one <c>is-allowed</c> call.</summary>
 /// <param name="Allowed">The server's <c>allowed</c> value.</param>
 /// <param name="Reason">The reason code.</param>
-/// <param name="ErrorMessage">The evaluator error (Speedle+), or null.</param>
+/// <param name="ErrorMessage">The evaluator error (self-hosted Speedle), or null.</param>
 /// <param name="QuotaDailyRemaining">Speedle Cloud's <c>X-Quota-Daily-Remaining</c>, or null.</param>
 public sealed record Decision(bool Allowed, Reason Reason, string? ErrorMessage, long? QuotaDailyRemaining);

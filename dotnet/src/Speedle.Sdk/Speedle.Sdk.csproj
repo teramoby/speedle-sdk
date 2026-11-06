@@ -13,7 +13,7 @@
     <Authors>The Speedle Authors</Authors>
     <Company>The Speedle Authors</Company>
     <Copyright>Copyright (c) 2026 The Speedle Authors</Copyright>
-    <Description>Client for the Speedle Cloud and Speedle+ is-allowed authorization check.</Description>
+    <Description>Client for the Speedle Cloud and self-hosted Speedle is-allowed authorization check.</Description>
     <PackageLicenseExpression>UPL-1.0</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/teramoby/speedle-sdk</PackageProjectUrl>
     <RepositoryUrl>https://github.com/teramoby/speedle-sdk</RepositoryUrl>

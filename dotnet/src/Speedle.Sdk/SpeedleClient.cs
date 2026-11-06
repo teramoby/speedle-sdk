@@ -10,10 +10,10 @@ using System.Threading.Tasks;
 namespace Speedle.Sdk;
 
 /// <summary>
-/// A client for <c>POST /authz-check/v1/is-allowed</c> on Speedle Cloud or Speedle+. Create one per
-/// endpoint and share it: it is thread-safe and owns one keep-alive connection pool. A cancelled
-/// <see cref="CancellationToken"/> stops the call, including during a retry delay, and throws
-/// <see cref="OperationCanceledException"/> in every failure mode.
+/// A client for <c>POST /authz-check/v1/is-allowed</c> on Speedle Cloud or self-hosted Speedle.
+/// Create one per endpoint and share it: it is thread-safe and owns one keep-alive connection
+/// pool. A cancelled <see cref="CancellationToken"/> stops the call, including during a retry
+/// delay, and throws <see cref="OperationCanceledException"/> in every failure mode.
 /// </summary>
 public sealed class SpeedleClient : IDisposable, IAsyncDisposable
 {
