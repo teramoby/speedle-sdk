@@ -3,7 +3,7 @@
 
 // Package speedle is the Go client for the Speedle authorization decision
 // service: POST /authz-check/v1/is-allowed on Speedle Cloud or on a
-// self-hosted Speedle+ ADS.
+// self-hosted Speedle ADS.
 //
 // Create one [Client] per endpoint with [NewClient] and share it; it is safe
 // for concurrent use and keeps a pool of keep-alive connections. Every call
@@ -38,7 +38,7 @@ const (
 	BackendSpeedlePlus  Backend = "speedle-plus"
 )
 
-// Principal types known to Speedle+. Type is an open string.
+// Principal types known to Speedle. Type is an open string.
 const (
 	PrincipalUser   = "user"
 	PrincipalGroup  = "group"
@@ -92,7 +92,7 @@ func (r Reason) String() string {
 type Decision struct {
 	Allowed             bool
 	Reason              Reason
-	ErrorMessage        string // Speedle+ only: set when evaluation failed
+	ErrorMessage        string // self-hosted Speedle only: set when evaluation failed
 	QuotaDailyRemaining *int64 // Speedle Cloud only
 }
 
