@@ -1,4 +1,4 @@
-"""Typed Speedle+ attributes (design §3.2.1)."""
+"""Typed Speedle attributes (design §3.2.1)."""
 
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ _Scalar = Union[str, float, bool, _dt.datetime]
 
 @dataclass(frozen=True)
 class Attribute:
-    """One Speedle+ ``JsonAttribute``; build it with the factories.
+    """One Speedle ``JsonAttribute``; build it with the factories.
 
     Values are checked when the attribute is sent, so that a bad value is
     handled like every other request error (including fail-closed mode).
@@ -146,7 +146,7 @@ _TYPES = frozenset(("string", "numeric", "bool", "datetime"))
 
 
 def to_wire_attributes(attributes: Attributes | None) -> list[dict[str, object]]:
-    """Converts the caller's attributes to the Speedle+ wire array.
+    """Converts the caller's attributes to the Speedle wire array.
 
     Raises InvalidRequestError for every check of design §3.2.1.
     """

@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "speedle"
 version = "0.1.0"
-description = "Speedle authorization SDK for Python: is-allowed checks against Speedle Cloud and Speedle+"
+description = "Speedle authorization SDK for Python: is-allowed checks against Speedle Cloud and self-hosted Speedle"
 readme = "README.md"
 license = "UPL-1.0"
 license-files = ["LICENSE"]

@@ -86,7 +86,7 @@ class TooManyRequestsError(SpeedleError):
 
 
 class RateLimitedError(TooManyRequestsError):
-    """Burst 429 (Speedle Cloud ``rate_limited``, or any 429 from a Speedle+ gateway)."""
+    """Burst 429 (Speedle Cloud ``rate_limited``, or any 429 from a self-hosted Speedle gateway)."""
 
 
 class QuotaExceededError(TooManyRequestsError):

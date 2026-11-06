@@ -38,7 +38,7 @@ GiveUpReason = Literal[
 
 
 class PrincipalType:
-    """Constants for the Speedle+ principal types; any string is accepted."""
+    """Constants for the Speedle principal types; any string is accepted."""
 
     USER = "user"
     GROUP = "group"
