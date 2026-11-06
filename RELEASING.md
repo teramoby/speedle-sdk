@@ -175,11 +175,21 @@ Prerequisite: the npm organization `speedle` on an account with 2FA (design
 first release uses a bootstrap token:
 
 1. First release only: on npmjs.com, Access Tokens → Generate New Token →
-   Granular Access Token, with permission **Read and write** for packages and
-   scopes, limited to the scope `@speedle` (organization `speedle`), and the
-   shortest expiry. Store it as the `release` environment secret
-   `NPM_BOOTSTRAP_TOKEN`, then cut `node/v0.1.0`. The workflow still publishes
-   with `--provenance`.
+   Granular Access Token, with **Bypass two-factor authentication** checked,
+   permission **Read and write** for packages and scopes, limited to the scope
+   `@speedle` (organization `speedle`), and the shortest expiry. Store it as
+   the `release` environment secret `NPM_BOOTSTRAP_TOKEN`, then cut
+   `node/v0.1.0`. The workflow still publishes with `--provenance`.
+   The `speedle` organization enforces 2FA, so a token without Bypass 2FA
+   makes `npm publish` fail with `EOTP` (npm asks for a one-time password,
+   which CI cannot give). Regenerate the token with Bypass 2FA and rerun.
+   Bypass-2FA tokens are being phased out for direct publishing: per the
+   [GitHub Changelog of 2026-07-08](https://github.blog/changelog/2026-07-08-npm-install-time-security-and-gat-bypass2fa-deprecation/),
+   "2FA-bypass tokens will no longer publish directly", expected around
+   January 2027. From then on such a token can only read private packages and
+   stage a publish that goes public after a human 2FA approval, so this
+   bootstrap step will no longer work as written. Trusted publishing (step 3)
+   is the long-term path.
 2. Right after that release: delete the `NPM_BOOTSTRAP_TOKEN` secret and
    revoke the token on npmjs.com. The workflow enforces this: when
    `NPM_BOOTSTRAP_TOKEN` is set, the publish job first checks
