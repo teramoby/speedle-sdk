@@ -14,7 +14,7 @@ import (
 	"strings"
 )
 
-// runLoad creates the service and every policy in a Speedle+ PMS with spctl,
+// runLoad creates the service and every policy in a self-hosted Speedle PMS with spctl,
 // from the SPDL in policies.json, the same source the Cloud import reparses.
 func runLoad(args []string) error {
 	fs := newFlags("load")
@@ -56,7 +56,7 @@ func runLoad(args []string) error {
 	return nil
 }
 
-// storeFile is the part of the Speedle+ file store (api/pms PolicyStore) that
+// storeFile is the part of the Speedle file store (api/pms PolicyStore) that
 // holds the parsed policies.
 type storeFile struct {
 	Services []struct {
@@ -67,10 +67,10 @@ type storeFile struct {
 }
 
 // runParsed compares the parsed form in policies.json with the policies that
-// Speedle+ PMS stored after load, or rewrites the file with them (-write).
+// self-hosted Speedle PMS stored after load, or rewrites the file with them (-write).
 func runParsed(args []string) error {
 	fs := newFlags("parsed")
-	storePath := fs.String("store", "", "Speedle+ file store written by PMS (required)")
+	storePath := fs.String("store", "", "self-hosted Speedle file store written by PMS (required)")
 	service := fs.String("service", defaultService, "service name in the store")
 	policies := fs.String("policies", "e2e/policies.json", "policy file")
 	write := fs.Bool("write", false, "rewrite the parsed forms in the policy file")

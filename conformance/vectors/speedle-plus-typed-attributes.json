@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
   "id": "speedle-plus-typed-attributes",
-  "description": "The same typed attributes as cloud-allowed produce the same request body for Speedle+, without an Authorization header.",
+  "description": "The same typed attributes as cloud-allowed produce the same request body for self-hosted Speedle, without an Authorization header.",
   "backend": "speedle-plus",
   "config": {
     "auth": {

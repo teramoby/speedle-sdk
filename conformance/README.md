@@ -14,7 +14,7 @@ SDK's directory.
 
 | Field | Meaning |
 | --- | --- |
-| `backend` | `speedle-cloud` or `speedle-plus`. Both get the same Speedle+ `JsonContext` body; the backend changes only auth and error handling. |
+| `backend` | `speedle-cloud` or `speedle-plus`. Both get the same Speedle `JsonContext` body; the backend changes only auth and error handling. |
 | `config` | Client options: `auth` (`none` or `bearer`), `serviceName` (required), `retry` (`maxAttempts`, `baseDelayMs`, `maxDelayMs`, `attemptTimeoutMs`, `deadlineMs`), `failureMode` (`error` or `closed`), `circuitBreaker` (`failureThreshold`, `coolDownMs`). Unset values take the SDK defaults. The runner adds the endpoint (the mock's base URL) and the mock's test CA. |
 | `jitterFraction` | The value in [0, 1] that the injected random source returns; each backoff delay is `jitterFraction × min(maxDelay, baseDelay × 2^(n-1))`. Default 1. |
 | `call`, `expect` | One call: `method` (`isAllowed` or `check`), `subject` (a user name or a list of principals), `action`, `resource`, an optional `serviceName` override, and at most one of `attributes` (typed `{name, type, value}` items) or `inferredAttributes` (a name-to-value map for the inferred overload); and its outcome. |
@@ -155,7 +155,7 @@ fails the `conformance` workflow.
 | Vector | Covers |
 | --- | --- |
 | `cloud-allowed` | 200 allow; every attribute type in single and array form, including `datetime` and an empty array; bearer header; `X-Quota-Daily-Remaining` on the decision |
-| `speedle-plus-typed-attributes` | The same call and request body as `cloud-allowed` against Speedle+, without `Authorization` |
+| `speedle-plus-typed-attributes` | The same call and request body as `cloud-allowed` against self-hosted Speedle, without `Authorization` |
 | `speedle-plus-denied` | 200 deny, no `Authorization`, inferred attributes sent as typed items sorted by name |
 | `cloud-invalid-request` | 400 `invalid_request`, charged, no retry |
 | `cloud-service-mismatch` | Per-call `serviceName` override that is not the token's service: 403 `service_mismatch`, `ForbiddenError`, charged, no retry |
@@ -163,7 +163,7 @@ fails the `conformance` workflow.
 | `cloud-unauthorized` | 401, not charged, never retried |
 | `cloud-daily-quota-exceeded` | 429 `daily_quota_exceeded` with `Retry-After: 3600`, never retried although attempts remain |
 | `retry-503-503-200` | 503, 503, 200: succeeds on attempt 3 after 100 ms and 200 ms delays |
-| `retry-network-error-then-200` | Speedle+: connection reset, then an allow |
+| `retry-network-error-then-200` | Self-hosted Speedle: connection reset, then an allow |
 | `retry-burst-429-retry-after` | Burst 429 `rate_limited` with `Retry-After: 1`: waits 1 s, then allowed |
 | `retry-burst-429-exceeds-deadline` | Burst 429 with `Retry-After: 60` does not fit the 5 s deadline: `RateLimitedError`, no retry |
 | `retry-deadline-exceeded` | 503, then no answer until the 300 ms deadline: `DeadlineExceededError` |

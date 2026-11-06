@@ -1,6 +1,7 @@
 # Repository guidance
 
-speedle-sdk holds the official client SDKs for Speedle Cloud and Speedle+.
+speedle-sdk holds the official client SDKs for Speedle Cloud and self-hosted
+Speedle.
 
 ## Spec
 

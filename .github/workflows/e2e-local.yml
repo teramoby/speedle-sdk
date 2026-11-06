@@ -1,5 +1,5 @@
 # The e2e local proof on every change to e2e/ or an SDK: each SDK runner
-# against a Speedle+ REST ADS built from teramoby/speedle-plus at the commit
+# against a self-hosted Speedle REST ADS built from teramoby/speedle-plus at the commit
 # recorded in e2e/vectors.json. No secrets and no network calls to Speedle
 # Cloud; the gamma run is e2e-gamma.yml. See e2e/README.md.
 name: e2e-local
@@ -47,7 +47,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Speedle+ commit of the recorded expectations
+      - name: Self-hosted Speedle commit of the recorded expectations
         id: speedle-plus
         run: |
           commit="$(jq -r .speedlePlus e2e/vectors.json)"
@@ -65,7 +65,7 @@ jobs:
           fetch-depth: 0
           path: .speedle-plus
           persist-credentials: false
-      - name: Check out the pinned Speedle+ commit from master
+      - name: Check out the pinned self-hosted Speedle commit from master
         env:
           COMMIT: ${{ steps.speedle-plus.outputs.commit }}
         run: |
@@ -103,7 +103,7 @@ jobs:
           rustup toolchain install stable --profile minimal
           rustup override set stable
 
-      - name: Local proof (Speedle+ raw HTTP, then the ${{ matrix.language }} SDK)
+      - name: Local proof (self-hosted Speedle raw HTTP, then the ${{ matrix.language }} SDK)
         env:
           LANGUAGE: ${{ matrix.language }}
         run: SPEEDLE_PLUS_DIR="$GITHUB_WORKSPACE/.speedle-plus" e2e/speedle-plus/run-local.sh "$LANGUAGE"

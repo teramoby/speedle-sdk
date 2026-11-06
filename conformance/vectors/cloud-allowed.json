@@ -1,7 +1,7 @@
 {
   "$schema": "../schema.json",
   "id": "cloud-allowed",
-  "description": "Speedle Cloud allows the request. Every attribute type in single and array form, including datetime and an empty array, is sent as Speedle+ {name, type, value} items in the caller's order. check returns the decision and the remaining daily quota.",
+  "description": "Speedle Cloud allows the request. Every attribute type in single and array form, including datetime and an empty array, is sent as Speedle {name, type, value} items in the caller's order. check returns the decision and the remaining daily quota.",
   "backend": "speedle-cloud",
   "config": {
     "auth": {

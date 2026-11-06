@@ -425,7 +425,7 @@
       }
     },
     "attribute": {
-      "description": "One Speedle+ JsonAttribute {name, type, value}: a single value or an array of values of the type.",
+      "description": "One Speedle JsonAttribute {name, type, value}: a single value or an array of values of the type.",
       "oneOf": [
         {
           "type": "object",

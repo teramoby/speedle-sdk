@@ -4,11 +4,11 @@ These tests run every SDK against a real authorization decision service with
 a known policy set, and check each decision. They complement the conformance
 suite in `conformance/`, which tests each SDK against a scripted mock.
 
-Speedle Cloud must answer exactly like Speedle+ (owner rule,
+Speedle Cloud must answer exactly like self-hosted Speedle (owner rule,
 [cloud.speedle.io#213](https://github.com/teramoby/cloud.speedle.io/issues/213)).
-So the expected decisions are recorded from a local Speedle+ REST ADS loaded
-with the same policies, and the gamma run checks that Speedle Cloud gives the
-same answers through each SDK.
+So the expected decisions are recorded from a local self-hosted Speedle REST ADS
+loaded with the same policies, and the gamma run checks that Speedle Cloud gives
+the same answers through each SDK.
 
 Tracking issue: [teramoby/cloud.speedle.io#212](https://github.com/teramoby/cloud.speedle.io/issues/212).
 
@@ -17,7 +17,7 @@ Tracking issue: [teramoby/cloud.speedle.io#212](https://github.com/teramoby/clou
 | Path | What it is |
 | --- | --- |
 | `policies.json` | The policy set, in Speedle Cloud's JSON export format, which is also the console's JSON import file ([cloud.speedle.io#191](https://github.com/teramoby/cloud.speedle.io/pull/191)). |
-| `vectors.json` | The requests and the decision Speedle+ returned for each. |
+| `vectors.json` | The requests and the decision self-hosted Speedle returned for each. |
 | `speedle-plus/` | The local proof: `run-local.sh` and a small Go tool (standard library only) that loads the policies with `spctl`, checks the parsed forms and checks or records the vectors with raw HTTP. |
 | `java/`, `node/`, `python/`, `go/`, `dotnet/`, `rust/` | One thin runner per SDK, each with `build.sh` and `run.sh`. Each builds the SDK from its directory in this repository. |
 | `../.github/workflows/e2e-local.yml` | The local proof for every SDK, on pull requests and pushes that touch `e2e/` or an SDK. No secrets. |
@@ -76,13 +76,13 @@ Each vector is:
 }
 ```
 
-`request` is a Speedle+ REST `JsonContext` without `serviceName`; the runner
-adds the service name it is given. Attribute types are `string`, `numeric`,
-`bool` and `datetime`; a JSON array value is the array form. `datetime`
-values are RFC 3339 in UTC with at most millisecond precision, the form the
-SDKs write. `expect` is the `is-allowed` body: `allowed`, `reason` and, when
-Speedle+ sets it, `errorMessage`. The top-level `speedlePlus` field is the
-Speedle+ commit the expectations were recorded with.
+`request` is a Speedle REST `JsonContext` without `serviceName`; the runner adds
+the service name it is given. Attribute types are `string`, `numeric`, `bool`
+and `datetime`; a JSON array value is the array form. `datetime` values are
+RFC 3339 in UTC with at most millisecond precision, the form the SDKs write.
+`expect` is the `is-allowed` body: `allowed`, `reason` and, when self-hosted
+Speedle sets it, `errorMessage`. The top-level `speedlePlus` field is the
+self-hosted Speedle commit the expectations were recorded with.
 
 ## Runner contract
 
@@ -114,8 +114,8 @@ vectors. They never print the token.
 
 ## Local proof
 
-Needs Go, git, curl, and the toolchains of the SDKs you name. Speedle+ is
-built from the git checkout you point at; nothing is written into it.
+Needs Go, git, curl, and the toolchains of the SDKs you name. Self-hosted
+Speedle is built from the git checkout you point at; nothing is written into it.
 
 ```bash
 SPEEDLE_PLUS_DIR=/path/to/speedle-plus e2e/speedle-plus/run-local.sh all
@@ -129,15 +129,15 @@ policy from the SPDL in `policies.json` with `spctl`, and checks that the
 runs the named SDK runners against it with `SPEEDLE_E2E_BACKEND=speedle-plus`
 and no token (a `SPEEDLE_E2E_TOKEN` in your shell is not passed on).
 Name one or more of `java`, `node`, `python`, `go`, `dotnet` and `rust`, or
-`all`, or nothing to check only Speedle+.
+`all`, or nothing to check only self-hosted Speedle.
 
 The `e2e-local` workflow runs the same script for each SDK on GitHub-hosted
-runners, with Speedle+ checked out at the `speedlePlus` commit in
+runners, with self-hosted Speedle checked out at the `speedlePlus` commit in
 `vectors.json`. That commit must be on `teramoby/speedle-plus` `master`.
 
 After changing the policies or the vectors, record the parsed forms and the
-expectations again, then review the diff. Recording refuses a Speedle+
-checkout with uncommitted changes, because the recorded commit would not
+expectations again, then review the diff. Recording refuses a self-hosted
+Speedle checkout with uncommitted changes, because the recorded commit would not
 describe the build:
 
 ```bash
@@ -167,7 +167,7 @@ writes a warning and stops, and a manual run fails.
   [cloud.speedle.io#136](https://github.com/teramoby/cloud.speedle.io/pull/136),
   after the owner's #79 acceptance. Until then gamma answers 401 to
   `is-allowed` without a valid token.
-- The Speedle+ request format:
+- The Speedle request format:
   [cloud.speedle.io#215](https://github.com/teramoby/cloud.speedle.io/pull/215).
   The SDKs send only that format (typed attribute arrays), so the runs are
   expected to fail on gamma until #215 is deployed there.

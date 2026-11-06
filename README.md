@@ -11,7 +11,7 @@ lines of code.
 
 - **Speedle Cloud** ([cloud.speedle.io](https://cloud.speedle.io)): the hosted
   service. Requests authenticate with a service-scoped bearer token.
-- **Speedle+ self-hosted ADS** ([teramoby/speedle-plus](https://github.com/teramoby/speedle-plus)):
+- **Self-hosted Speedle ADS** ([teramoby/speedle-plus](https://github.com/teramoby/speedle-plus)):
   the Authorization Decision Service you run yourself, with no client
   authentication or with mutual TLS.
 
@@ -38,4 +38,4 @@ mobile apps or any other client you do not control.
 
 Copyright (c) 2026 The Speedle Authors. Licensed under the
 [Universal Permissive License (UPL), Version 1.0](LICENSE), the same license
-as [Speedle+](https://github.com/teramoby/speedle-plus).
+as [self-hosted Speedle](https://github.com/teramoby/speedle-plus).

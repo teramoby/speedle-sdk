@@ -40,7 +40,7 @@ type exportPolicy struct {
 	UpdatedAt int64           `json:"updatedAt"`
 }
 
-// The parsed forms mirror Speedle+ api/pms Policy and RolePolicy (field order
+// The parsed forms mirror Speedle api/pms Policy and RolePolicy (field order
 // and JSON names), restricted to the fields that Cloud's ParsedAuthzPolicy and
 // ParsedRolePolicy schemas allow. Required fields have no omitempty.
 type parsedPermission struct {
