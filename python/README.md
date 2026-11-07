@@ -4,7 +4,8 @@ Python SDK for Speedle authorization checks: `is-allowed` against
 [Speedle Cloud](https://cloud.speedle.io) and [self-hosted
 Speedle](https://github.com/teramoby/speedle-plus). Python 3.10 or later, sync
 and asyncio clients, fully typed. The only runtime dependency is `httpx`.
-The behaviour follows [docs/design.md](../docs/design.md).
+The behaviour follows [docs/design.md](../docs/design.md). See the
+[Python SDK documentation](https://engine.speedle.io/docs/sdks/python/).
 
 > Published on PyPI: 0.1.0 (2026-11-05). This README describes 0.2.0, which is
 > not yet released.
@@ -15,7 +16,29 @@ The behaviour follows [docs/design.md](../docs/design.md).
 pip install speedle
 ```
 
-## Quickstart: Speedle Cloud
+## Quickstart: self-hosted Speedle with asyncio
+
+```python
+from speedle import AsyncClient, Auth
+
+async with AsyncClient(
+    backend="speedle",
+    endpoint="http://127.0.0.1:6734",
+    auth=Auth.none(),
+    service_name="books",
+) as speedle:
+    decision = await speedle.check("alice", "get", "/books/123", {"team": "eng", "clearance": 4})
+    # Decision(allowed=False, reason=<Reason.NO_APPLICABLE_POLICIES: 3>, ...)
+```
+
+For HTTPS, use `Auth.mutual_tls("client.pem", "client.key")` with
+`--force-client-cert`, and set `ca_file="ca.pem"` for a private CA. `http://`
+is accepted only for `speedle` with `Auth.none()`, and only for loopback
+hosts unless you pass `allow_insecure_http=True`. Self-hosted Speedle warns
+that an unauthenticated plaintext endpoint lets anyone on the network ask for
+decisions; prefer HTTPS.
+
+## Quickstart: Speedle Cloud (coming soon)
 
 ```python
 import datetime
@@ -41,27 +64,6 @@ with Client(
     ):
         ...
 ```
-
-## Quickstart: self-hosted Speedle with asyncio
-
-```python
-from speedle import AsyncClient, Auth
-
-async with AsyncClient(
-    backend="speedle",
-    endpoint="https://ads.internal:6734",
-    auth=Auth.none(),  # or Auth.mutual_tls("client.pem", "client.key") with --force-client-cert
-    ca_file="ca.pem",  # extra trust anchor for a private CA
-    service_name="books",
-) as speedle:
-    decision = await speedle.check("alice", "get", "/books/123", {"team": "eng", "clearance": 4})
-    # Decision(allowed=False, reason=<Reason.NO_APPLICABLE_POLICIES: 3>, ...)
-```
-
-`http://` is accepted only for backend `speedle` with `Auth.none()`, and only for
-loopback hosts unless you pass `allow_insecure_http=True`. Self-hosted Speedle
-warns that an unauthenticated plaintext endpoint lets anyone on the network ask
-for decisions; prefer HTTPS.
 
 ## API
 

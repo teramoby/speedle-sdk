@@ -11,6 +11,7 @@ Client for the `is-allowed` authorization check of
 
 Published on NuGet: 0.1.0 (2026-11-05). This README describes 0.2.0, which is
 not yet released. The design is in [docs/design.md](../docs/design.md).
+See the [.NET SDK documentation](https://engine.speedle.io/docs/sdks/dotnet/).
 
 ## Install
 
@@ -18,7 +19,30 @@ not yet released. The design is in [docs/design.md](../docs/design.md).
 dotnet add package Speedle.Sdk
 ```
 
-## Quickstart: Speedle Cloud
+## Quickstart: self-hosted Speedle
+
+```csharp
+await using var speedle = new SpeedleClient(new SpeedleClientOptions
+{
+    Backend = Backend.Speedle,
+    Endpoint = new Uri("http://127.0.0.1:6734"),
+    Auth = Auth.None(),
+    ServiceName = "books",
+});
+
+Decision d = await speedle.CheckAsync(
+    Subject.Of(Principal.User("alice"), Principal.Group("eng")), "get", "/books/123");
+Console.WriteLine($"{d.Allowed} {d.Reason}");
+```
+
+For HTTPS, use `Auth.MutualTls(certificateWithKey)` when required and set
+`ExtraTrustedCertificates` for a private CA. `http://` is accepted only for
+`Backend.Speedle` with `Auth.None()`, and only for loopback hosts unless you set
+`AllowInsecureHttp = true`. A bearer token is never sent over plaintext.
+Self-hosted Speedle itself warns against unauthenticated plaintext endpoints;
+keep them on a trusted network.
+
+## Quickstart: Speedle Cloud (coming soon)
 
 ```csharp
 using Speedle.Sdk;
@@ -47,28 +71,6 @@ await speedle.IsAllowedAsync("alice", "get", "/books/123",
 
 The token is a server-side secret. Never ship it to browsers, mobile apps or
 desktop clients.
-
-## Quickstart: self-hosted Speedle
-
-```csharp
-await using var speedle = new SpeedleClient(new SpeedleClientOptions
-{
-    Backend = Backend.Speedle,
-    Endpoint = new Uri("https://ads.internal.example:6734"),
-    Auth = Auth.None(),                 // or Auth.MutualTls(certificateWithKey)
-    ServiceName = "books",
-    ExtraTrustedCertificates = new X509Certificate2Collection(myCa), // optional
-});
-
-Decision d = await speedle.CheckAsync(
-    Subject.Of(Principal.User("alice"), Principal.Group("eng")), "get", "/books/123");
-Console.WriteLine($"{d.Allowed} {d.Reason}");
-```
-
-`http://` is accepted only for `Backend.Speedle` with `Auth.None()`, and only for
-loopback hosts unless you set `AllowInsecureHttp = true`. A bearer token is
-never sent over plaintext. Self-hosted Speedle itself warns against
-unauthenticated plaintext endpoints; keep them on a trusted network.
 
 ## API
 

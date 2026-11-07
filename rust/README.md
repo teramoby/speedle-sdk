@@ -13,6 +13,8 @@ Rust client for the Speedle authorization decision service
 - Status: 0.1.0 published on crates.io (2026-11-05); this README describes
   0.2.0, which is not yet released
 
+See the [Rust SDK documentation](https://engine.speedle.io/docs/sdks/rust/).
+
 ## Install
 
 Install from crates.io:
@@ -23,7 +25,27 @@ speedle = "0.2.0"
 # Optional blocking client: speedle = { version = "0.2.0", features = ["blocking"] }
 ```
 
-## Quickstart: Speedle Cloud
+## Quickstart: self-hosted Speedle
+
+```rust
+use speedle::{Auth, Backend, Client, Principal, Subject};
+
+let client = Client::builder(Backend::Speedle, "http://127.0.0.1:6734", Auth::none(), "books")
+    .build()?;
+let subject = Subject::of([Principal::new(Principal::USER, "bob"), Principal::new(Principal::GROUP, "readers")]);
+let decision = client.check(&subject, "download", "/books/HarryPotter", &[]).await?;
+println!("{} {:?} {:?}", decision.allowed, decision.reason, decision.error_message);
+```
+
+For HTTPS with a private CA, call `add_root_certificate_pem` with the CA
+certificate. For mutual TLS use `Auth::mutual_tls(cert_pem, key_pem)?`.
+`http://` is accepted only for `Backend::Speedle` with `Auth::none()`, and
+only for loopback hosts unless `allow_insecure_http(true)` is set. Self-hosted
+Speedle warns that a plaintext endpoint has no authentication; keep it on a
+trusted network. An unknown service on self-hosted Speedle is not an error: the
+decision is a deny with reason `ServiceNotFound`.
+
+## Quickstart: Speedle Cloud (coming soon)
 
 ```rust
 use std::time::{Duration, UNIX_EPOCH};
@@ -46,27 +68,6 @@ The service name (`"books"`) is sent on every call; on Speedle Cloud it must
 be the token's service, otherwise the call fails with `ErrorKind::Forbidden`
 and code `service_mismatch`. The token is a server-side secret: never ship it
 to browsers, mobile apps or desktop clients.
-
-## Quickstart: self-hosted Speedle
-
-```rust
-use speedle::{Auth, Backend, Client, Principal, Subject};
-
-let ca_pem = std::fs::read("ads-ca.pem")?; // your server's CA, if not in the platform store
-let client = Client::builder(Backend::Speedle, "https://ads.internal:6734", Auth::none(), "books")
-    .add_root_certificate_pem(&ca_pem)
-    .build()?;
-let subject = Subject::of([Principal::new(Principal::USER, "bob"), Principal::new(Principal::GROUP, "readers")]);
-let decision = client.check(&subject, "download", "/books/HarryPotter", &[]).await?;
-println!("{} {:?} {:?}", decision.allowed, decision.reason, decision.error_message);
-```
-
-For mutual TLS use `Auth::mutual_tls(cert_pem, key_pem)?`. `http://` is
-accepted only for `Backend::Speedle` with `Auth::none()`, and only for
-loopback hosts unless `allow_insecure_http(true)` is set. Self-hosted Speedle
-warns that a plaintext endpoint has no authentication; keep it on a trusted
-network. An unknown service on self-hosted Speedle is not an error: the
-decision is a deny with reason `ServiceNotFound`.
 
 ## Calls
 

@@ -6,15 +6,16 @@ Client libraries for the Speedle authorization decision API,
 lines of code.
 
 **Status:** all six SDKs are implemented at version 0.2.0, which is not yet
-released. The latest published version is 0.1.0.
+released. The latest published version is 0.1.0. See the
+[Speedle SDK documentation](https://engine.speedle.io/docs/sdks/).
 
 ## Supported backends
 
-- **Speedle Cloud** ([cloud.speedle.io](https://cloud.speedle.io)): the hosted
-  service. Requests authenticate with a service-scoped bearer token.
 - **Self-hosted Speedle ADS** ([teramoby/speedle-plus](https://github.com/teramoby/speedle-plus)):
   the Authorization Decision Service you run yourself, with no client
   authentication or with mutual TLS.
+- **Speedle Cloud (coming soon)** ([cloud.speedle.io](https://cloud.speedle.io)):
+  the hosted service. Requests authenticate with a service-scoped bearer token.
 
 ## Packages
 
@@ -29,6 +30,23 @@ conformance suite. Five packages are published; the npm release is pending.
 | Go | [`github.com/teramoby/speedle-sdk/go`](https://pkg.go.dev/github.com/teramoby/speedle-sdk/go) | 0.1.0 (2026-11-05); 0.2.0 pending |
 | C# | [NuGet `Speedle.Sdk`](https://www.nuget.org/packages/Speedle.Sdk) | 0.1.0 (2026-11-05); 0.2.0 pending |
 | Rust | [crates.io `speedle`](https://crates.io/crates/speedle) | 0.1.0 (2026-11-05); 0.2.0 pending |
+
+## Quickstart: self-hosted Speedle (local ADS)
+
+Start with a local ADS; no token is needed for an unauthenticated loopback
+endpoint. Each package README puts its self-hosted example first:
+
+- [Node.js/TypeScript](node/README.md#quickstart-self-hosted-speedle)
+- [Python](python/README.md#quickstart-self-hosted-speedle-with-asyncio)
+- [Go](go/README.md#quickstart-self-hosted-speedle)
+- [Java](java/README.md#quickstart-self-hosted-speedle)
+- [C#](dotnet/README.md#quickstart-self-hosted-speedle)
+- [Rust](rust/README.md#quickstart-self-hosted-speedle)
+
+## Quickstart: Speedle Cloud (coming soon)
+
+Speedle Cloud sign-in is not open yet. Each package README includes a Cloud
+configuration example for use when access is available.
 
 ## Security
 

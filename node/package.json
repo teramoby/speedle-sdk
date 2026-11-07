@@ -4,7 +4,10 @@
   "description": "Speedle authorization SDK for Node.js: is-allowed checks against Speedle Cloud and self-hosted Speedle",
   "license": "UPL-1.0",
   "author": "The Speedle Authors",
-  "homepage": "https://github.com/teramoby/speedle-sdk/tree/main/node#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://engine.speedle.io/docs/sdks/node/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/teramoby/speedle-sdk.git",

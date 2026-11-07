@@ -10,6 +10,7 @@ Client for the `is-allowed` authorization check of
 
 Published on Maven Central: 0.1.0 (2026-11-05). This README describes 0.2.0,
 which is not yet released. The design is in [docs/design.md](../docs/design.md).
+See the [Java SDK documentation](https://engine.speedle.io/docs/sdks/java/).
 
 ## Install
 
@@ -23,7 +24,29 @@ which is not yet released. The design is in [docs/design.md](../docs/design.md).
 
 With JPMS, add `requires io.speedle.sdk;`.
 
-## Quickstart: Speedle Cloud
+## Quickstart: self-hosted Speedle
+
+```java
+try (SpeedleClient speedle = SpeedleClient.builder()
+    .backend(Backend.SPEEDLE)
+    .endpoint(URI.create("http://127.0.0.1:6734"))
+    .auth(Auth.none())
+    .serviceName("books")
+    .build()) {
+  Decision d = speedle.check(Subject.of(Principal.user("alice"), Principal.group("eng")),
+      "get", "/books/123", List.of());
+  System.out.println(d.allowed() + " " + d.reason());
+}
+```
+
+For HTTPS, use `Auth.mutualTls(keyStore, password)` when required and set
+`trustStore(myCaTrustStore)` for a private CA. `http://` is accepted only for
+`Backend.SPEEDLE` with `Auth.none()`, and only for loopback hosts unless you set
+`allowInsecureHttp(true)`. A bearer token is never sent over plaintext.
+Self-hosted Speedle itself warns against unauthenticated plaintext endpoints;
+keep them on a trusted network.
+
+## Quickstart: Speedle Cloud (coming soon)
 
 ```java
 import io.speedle.sdk.*;
@@ -52,27 +75,6 @@ try (SpeedleClient speedle = SpeedleClient.builder()
 
 The token is a server-side secret. Never ship it to browsers, mobile apps or
 desktop clients.
-
-## Quickstart: self-hosted Speedle
-
-```java
-try (SpeedleClient speedle = SpeedleClient.builder()
-    .backend(Backend.SPEEDLE)
-    .endpoint(URI.create("https://ads.internal.example:6734"))
-    .auth(Auth.none())                  // or Auth.mutualTls(keyStore, password)
-    .serviceName("books")
-    .trustStore(myCaTrustStore)         // extra CA for a self-hosted server, optional
-    .build()) {
-  Decision d = speedle.check(Subject.of(Principal.user("alice"), Principal.group("eng")),
-      "get", "/books/123", List.of());
-  System.out.println(d.allowed() + " " + d.reason());
-}
-```
-
-`http://` is accepted only for `Backend.SPEEDLE` with `Auth.none()`, and only for
-loopback hosts unless you set `allowInsecureHttp(true)`. A bearer token is
-never sent over plaintext. Self-hosted Speedle itself warns against
-unauthenticated plaintext endpoints; keep them on a trusted network.
 
 ## API
 
