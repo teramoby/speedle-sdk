@@ -29,11 +29,18 @@ client, err := speedle.NewClient(speedle.Config{
 	Auth:        speedle.NoAuth(),
 	ServiceName: "books",
 })
+if err != nil {
+	return err
+}
+defer client.Close()
 
 d, err := client.Check(ctx, speedle.Subject{
 	{Type: speedle.PrincipalUser, Name: "bob"},
 	{Type: speedle.PrincipalGroup, Name: "readers"},
 }, "download", "/books/HarryPotter", nil)
+if err != nil {
+	return err
+}
 // d.Allowed, d.Reason, d.ErrorMessage
 ```
 
