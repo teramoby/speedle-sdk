@@ -3,10 +3,9 @@
 Node.js/TypeScript SDK for Speedle authorization checks: `is-allowed` against
 [Speedle Cloud](https://cloud.speedle.io) and [self-hosted
 Speedle](https://github.com/teramoby/speedle-plus). Node.js 22 or later, ESM and
-CommonJS, no runtime dependencies. The behaviour follows
-[docs/design.md](../docs/design.md).
-
-> Not yet published on npm (0.1.0 pending).
+CommonJS, no runtime dependencies. See the [Node.js SDK
+documentation](https://engine.speedle.io/docs/sdks/node/) and [design
+specification](https://github.com/teramoby/speedle-sdk/blob/main/docs/design.md).
 
 ## Install
 
@@ -14,7 +13,34 @@ CommonJS, no runtime dependencies. The behaviour follows
 npm install @speedle/sdk
 ```
 
-## Quickstart: Speedle Cloud
+## Quickstart: self-hosted Speedle
+
+```ts
+import { Auth, SpeedleClient } from "@speedle/sdk";
+
+const speedle = new SpeedleClient({
+  backend: "speedle-plus",
+  endpoint: "http://127.0.0.1:6734",
+  auth: Auth.none(),
+  serviceName: "books",
+});
+
+try {
+  const decision = await speedle.check("alice", "get", "/books/123", { team: "eng", clearance: 4 });
+  console.log(decision); // { allowed: true, reason: 0 }
+} finally {
+  await speedle.close();
+}
+```
+
+For HTTPS, use `Auth.mutualTls({ cert, key })` when ADS runs with
+`--force-client-cert`, and set `caCert` to an extra PEM trust anchor for a
+private CA. `http://` is accepted only for `speedle-plus` with `Auth.none()`,
+and only for loopback hosts unless you set `allowInsecureHttp: true`.
+Self-hosted Speedle warns that an unauthenticated plaintext endpoint lets
+anyone on the network ask for decisions; prefer HTTPS.
+
+## Quickstart: Speedle Cloud (coming soon)
 
 ```ts
 import { Attr, Auth, SpeedleClient } from "@speedle/sdk";
@@ -36,29 +62,6 @@ if (await speedle.isAllowed("alice", "get", "/books/123", [
 ```
 
 CommonJS works the same way: `const { SpeedleClient } = require("@speedle/sdk")`.
-
-## Quickstart: self-hosted Speedle
-
-```ts
-import { readFileSync } from "node:fs";
-import { Auth, SpeedleClient } from "@speedle/sdk";
-
-const speedle = new SpeedleClient({
-  backend: "speedle-plus",
-  endpoint: "https://ads.internal:6734",
-  auth: Auth.none(), // or Auth.mutualTls({ cert, key }) with --force-client-cert
-  caCert: readFileSync("ca.pem"), // extra trust anchor for a private CA
-  serviceName: "books",
-});
-
-const decision = await speedle.check("alice", "get", "/books/123", { team: "eng", clearance: 4 });
-// { allowed: false, reason: 3 }
-```
-
-`http://` is accepted only for `speedle-plus` with `Auth.none()`, and only for
-loopback hosts unless you set `allowInsecureHttp: true`. Self-hosted Speedle
-warns that an unauthenticated plaintext endpoint lets anyone on the network ask
-for decisions; prefer HTTPS.
 
 ## API
 
@@ -159,6 +162,9 @@ plus `userAgentSuffix`.
   from untrusted client input.
 - Decisions are never cached.
 
+Report security issues privately using the [Speedle security
+policy](https://github.com/teramoby/speedle-sdk/blob/main/SECURITY.md).
+
 ## Development
 
 ```sh
@@ -171,4 +177,4 @@ npm run test:package # build ESM and CJS, then load both
 
 ## License
 
-[UPL-1.0](LICENSE). Copyright (c) 2026 The Speedle Authors.
+[UPL-1.0](https://github.com/teramoby/speedle-sdk/blob/main/node/LICENSE). Copyright (c) 2026 The Speedle Authors.

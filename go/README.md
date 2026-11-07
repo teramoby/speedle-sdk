@@ -17,7 +17,32 @@ Go client for the Speedle authorization decision service
 go get github.com/teramoby/speedle-sdk/go
 ```
 
-## Quickstart: Speedle Cloud
+## Quickstart: self-hosted Speedle
+
+```go
+client, err := speedle.NewClient(speedle.Config{
+	Backend:     speedle.BackendSpeedlePlus,
+	Endpoint:    "http://127.0.0.1:6734",
+	Auth:        speedle.NoAuth(),
+	ServiceName: "books",
+})
+
+d, err := client.Check(ctx, speedle.Subject{
+	{Type: speedle.PrincipalUser, Name: "bob"},
+	{Type: speedle.PrincipalGroup, Name: "readers"},
+}, "download", "/books/HarryPotter", nil)
+// d.Allowed, d.Reason, d.ErrorMessage
+```
+
+For HTTPS, use `speedle.MutualTLS(cert)` when required and set `RootCAs` to a
+pool containing your private CA. `http://` is accepted only for
+`BackendSpeedlePlus` with `NoAuth()`, and only for loopback hosts unless
+`AllowInsecureHTTP` is set. Self-hosted Speedle warns that a plaintext endpoint
+has no authentication; keep it on a trusted network. An unknown service on
+self-hosted Speedle is not an error: the decision is a deny with reason
+`ServiceNotFound`.
+
+## Quickstart: Speedle Cloud (coming soon)
 
 ```go
 import speedle "github.com/teramoby/speedle-sdk/go"
@@ -48,30 +73,6 @@ if ok {
 
 The Speedle Cloud token is a server-side secret. Never ship it to browsers,
 mobile apps or desktop clients.
-
-## Quickstart: self-hosted Speedle
-
-```go
-client, err := speedle.NewClient(speedle.Config{
-	Backend:     speedle.BackendSpeedlePlus,
-	Endpoint:    "https://ads.internal:6734",
-	Auth:        speedle.NoAuth(), // or speedle.MutualTLS(cert)
-	ServiceName: "books",
-	RootCAs:     pool, // your server's CA; nil means the system roots
-})
-
-d, err := client.Check(ctx, speedle.Subject{
-	{Type: speedle.PrincipalUser, Name: "bob"},
-	{Type: speedle.PrincipalGroup, Name: "readers"},
-}, "download", "/books/HarryPotter", nil)
-// d.Allowed, d.Reason, d.ErrorMessage
-```
-
-`http://` is accepted only for `BackendSpeedlePlus` with `NoAuth()`, and only
-for loopback hosts unless `AllowInsecureHTTP` is set. Self-hosted Speedle warns
-that a plaintext endpoint has no authentication; keep it on a trusted network.
-An unknown service on self-hosted Speedle is not an error: the decision is a
-deny with reason `ServiceNotFound`.
 
 ## Calls
 
