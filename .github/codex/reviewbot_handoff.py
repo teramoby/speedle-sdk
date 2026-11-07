@@ -24,7 +24,9 @@ def seal(result_path, artifact_path):
         if not isinstance(secrets, dict) or not secrets:
             raise ValueError()
         secrets["GITHUB_TOKEN"] = os.environ["GH_TOKEN"]
-        if not secrets.get("ARK_API_KEY") or not secrets["GITHUB_TOKEN"]:
+        provider = os.environ.get("REVIEWBOT_PROVIDER", "").strip().lower() or "ark"
+        required_secret = {"ark": "ARK_API_KEY", "deepseek": "DEEPSEEK_API_KEY"}.get(provider)
+        if not required_secret or not secrets.get(required_secret) or not secrets["GITHUB_TOKEN"]:
             raise ValueError()
         if not isinstance(result, dict) or set(result) != {"message", "model"}:
             raise ValueError()

@@ -75,7 +75,9 @@ jobs:
         id: gate
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
+          REVIEWBOT_PROVIDER: ${{ vars.REVIEWBOT_PROVIDER }}
           REVIEWBOT_API_KEY: ${{ secrets.ARK_API_KEY }}
+          REVIEWBOT_DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           PULL_NUMBER: ${{ needs.prepare.outputs.pull_number }}
           COMMAND: ${{ needs.prepare.outputs.command }}
         with:
@@ -88,12 +90,15 @@ jobs:
         if: steps.gate.outputs.enabled == 'true'
         shell: bash
         env:
+          REVIEWBOT_PROVIDER: ${{ vars.REVIEWBOT_PROVIDER }}
           ARK_API_KEY: ${{ secrets.ARK_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           ARK_REVIEW_MODELS: ${{ vars.ARK_REVIEW_MODELS }}
           ARK_REVIEW_MODEL: ${{ vars.ARK_REVIEW_MODEL }}
           ARK_REVIEW_MAX_OUTPUT_TOKENS: ${{ vars.ARK_REVIEW_MAX_OUTPUT_TOKENS }}
           ARK_REVIEW_REASONING_EFFORT: ${{ vars.ARK_REVIEW_REASONING_EFFORT }}
           ARK_REVIEW_INPUT_LIMIT: ${{ vars.ARK_REVIEW_INPUT_LIMIT }}
+          DEEPSEEK_REVIEW_MODEL: ${{ vars.DEEPSEEK_REVIEW_MODEL }}
           GH_TOKEN: ${{ github.token }}
           BASE_SHA: ${{ needs.prepare.outputs.base_sha }}
           HEAD_SHA: ${{ needs.prepare.outputs.head_sha }}
@@ -108,6 +113,7 @@ jobs:
         shell: bash
         env:
           # Only this trusted, network-free guard sees all secrets, never the model.
+          REVIEWBOT_PROVIDER: ${{ vars.REVIEWBOT_PROVIDER }}
           REVIEWBOT_SECRETS: ${{ toJSON(secrets) }} # zizmor: ignore[overprovisioned-secrets] the guard must reject every available secret before artifact upload, including future/inherited secrets
           GH_TOKEN: ${{ github.token }}
           REVIEWBOT_RETRIED: ${{ steps.review.outputs.retried }}
