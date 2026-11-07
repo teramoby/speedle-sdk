@@ -10,6 +10,7 @@ Client for the `is-allowed` authorization check of
 - License: UPL-1.0.
 
 Published on NuGet: 0.1.0 (2026-11-05). The design is in [docs/design.md](../docs/design.md).
+See the [.NET SDK documentation](https://engine.speedle.io/docs/sdks/dotnet/).
 
 ## Install
 

@@ -12,6 +12,8 @@ Rust client for the Speedle authorization decision service
 - License: UPL-1.0, © 2026 The Speedle Authors
 - Status: 0.1.0, published on crates.io (2026-11-05)
 
+See the [Rust SDK documentation](https://engine.speedle.io/docs/sdks/rust/).
+
 ## Install
 
 Install from crates.io:

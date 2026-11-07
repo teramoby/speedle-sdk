@@ -4,7 +4,8 @@ Python SDK for Speedle authorization checks: `is-allowed` against
 [Speedle Cloud](https://cloud.speedle.io) and [self-hosted
 Speedle](https://github.com/teramoby/speedle-plus). Python 3.10 or later, sync
 and asyncio clients, fully typed. The only runtime dependency is `httpx`.
-The behaviour follows [docs/design.md](../docs/design.md).
+The behaviour follows [docs/design.md](../docs/design.md). See the
+[Python SDK documentation](https://engine.speedle.io/docs/sdks/python/).
 
 > Published on PyPI: 0.1.0 (2026-11-05).
 

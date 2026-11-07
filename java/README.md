@@ -9,6 +9,7 @@ Client for the `is-allowed` authorization check of
 - License: UPL-1.0.
 
 Published on Maven Central: 0.1.0 (2026-11-05). The design is in [docs/design.md](../docs/design.md).
+See the [Java SDK documentation](https://engine.speedle.io/docs/sdks/java/).
 
 ## Install
 

@@ -15,6 +15,8 @@ npm install @speedle/sdk
 
 ## Quickstart: self-hosted Speedle
 
+With an empty `books` service and no matching policies, the decision is a denial:
+
 ```ts
 import { Auth, SpeedleClient } from "@speedle/sdk";
 
@@ -27,7 +29,7 @@ const speedle = new SpeedleClient({
 
 try {
   const decision = await speedle.check("alice", "get", "/books/123", { team: "eng", clearance: 4 });
-  console.log(decision); // { allowed: true, reason: 0 }
+  console.log(decision); // { allowed: false, reason: 3 }
 } finally {
   await speedle.close();
 }

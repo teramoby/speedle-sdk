@@ -5,7 +5,8 @@ Client libraries for the Speedle authorization decision API,
 "is this subject allowed to perform this action on this resource?" with a few
 lines of code.
 
-**Status:** all six SDKs are implemented at version 0.1.0.
+**Status:** all six SDKs are implemented at version 0.1.0. See the
+[Speedle SDK documentation](https://engine.speedle.io/docs/sdks/).
 
 ## Supported backends
 

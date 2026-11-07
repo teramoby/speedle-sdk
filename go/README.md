@@ -11,6 +11,8 @@ Go client for the Speedle authorization decision service
 - License: UPL-1.0, © 2026 The Speedle Authors
 - Status: 0.1.0, published in the Go module proxy (2026-11-05)
 
+See the [Go SDK documentation](https://engine.speedle.io/docs/sdks/go/).
+
 ## Install
 
 ```sh
