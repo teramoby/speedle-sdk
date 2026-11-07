@@ -78,7 +78,7 @@ impl ClientBuilder {
     }
 
     /// Accepts an `http://` endpoint on a non-loopback host for
-    /// [`Backend::SpeedlePlus`] with [`Auth::none`]. Default false.
+    /// [`Backend::Speedle`] with [`Auth::none`]. Default false.
     pub fn allow_insecure_http(mut self, allow: bool) -> Self {
         self.allow_insecure_http = allow;
         self
@@ -204,7 +204,7 @@ fn check_endpoint(
     let https = match url.scheme() {
         "https" => true,
         "http" => {
-            if backend != Backend::SpeedlePlus {
+            if backend != Backend::Speedle {
                 return Err(Error::configuration("the endpoint must use https for Speedle Cloud"));
             }
             if !auth_none {
@@ -254,8 +254,8 @@ mod tests {
             ("user info", build(SpeedleCloud, "https://u:p@h/", Auth::bearer("t"))),
             ("ftp", build(SpeedleCloud, "ftp://h/", Auth::bearer("t"))),
             ("http cloud", build(SpeedleCloud, "http://127.0.0.1:1", Auth::none())),
-            ("http bearer", build(SpeedlePlus, "http://127.0.0.1:1", Auth::bearer("t"))),
-            ("http remote", build(SpeedlePlus, "http://ads.internal:6734", Auth::none())),
+            ("http bearer", build(Speedle, "http://127.0.0.1:1", Auth::bearer("t"))),
+            ("http remote", build(Speedle, "http://ads.internal:6734", Auth::none())),
             ("no service", Client::builder(SpeedleCloud, "https://h", Auth::bearer("t"), "").build()),
             (
                 "zero attempts",
@@ -289,7 +289,7 @@ mod tests {
             ),
             (
                 "bearer over http with allow_insecure_http",
-                Client::builder(SpeedlePlus, "http://h", Auth::bearer("t"), "s").allow_insecure_http(true).build(),
+                Client::builder(Speedle, "http://h", Auth::bearer("t"), "s").allow_insecure_http(true).build(),
             ),
         ];
         for (name, result) in cases {
@@ -318,35 +318,17 @@ mod tests {
                 false,
                 "https://gw.example/prefix/authz-check/v1/is-allowed",
             ),
+            (Speedle, "http://127.0.0.1:6734", Auth::none(), false, "http://127.0.0.1:6734/authz-check/v1/is-allowed"),
+            (Speedle, "http://localhost:6734", Auth::none(), false, "http://localhost:6734/authz-check/v1/is-allowed"),
+            (Speedle, "http://[::1]:6734", Auth::none(), false, "http://[::1]:6734/authz-check/v1/is-allowed"),
             (
-                SpeedlePlus,
-                "http://127.0.0.1:6734",
-                Auth::none(),
-                false,
-                "http://127.0.0.1:6734/authz-check/v1/is-allowed",
-            ),
-            (
-                SpeedlePlus,
-                "http://localhost:6734",
-                Auth::none(),
-                false,
-                "http://localhost:6734/authz-check/v1/is-allowed",
-            ),
-            (SpeedlePlus, "http://[::1]:6734", Auth::none(), false, "http://[::1]:6734/authz-check/v1/is-allowed"),
-            (
-                SpeedlePlus,
+                Speedle,
                 "http://ads.internal:6734",
                 Auth::none(),
                 true,
                 "http://ads.internal:6734/authz-check/v1/is-allowed",
             ),
-            (
-                SpeedlePlus,
-                "https://gw.internal",
-                Auth::bearer("t"),
-                false,
-                "https://gw.internal/authz-check/v1/is-allowed",
-            ),
+            (Speedle, "https://gw.internal", Auth::bearer("t"), false, "https://gw.internal/authz-check/v1/is-allowed"),
         ];
         for (backend, endpoint, auth, insecure, want) in cases {
             let c = Client::builder(backend, endpoint, auth, "s").allow_insecure_http(insecure).build().unwrap();

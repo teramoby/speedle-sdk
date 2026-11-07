@@ -218,7 +218,7 @@ public sealed class SpeedleClientOptions
 
     /// <summary>
     /// The base URL (scheme, host, optional port and path prefix), without query or fragment.
-    /// <c>https://</c> is required, except for <see cref="Backend.SpeedlePlus"/> with
+    /// <c>https://</c> is required, except for <see cref="Backend.Speedle"/> with
     /// <see cref="Auth.None"/> on a loopback host, or anywhere with <see cref="AllowInsecureHttp"/>.
     /// </summary>
     public required Uri Endpoint { get; init; }

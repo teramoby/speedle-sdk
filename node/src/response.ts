@@ -128,7 +128,7 @@ export function classify(backend: Backend, res: RawResponse): Classified {
       return final(new RequestTooLargeError(message, fields));
     case 429: {
       const f = { ...fields, retryAfter };
-      if (backend === "speedle-plus" || code === "rate_limited") {
+      if (backend === "speedle" || code === "rate_limited") {
         const error = new RateLimitedError(message, f);
         // A burst 429 is retried only with a usable Retry-After (design §6.3).
         return retryAfter === undefined ? final(error) : retry(error);

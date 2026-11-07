@@ -26,8 +26,8 @@ const endpoint = env("SPEEDLE_E2E_ENDPOINT", true);
 const serviceName = env("SPEEDLE_E2E_SERVICE", true);
 const backend = env("SPEEDLE_E2E_BACKEND", false) ?? "speedle-cloud";
 const token = env("SPEEDLE_E2E_TOKEN", false);
-if (backend !== "speedle-cloud" && backend !== "speedle-plus") {
-  usage("SPEEDLE_E2E_BACKEND must be speedle-cloud or speedle-plus");
+if (backend !== "speedle-cloud" && backend !== "speedle") {
+  usage("SPEEDLE_E2E_BACKEND must be speedle-cloud or speedle");
 }
 if (backend === "speedle-cloud" && !token) usage("SPEEDLE_E2E_TOKEN is required for speedle-cloud");
 if (process.argv.length !== 3) usage("usage: run.mjs VECTORS_JSON");

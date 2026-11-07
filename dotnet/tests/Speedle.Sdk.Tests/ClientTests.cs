@@ -63,10 +63,10 @@ public class ClientTests
     }
 
     [Fact]
-    public async Task SpeedlePlusSendsNoAuthorization()
+    public async Task SpeedleSendsNoAuthorization()
     {
         handler.Reply(200, Allow);
-        using SpeedleClient c = Client(Backend.SpeedlePlus);
+        using SpeedleClient c = Client(Backend.Speedle);
         Assert.True(await c.IsAllowedAsync("alice", "get", "/r"));
         Assert.DoesNotContain("Authorization", Assert.Single(handler.Requests).Headers.Keys);
     }
@@ -98,10 +98,10 @@ public class ClientTests
     }
 
     [Fact]
-    public async Task SpeedlePlusErrorsAreMessagesAndGateway429IsBurst()
+    public async Task SpeedleErrorsAreMessagesAndGateway429IsBurst()
     {
         handler.Reply(400, "{\"error\":\"invalid_request\"}").Reply(429, "slow down");
-        using SpeedleClient c = Client(Backend.SpeedlePlus);
+        using SpeedleClient c = Client(Backend.Speedle);
         InvalidRequestException e = await Assert.ThrowsAsync<InvalidRequestException>(() => c.IsAllowedAsync("a", "g", "/r"));
         Assert.Null(e.Code);
         Assert.Contains("invalid_request", e.Message, StringComparison.Ordinal);
@@ -124,7 +124,7 @@ public class ClientTests
     public async Task UnknownReasonAndErrorMessage()
     {
         handler.Reply(200, "{\"allowed\":false,\"reason\":4,\"errorMessage\":\"bad\"}").Reply(200, "{\"allowed\":true,\"reason\":99}");
-        using SpeedleClient c = Client(Backend.SpeedlePlus);
+        using SpeedleClient c = Client(Backend.Speedle);
         Decision d = await c.CheckAsync("a", "g", "/r");
         Assert.Equal(Reason.ErrorInEvaluation, d.Reason);
         Assert.Equal("bad", d.ErrorMessage);
@@ -167,7 +167,7 @@ public class ClientTests
             OnAttempt = _ => throw new InvalidOperationException("hook"),
             OnRetry = _ => throw new InvalidOperationException("hook"),
         };
-        using SpeedleClient c = Client(Backend.SpeedlePlus, hooks: bad);
+        using SpeedleClient c = Client(Backend.Speedle, hooks: bad);
         Assert.True(await c.IsAllowedAsync("a", "g", "/r"));
     }
 
@@ -177,7 +177,7 @@ public class ClientTests
         handler.Throw(new HttpRequestException(HttpRequestError.ConnectionError, "reset"))
             .Reply(200, Allow)
             .Throw(new HttpRequestException("tls", new AuthenticationException("bad cert")));
-        using SpeedleClient c = Client(Backend.SpeedlePlus);
+        using SpeedleClient c = Client(Backend.Speedle);
         Assert.True(await c.IsAllowedAsync("a", "g", "/r"));
         NetworkException e = await Assert.ThrowsAsync<NetworkException>(() => c.IsAllowedAsync("a", "g", "/r"));
         Assert.Null(e.Status);
@@ -189,7 +189,7 @@ public class ClientTests
     {
         handler.Hang().Hang();
         var retry = new RetryPolicy { MaxAttempts = 2, BaseDelay = TimeSpan.Zero, AttemptTimeout = TimeSpan.FromMilliseconds(100) };
-        using SpeedleClient c = Client(Backend.SpeedlePlus, retry);
+        using SpeedleClient c = Client(Backend.Speedle, retry);
         SpeedleTimeoutException e = await Assert.ThrowsAsync<SpeedleTimeoutException>(() => c.IsAllowedAsync("a", "g", "/r"));
         Assert.Equal(typeof(SpeedleTimeoutException), e.GetType());
         Assert.Equal(2, handler.Requests.Count);
@@ -201,7 +201,7 @@ public class ClientTests
     {
         handler.Hang();
         var retry = new RetryPolicy { Deadline = TimeSpan.FromMilliseconds(150) };
-        using SpeedleClient c = Client(Backend.SpeedlePlus, retry);
+        using SpeedleClient c = Client(Backend.Speedle, retry);
         await Assert.ThrowsAsync<DeadlineExceededException>(() => c.IsAllowedAsync("a", "g", "/r"));
         Assert.Equal("deadline", recorder.Events[^1]["reason"]);
     }
@@ -210,7 +210,7 @@ public class ClientTests
     public async Task CancellationDuringAnAttemptIsNeverConverted()
     {
         handler.Hang();
-        using SpeedleClient c = Client(Backend.SpeedlePlus, mode: FailureMode.Closed, breaker: new CircuitBreakerPolicy { FailureThreshold = 1 });
+        using SpeedleClient c = Client(Backend.Speedle, mode: FailureMode.Closed, breaker: new CircuitBreakerPolicy { FailureThreshold = 1 });
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => c.IsAllowedAsync("a", "g", "/r", cancellationToken: cts.Token));
         Assert.DoesNotContain(recorder.Events, e => (string?)e["type"] == "giveUp");
@@ -222,7 +222,7 @@ public class ClientTests
     {
         handler.Reply(503, "");
         var retry = new RetryPolicy { BaseDelay = TimeSpan.FromSeconds(3), MaxDelay = TimeSpan.FromSeconds(3), Deadline = TimeSpan.FromSeconds(10) };
-        using SpeedleClient c = Client(Backend.SpeedlePlus, retry, withClock: SystemClock.Instance);
+        using SpeedleClient c = Client(Backend.Speedle, retry, withClock: SystemClock.Instance);
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
         var watch = Stopwatch.StartNew();
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => c.IsAllowedAsync("a", "g", "/r", cancellationToken: cts.Token));
@@ -234,7 +234,7 @@ public class ClientTests
     {
         handler.Reply(503, "").Reply(200, Allow);
         using SpeedleClient c = Client(
-            Backend.SpeedlePlus, RetryPolicy.Disabled, breaker: new CircuitBreakerPolicy { FailureThreshold = 1, CoolDown = TimeSpan.FromSeconds(30) });
+            Backend.Speedle, RetryPolicy.Disabled, breaker: new CircuitBreakerPolicy { FailureThreshold = 1, CoolDown = TimeSpan.FromSeconds(30) });
         await Assert.ThrowsAsync<ServiceUnavailableException>(() => c.IsAllowedAsync("a", "g", "/r"));
         await Assert.ThrowsAsync<CircuitOpenException>(() => c.IsAllowedAsync("a", "g", "/r"));
         clock.Advance(TimeSpan.FromSeconds(30));

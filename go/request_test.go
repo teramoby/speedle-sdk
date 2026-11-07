@@ -45,7 +45,7 @@ func TestRequestFormat(t *testing.T) {
 
 func TestNoAuthSendsNoAuthorization(t *testing.T) {
 	s := newScript(t, reply{status: 200, body: okBody})
-	c, _ := testClient(t, s, func(c *Config) { c.Backend, c.Auth = BackendSpeedlePlus, NoAuth() })
+	c, _ := testClient(t, s, func(c *Config) { c.Backend, c.Auth = BackendSpeedle, NoAuth() })
 	if _, err := c.IsAllowed(bg, User("a"), "get", "/r", nil); err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +129,7 @@ func TestErrorMapping(t *testing.T) {
 	}{
 		{BackendSpeedleCloud, 400, map[string]string{"X-Quota-Daily-Remaining": "7"}, `{"error":"invalid_request"}`, KindInvalidRequest, "invalid_request", "", 0, 7, 1},
 		{BackendSpeedleCloud, 400, nil, `{"error":"SPDL-0004 bad attribute"}`, KindInvalidRequest, "", "SPDL-0004 bad attribute", 0, -1, 1},
-		{BackendSpeedlePlus, 400, nil, `{"error":"invalid_request"}`, KindInvalidRequest, "", "invalid_request", 0, -1, 1},
+		{BackendSpeedle, 400, nil, `{"error":"invalid_request"}`, KindInvalidRequest, "", "invalid_request", 0, -1, 1},
 		{BackendSpeedleCloud, 401, nil, `{"error":"unauthorized"}`, KindUnauthorized, "unauthorized", "", 0, -1, 1},
 		{BackendSpeedleCloud, 403, nil, `{"error":"service_mismatch"}`, KindForbidden, "service_mismatch", "", 0, -1, 1},
 		{BackendSpeedleCloud, 404, nil, `404 page not found`, KindHTTP, "", "", 0, -1, 1},
@@ -139,8 +139,8 @@ func TestErrorMapping(t *testing.T) {
 		{BackendSpeedleCloud, 429, map[string]string{"Retry-After": "3600"}, `{"error":"daily_quota_exceeded"}`, KindQuotaExceeded, "daily_quota_exceeded", "", time.Hour, -1, 1},
 		{BackendSpeedleCloud, 429, map[string]string{"Retry-After": "1"}, `{"error":"slow_down"}`, KindTooManyRequests, "", "slow_down", time.Second, -1, 1},
 		{BackendSpeedleCloud, 429, nil, `<html>`, KindTooManyRequests, "", "", 0, -1, 1},
-		{BackendSpeedlePlus, 429, nil, `{"error":"gateway says slow down"}`, KindRateLimited, "", "gateway says slow down", 0, -1, 1},
-		{BackendSpeedlePlus, 429, map[string]string{"Retry-After": "soon"}, ``, KindRateLimited, "", "", 0, -1, 1},
+		{BackendSpeedle, 429, nil, `{"error":"gateway says slow down"}`, KindRateLimited, "", "gateway says slow down", 0, -1, 1},
+		{BackendSpeedle, 429, map[string]string{"Retry-After": "soon"}, ``, KindRateLimited, "", "", 0, -1, 1},
 		{BackendSpeedleCloud, 500, nil, `{"error":"internal_error"}`, KindServer, "internal_error", "", 0, -1, 1},
 		{BackendSpeedleCloud, 501, nil, ``, KindServer, "", "", 0, -1, 1},
 		{BackendSpeedleCloud, 502, nil, `<html>`, KindServer, "", "", 0, -1, 3},

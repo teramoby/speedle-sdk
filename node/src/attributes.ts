@@ -157,7 +157,7 @@ export function toWireAttributes(attributes: Attributes | undefined | null): Wir
     } else {
       type = inferType(value);
     }
-    if (type === undefined) throw invalid(`attribute "${name}": cannot infer a Speedle+ type; use Attr`);
+    if (type === undefined) throw invalid(`attribute "${name}": cannot infer a Speedle type; use Attr`);
     return { name, type, value: convert(name, type, value) };
   });
 }

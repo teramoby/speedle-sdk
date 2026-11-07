@@ -12,5 +12,5 @@ public enum Backend {
   /** Speedle Cloud ADS ({@code https://cloud.speedle.io}). Requires {@link Auth#bearer}. */
   SPEEDLE_CLOUD,
   /** A self-hosted Speedle ADS (REST, default port 6734). */
-  SPEEDLE_PLUS
+  SPEEDLE
 }

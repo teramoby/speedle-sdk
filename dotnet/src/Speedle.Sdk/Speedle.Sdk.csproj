@@ -9,7 +9,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
     <PackageId>Speedle.Sdk</PackageId>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
     <Authors>The Speedle Authors</Authors>
     <Company>The Speedle Authors</Company>
     <Copyright>Copyright (c) 2026 The Speedle Authors</Copyright>

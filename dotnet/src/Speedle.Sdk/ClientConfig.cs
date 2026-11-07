@@ -50,9 +50,9 @@ internal sealed record ClientConfig(
         Uri target = BuildTarget(o.Endpoint);
         if (target.Scheme == Uri.UriSchemeHttp)
         {
-            if (o.Backend != Backend.SpeedlePlus || o.Auth is not NoneAuth)
+            if (o.Backend != Backend.Speedle || o.Auth is not NoneAuth)
             {
-                throw Config("http:// is allowed only for SpeedlePlus with Auth.None(); use https://");
+                throw Config("http:// is allowed only for Backend.Speedle with Auth.None(); use https://");
             }
 
             if (!o.AllowInsecureHttp && !IsLoopback(target.Host))

@@ -33,7 +33,7 @@ final class VectorCalls {
   /** Applies {@code config} to the builder. */
   static SpeedleClient.Builder configure(
       SpeedleClient.Builder b, String backend, Map<String, Object> config) {
-    b.backend(backend.equals("speedle-cloud") ? Backend.SPEEDLE_CLOUD : Backend.SPEEDLE_PLUS);
+    b.backend(backend.equals("speedle-cloud") ? Backend.SPEEDLE_CLOUD : Backend.SPEEDLE);
     Map<String, Object> auth = obj(config.get("auth"));
     b.auth(
         "bearer".equals(auth.get("type")) ? Auth.bearer((String) auth.get("token")) : Auth.none());

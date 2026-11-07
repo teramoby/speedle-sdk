@@ -8,7 +8,7 @@ import { startServer, TOKEN } from "./helpers.js";
 
 const allow = { status: 200, body: { allowed: true, reason: 0 } };
 
-test("sends the Speedle+ JsonContext with bearer auth, JSON and the User-Agent", async () => {
+test("sends the Speedle JsonContext with bearer auth, JSON and the User-Agent", async () => {
   const server = await startServer([allow]);
   after(() => server.close());
   const { client } = build(server.url, { userAgentSuffix: "app/1.2" });

@@ -8,7 +8,8 @@ Client for the `is-allowed` authorization check of
 - Java 17 or later. No runtime dependencies: transport is `java.net.http.HttpClient`.
 - License: UPL-1.0.
 
-Published on Maven Central: 0.1.0 (2026-11-05). The design is in [docs/design.md](../docs/design.md).
+Published on Maven Central: 0.1.0 (2026-11-05). This README describes 0.2.0,
+which is not yet released. The design is in [docs/design.md](../docs/design.md).
 
 ## Install
 
@@ -16,7 +17,7 @@ Published on Maven Central: 0.1.0 (2026-11-05). The design is in [docs/design.md
 <dependency>
   <groupId>io.speedle</groupId>
   <artifactId>speedle-sdk</artifactId>
-  <version>0.1.0</version>
+  <version>0.2.0</version>
 </dependency>
 ```
 
@@ -56,7 +57,7 @@ desktop clients.
 
 ```java
 try (SpeedleClient speedle = SpeedleClient.builder()
-    .backend(Backend.SPEEDLE_PLUS)
+    .backend(Backend.SPEEDLE)
     .endpoint(URI.create("https://ads.internal.example:6734"))
     .auth(Auth.none())                  // or Auth.mutualTls(keyStore, password)
     .serviceName("books")
@@ -68,7 +69,7 @@ try (SpeedleClient speedle = SpeedleClient.builder()
 }
 ```
 
-`http://` is accepted only for `SPEEDLE_PLUS` with `Auth.none()`, and only for
+`http://` is accepted only for `Backend.SPEEDLE` with `Auth.none()`, and only for
 loopback hosts unless you set `allowInsecureHttp(true)`. A bearer token is
 never sent over plaintext. Self-hosted Speedle itself warns against
 unauthenticated plaintext endpoints; keep them on a trusted network.

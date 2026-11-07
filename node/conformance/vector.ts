@@ -46,7 +46,7 @@ export interface VectorExpect {
 export interface Vector {
   id: string;
   description: string;
-  backend: "speedle-cloud" | "speedle-plus";
+  backend: "speedle-cloud" | "speedle";
   config: {
     auth: { type: "none" } | { type: "bearer"; token: string };
     serviceName: string;
