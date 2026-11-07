@@ -11,7 +11,7 @@ public class ConfigurationTests
 {
     private static SpeedleClientOptions Plus(string endpoint, Auth? auth = null, bool insecure = false) => new()
     {
-        Backend = Backend.SpeedlePlus,
+        Backend = Backend.Speedle,
         Endpoint = new Uri(endpoint),
         Auth = auth ?? Auth.None(),
         ServiceName = "books",
@@ -51,7 +51,7 @@ public class ConfigurationTests
     }
 
     [Fact]
-    public void PlaintextOnlyForSpeedlePlusWithoutCredentials()
+    public void PlaintextOnlyForSpeedleWithoutCredentials()
     {
         Ok(Plus("http://127.0.0.1:6734"));
         Ok(Plus("http://localhost:6734"));
@@ -100,7 +100,7 @@ public class ConfigurationTests
     public void UserAgent()
     {
         string ua = ClientConfig.BuildUserAgent("myapp/1.2");
-        Assert.Matches(new Regex(@"^speedle-sdk-dotnet/0\.1\.0 \(dotnet/[0-9.]+; [a-z]+\) myapp/1\.2$"), ua);
+        Assert.Matches(new Regex(@"^speedle-sdk-dotnet/0\.2\.0 \(dotnet/[0-9.]+; [a-z]+\) myapp/1\.2$"), ua);
     }
 
     [Fact]

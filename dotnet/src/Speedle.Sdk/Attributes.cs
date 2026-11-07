@@ -15,7 +15,7 @@ public enum Backend
     SpeedleCloud,
 
     /// <summary>A self-hosted Speedle ADS.</summary>
-    SpeedlePlus,
+    Speedle,
 }
 
 /// <summary>The four Speedle principal types; <see cref="Principal.Type"/> is an open string.</summary>

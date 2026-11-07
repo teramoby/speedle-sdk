@@ -18,7 +18,7 @@ Tracking issue: [teramoby/cloud.speedle.io#212](https://github.com/teramoby/clou
 | --- | --- |
 | `policies.json` | The policy set, in Speedle Cloud's JSON export format, which is also the console's JSON import file ([cloud.speedle.io#191](https://github.com/teramoby/cloud.speedle.io/pull/191)). |
 | `vectors.json` | The requests and the decision self-hosted Speedle returned for each. |
-| `speedle-plus/` | The local proof: `run-local.sh` and a small Go tool (standard library only) that loads the policies with `spctl`, checks the parsed forms and checks or records the vectors with raw HTTP. |
+| `speedle/` | The local proof: `run-local.sh` and a small Go tool (standard library only) that loads the policies with `spctl`, checks the parsed forms and checks or records the vectors with raw HTTP. |
 | `java/`, `node/`, `python/`, `go/`, `dotnet/`, `rust/` | One thin runner per SDK, each with `build.sh` and `run.sh`. Each builds the SDK from its directory in this repository. |
 | `../.github/workflows/e2e-local.yml` | The local proof for every SDK, on pull requests and pushes that touch `e2e/` or an SDK. No secrets. |
 | `../.github/workflows/e2e-gamma.yml` | The gamma workflow. |
@@ -81,7 +81,7 @@ the service name it is given. Attribute types are `string`, `numeric`, `bool`
 and `datetime`; a JSON array value is the array form. `datetime` values are
 RFC 3339 in UTC with at most millisecond precision, the form the SDKs write.
 `expect` is the `is-allowed` body: `allowed`, `reason` and, when self-hosted
-Speedle sets it, `errorMessage`. The top-level `speedlePlus` field is the
+Speedle sets it, `errorMessage`. The top-level `speedleCommit` field is the
 self-hosted Speedle commit the expectations were recorded with.
 
 ## Runner contract
@@ -99,8 +99,8 @@ Every `e2e/<language>/` directory has two scripts:
 | --- | --- |
 | `SPEEDLE_E2E_ENDPOINT` | Required. Base URL, for example `https://g.speedle.io`. |
 | `SPEEDLE_E2E_SERVICE` | Required. The `serviceName` to send; on Speedle Cloud, the token's service. |
-| `SPEEDLE_E2E_TOKEN` | The bearer token. Required for `speedle-cloud`; for `speedle-plus` the runner uses no authentication when it is unset. |
-| `SPEEDLE_E2E_BACKEND` | `speedle-cloud` (default) or `speedle-plus`. |
+| `SPEEDLE_E2E_TOKEN` | The bearer token. Required for `speedle-cloud`; for `speedle` the runner uses no authentication when it is unset. |
+| `SPEEDLE_E2E_BACKEND` | `speedle-cloud` (default) or `speedle`. |
 | `SPEEDLE_E2E_VECTORS` | Vector file, default `e2e/vectors.json`. |
 
 The runners use the SDK defaults (3 attempts, 5 s deadline) and add
@@ -118,7 +118,7 @@ Needs Go, git, curl, and the toolchains of the SDKs you name. Self-hosted
 Speedle is built from the git checkout you point at; nothing is written into it.
 
 ```bash
-SPEEDLE_PLUS_DIR=/path/to/speedle-plus e2e/speedle-plus/run-local.sh all
+SPEEDLE_DIR=/path/to/speedle-plus e2e/speedle/run-local.sh all
 ```
 
 The script builds `speedle-pms`, `speedle-ads` and `spctl`, starts PMS on
@@ -126,13 +126,13 @@ The script builds `speedle-pms`, `speedle-ads` and `spctl`, starts PMS on
 policy from the SPDL in `policies.json` with `spctl`, and checks that the
 `parsed` form in the file is what PMS stored. It then starts a REST ADS on
 `127.0.0.1:16734` with the same store, checks every vector with raw HTTP, and
-runs the named SDK runners against it with `SPEEDLE_E2E_BACKEND=speedle-plus`
+runs the named SDK runners against it with `SPEEDLE_E2E_BACKEND=speedle`
 and no token (a `SPEEDLE_E2E_TOKEN` in your shell is not passed on).
 Name one or more of `java`, `node`, `python`, `go`, `dotnet` and `rust`, or
 `all`, or nothing to check only self-hosted Speedle.
 
 The `e2e-local` workflow runs the same script for each SDK on GitHub-hosted
-runners, with self-hosted Speedle checked out at the `speedlePlus` commit in
+runners, with self-hosted Speedle checked out at the `speedleCommit` commit in
 `vectors.json`. That commit must be on `teramoby/speedle-plus` `master`.
 
 After changing the policies or the vectors, record the parsed forms and the
@@ -141,7 +141,7 @@ Speedle checkout with uncommitted changes, because the recorded commit would not
 describe the build:
 
 ```bash
-SPEEDLE_PLUS_DIR=/path/to/speedle-plus e2e/speedle-plus/run-local.sh --record
+SPEEDLE_DIR=/path/to/speedle-plus e2e/speedle/run-local.sh --record
 ```
 
 New entries in `policies.json` need a UUIDv7 `id` and millisecond

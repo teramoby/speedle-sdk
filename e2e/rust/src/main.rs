@@ -30,8 +30,8 @@ fn main() {
     let service = env("SPEEDLE_E2E_SERVICE", true).unwrap();
     let backend = match env("SPEEDLE_E2E_BACKEND", false).as_deref() {
         None | Some("speedle-cloud") => Backend::SpeedleCloud,
-        Some("speedle-plus") => Backend::SpeedlePlus,
-        Some(_) => usage("SPEEDLE_E2E_BACKEND must be speedle-cloud or speedle-plus"),
+        Some("speedle") => Backend::Speedle,
+        Some(_) => usage("SPEEDLE_E2E_BACKEND must be speedle-cloud or speedle"),
     };
     let token = env("SPEEDLE_E2E_TOKEN", false);
     if matches!(backend, Backend::SpeedleCloud) && token.is_none() {

@@ -1,8 +1,8 @@
 {
   "$schema": "../schema.json",
-  "id": "speedle-plus-denied",
+  "id": "speedle-denied",
   "description": "Self-hosted Speedle denies the request. The inferred form becomes typed items sorted by name; no Authorization header is sent.",
-  "backend": "speedle-plus",
+  "backend": "speedle",
   "config": {
     "auth": {
       "type": "none"

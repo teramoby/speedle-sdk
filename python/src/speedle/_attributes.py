@@ -169,7 +169,7 @@ def to_wire_attributes(attributes: Attributes | None) -> list[dict[str, object]]
                 type_ = kinds.pop() if len(kinds) == 1 else None
                 is_array = True
             if type_ is None:
-                raise _invalid(f"attribute {name!r}: cannot infer a Speedle+ type; use Attribute")
+                raise _invalid(f"attribute {name!r}: cannot infer a Speedle type; use Attribute")
             out.append(_wire(name, type_, value, is_array))
         return out
     if isinstance(attributes, (str, bytes)) or not isinstance(attributes, Sequence):

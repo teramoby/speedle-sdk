@@ -64,8 +64,8 @@ func main() {
 	if backend == "" {
 		backend = string(speedle.BackendSpeedleCloud)
 	}
-	if backend != string(speedle.BackendSpeedleCloud) && backend != string(speedle.BackendSpeedlePlus) {
-		usage("SPEEDLE_E2E_BACKEND must be speedle-cloud or speedle-plus")
+	if backend != string(speedle.BackendSpeedleCloud) && backend != string(speedle.BackendSpeedle) {
+		usage("SPEEDLE_E2E_BACKEND must be speedle-cloud or speedle")
 	}
 	if backend == string(speedle.BackendSpeedleCloud) && token == "" {
 		usage("SPEEDLE_E2E_TOKEN is required for speedle-cloud")

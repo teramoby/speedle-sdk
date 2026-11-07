@@ -71,8 +71,9 @@ record ClientConfig(
       URI target = target();
       boolean https = target.getScheme().equals("https");
       if (!https) {
-        if (backend != Backend.SPEEDLE_PLUS || !(auth instanceof Auth.None)) {
-          throw config("http:// is allowed only for SPEEDLE_PLUS with Auth.none(); use https://");
+        if (backend != Backend.SPEEDLE || !(auth instanceof Auth.None)) {
+          throw config(
+              "http:// is allowed only for Backend.SPEEDLE with Auth.none(); use https://");
         }
         if (!allowInsecureHttp && !isLoopback(target.getHost())) {
           throw config(

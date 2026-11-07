@@ -7,7 +7,8 @@ and asyncio clients, fully typed. The only runtime dependency is `httpx`.
 The behaviour follows [docs/design.md](../docs/design.md). See the
 [Python SDK documentation](https://engine.speedle.io/docs/sdks/python/).
 
-> Published on PyPI: 0.1.0 (2026-11-05).
+> Published on PyPI: 0.1.0 (2026-11-05). This README describes 0.2.0, which is
+> not yet released.
 
 ## Install
 
@@ -21,7 +22,7 @@ pip install speedle
 from speedle import AsyncClient, Auth
 
 async with AsyncClient(
-    backend="speedle-plus",
+    backend="speedle",
     endpoint="http://127.0.0.1:6734",
     auth=Auth.none(),
     service_name="books",
@@ -32,7 +33,7 @@ async with AsyncClient(
 
 For HTTPS, use `Auth.mutual_tls("client.pem", "client.key")` with
 `--force-client-cert`, and set `ca_file="ca.pem"` for a private CA. `http://`
-is accepted only for `speedle-plus` with `Auth.none()`, and only for loopback
+is accepted only for `speedle` with `Auth.none()`, and only for loopback
 hosts unless you pass `allow_insecure_http=True`. Self-hosted Speedle warns
 that an unauthenticated plaintext endpoint lets anyone on the network ask for
 decisions; prefer HTTPS.

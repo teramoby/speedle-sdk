@@ -146,7 +146,7 @@ func (c *Client) interpret(resp *http.Response, data []byte) attemptResult {
 	case status == 429:
 		e.RetryAfter = retryAfter
 		switch {
-		case c.backend == BackendSpeedlePlus, code == "rate_limited":
+		case c.backend == BackendSpeedle, code == "rate_limited":
 			e.Kind = KindRateLimited
 			// A burst 429 is retried only with a usable Retry-After.
 			res.retryable = retryAfter > 0

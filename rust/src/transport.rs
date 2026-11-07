@@ -125,7 +125,7 @@ pub(crate) fn interpret(
         403 => ErrorKind::Forbidden,
         413 => ErrorKind::RequestTooLarge,
         429 => match (backend, code.as_deref()) {
-            (Backend::SpeedlePlus, _) | (_, Some("rate_limited")) => {
+            (Backend::Speedle, _) | (_, Some("rate_limited")) => {
                 // A burst 429 is retried only with a usable Retry-After.
                 res.retryable = retry_after.is_some();
                 res.retry_after = retry_after;
@@ -277,7 +277,7 @@ mod tests {
                 retryable: false,
             },
             Case {
-                backend: SpeedlePlus,
+                backend: Speedle,
                 status: 400,
                 headers: &[],
                 body: r#"{"error":"invalid_request"}"#,
@@ -377,7 +377,7 @@ mod tests {
                 retryable: false,
             },
             Case {
-                backend: SpeedlePlus,
+                backend: Speedle,
                 status: 429,
                 headers: &[("retry-after", "2")],
                 body: r#"{"error":"slow down"}"#,
@@ -502,7 +502,7 @@ mod tests {
     #[test]
     fn decisions() {
         let r = interpret(
-            Backend::SpeedlePlus,
+            Backend::Speedle,
             200,
             &headers(&[("x-quota-daily-remaining", "5")]),
             br#"{"allowed":false,"reason":4,"errorMessage":"boom","x":1}"#,

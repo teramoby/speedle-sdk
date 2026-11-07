@@ -9,7 +9,8 @@ Client for the `is-allowed` authorization check of
   source generation. Trimming and AOT compatible.
 - License: UPL-1.0.
 
-Published on NuGet: 0.1.0 (2026-11-05). The design is in [docs/design.md](../docs/design.md).
+Published on NuGet: 0.1.0 (2026-11-05). This README describes 0.2.0, which is
+not yet released. The design is in [docs/design.md](../docs/design.md).
 See the [.NET SDK documentation](https://engine.speedle.io/docs/sdks/dotnet/).
 
 ## Install
@@ -23,7 +24,7 @@ dotnet add package Speedle.Sdk
 ```csharp
 await using var speedle = new SpeedleClient(new SpeedleClientOptions
 {
-    Backend = Backend.SpeedlePlus,
+    Backend = Backend.Speedle,
     Endpoint = new Uri("http://127.0.0.1:6734"),
     Auth = Auth.None(),
     ServiceName = "books",
@@ -36,7 +37,7 @@ Console.WriteLine($"{d.Allowed} {d.Reason}");
 
 For HTTPS, use `Auth.MutualTls(certificateWithKey)` when required and set
 `ExtraTrustedCertificates` for a private CA. `http://` is accepted only for
-`SpeedlePlus` with `Auth.None()`, and only for loopback hosts unless you set
+`Backend.Speedle` with `Auth.None()`, and only for loopback hosts unless you set
 `AllowInsecureHttp = true`. A bearer token is never sent over plaintext.
 Self-hosted Speedle itself warns against unauthenticated plaintext endpoints;
 keep them on a trusted network.

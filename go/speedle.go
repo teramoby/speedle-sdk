@@ -27,7 +27,7 @@ import (
 )
 
 // Version is the SDK version sent in the User-Agent header.
-const Version = "0.1.0"
+const Version = "0.2.0"
 
 // Backend selects the auth rules and the error body interpretation. The
 // request format is the same for both.
@@ -35,7 +35,7 @@ type Backend string
 
 const (
 	BackendSpeedleCloud Backend = "speedle-cloud"
-	BackendSpeedlePlus  Backend = "speedle-plus"
+	BackendSpeedle      Backend = "speedle"
 )
 
 // Principal types known to Speedle. Type is an open string.

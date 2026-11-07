@@ -7,6 +7,8 @@ CommonJS, no runtime dependencies. See the [Node.js SDK
 documentation](https://engine.speedle.io/docs/sdks/node/) and [design
 specification](https://github.com/teramoby/speedle-sdk/blob/main/docs/design.md).
 
+> Not yet published on npm. 0.2.0 will be the first npm release.
+
 ## Install
 
 ```sh
@@ -21,7 +23,7 @@ With an empty `books` service and no matching policies, the decision is a denial
 import { Auth, SpeedleClient } from "@speedle/sdk";
 
 const speedle = new SpeedleClient({
-  backend: "speedle-plus",
+  backend: "speedle",
   endpoint: "http://127.0.0.1:6734",
   auth: Auth.none(),
   serviceName: "books",
@@ -37,7 +39,7 @@ try {
 
 For HTTPS, use `Auth.mutualTls({ cert, key })` when ADS runs with
 `--force-client-cert`, and set `caCert` to an extra PEM trust anchor for a
-private CA. `http://` is accepted only for `speedle-plus` with `Auth.none()`,
+private CA. `http://` is accepted only for `speedle` with `Auth.none()`,
 and only for loopback hosts unless you set `allowInsecureHttp: true`.
 Self-hosted Speedle warns that an unauthenticated plaintext endpoint lets
 anyone on the network ask for decisions; prefer HTTPS.

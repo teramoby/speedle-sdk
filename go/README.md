@@ -9,7 +9,8 @@ Go client for the Speedle authorization decision service
 - Go: the two latest releases (1.26 and 1.27)
 - Dependencies: the standard library only
 - License: UPL-1.0, © 2026 The Speedle Authors
-- Status: 0.1.0, published in the Go module proxy (2026-11-05)
+- Status: 0.1.0 published in the Go module proxy (2026-11-05); this README
+  describes 0.2.0, which is not yet released
 
 See the [Go SDK documentation](https://engine.speedle.io/docs/sdks/go/).
 
@@ -23,7 +24,7 @@ go get github.com/teramoby/speedle-sdk/go
 
 ```go
 client, err := speedle.NewClient(speedle.Config{
-	Backend:     speedle.BackendSpeedlePlus,
+	Backend:     speedle.BackendSpeedle,
 	Endpoint:    "http://127.0.0.1:6734",
 	Auth:        speedle.NoAuth(),
 	ServiceName: "books",
@@ -38,7 +39,7 @@ d, err := client.Check(ctx, speedle.Subject{
 
 For HTTPS, use `speedle.MutualTLS(cert)` when required and set `RootCAs` to a
 pool containing your private CA. `http://` is accepted only for
-`BackendSpeedlePlus` with `NoAuth()`, and only for loopback hosts unless
+`BackendSpeedle` with `NoAuth()`, and only for loopback hosts unless
 `AllowInsecureHTTP` is set. Self-hosted Speedle warns that a plaintext endpoint
 has no authentication; keep it on a trusted network. An unknown service on
 self-hosted Speedle is not an error: the decision is a deny with reason
@@ -184,7 +185,7 @@ nothing but the is-allowed request: no telemetry, no logging.
 
 ## Requests on the wire
 
-`User-Agent: speedle-sdk-go/0.1.0 (go/<version>; <os>)`, plus
+`User-Agent: speedle-sdk-go/0.2.0 (go/<version>; <os>)`, plus
 `UserAgentSuffix`. The body is the Speedle `JsonContext` for both backends.
 The transport honours the standard `HTTPS_PROXY`/`NO_PROXY` environment
 variables, as `net/http` does. Certificate verification cannot be disabled;

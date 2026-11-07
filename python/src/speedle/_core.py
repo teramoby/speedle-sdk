@@ -103,8 +103,8 @@ def resolve_config(
     allow_insecure_http: object,
     user_agent_suffix: object,
 ) -> Config:
-    if backend not in ("speedle-cloud", "speedle-plus"):
-        raise _fail('backend must be "speedle-cloud" or "speedle-plus"')
+    if backend not in ("speedle-cloud", "speedle"):
+        raise _fail('backend must be "speedle-cloud" or "speedle"')
     if not isinstance(auth, Auth):
         raise _fail("auth must come from Auth.none(), Auth.bearer() or Auth.mutual_tls()")
     if backend == "speedle-cloud" and auth.kind != "bearer":
@@ -127,8 +127,8 @@ def resolve_config(
         raise _fail("endpoint must not contain credentials")
     scheme = parts.scheme.lower()
     if scheme == "http":
-        if backend != "speedle-plus" or auth.kind != "none":
-            raise _fail("http:// is accepted only for speedle-plus with Auth.none()")
+        if backend != "speedle" or auth.kind != "none":
+            raise _fail('http:// is accepted only for backend "speedle" with Auth.none()')
         loopback = host in {"localhost", "::1"} or bool(_LOOPBACK_V4.match(host))
         if not loopback and allow_insecure_http is not True:
             raise _fail("http:// is accepted only for loopback hosts unless allow_insecure_http is set")
@@ -351,7 +351,7 @@ def classify(backend: Backend, res: RawResponse) -> Decision | Classified:
     if status == 413:
         return final(E.RequestTooLargeError(message, **kw))
     if status == 429:
-        if backend == "speedle-plus" or code == "rate_limited":
+        if backend == "speedle" or code == "rate_limited":
             rl = E.RateLimitedError(message, retry_after=retry_after, **kw)
             # A burst 429 is retried only with a usable Retry-After (design §6.3).
             return final(rl) if retry_after is None else retry(rl)

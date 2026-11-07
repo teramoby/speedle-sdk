@@ -8,7 +8,7 @@
 # vector in e2e/vectors.json with raw HTTP. Then it runs the SDK runners named
 # on the command line against the same ADS.
 #
-# Usage: SPEEDLE_PLUS_DIR=/path/to/speedle-plus e2e/speedle-plus/run-local.sh [--record] [all | LANG ...]
+# Usage: SPEEDLE_DIR=/path/to/speedle-plus e2e/speedle/run-local.sh [--record] [all | LANG ...]
 #   --record  write the self-hosted Speedle parsed forms into policies.json and the
 #             self-hosted Speedle decisions into vectors.json instead of checking them
 #   LANG      java, node, python, go, dotnet or rust
@@ -27,12 +27,12 @@ for arg in "$@"; do
     all) langs=("${all_langs[@]}") ;;
     java | node | python | go | dotnet | rust) langs+=("$arg") ;;
     *)
-      echo "usage: SPEEDLE_PLUS_DIR=DIR $0 [--record] [all | java | node | python | go | dotnet | rust ...]" >&2
+      echo "usage: SPEEDLE_DIR=DIR $0 [--record] [all | java | node | python | go | dotnet | rust ...]" >&2
       exit 2
       ;;
   esac
 done
-: "${SPEEDLE_PLUS_DIR:?set SPEEDLE_PLUS_DIR to a Speedle+ checkout}"
+: "${SPEEDLE_DIR:?set SPEEDLE_DIR to a teramoby/speedle-plus checkout}"
 pms_port="${E2E_PMS_PORT:-16733}"
 ads_port="${E2E_ADS_PORT:-16734}"
 service=sdk-e2e
@@ -71,16 +71,16 @@ for port in "$pms_port" "$ads_port"; do
   fi
 done
 
-commit="$(git -C "$SPEEDLE_PLUS_DIR" rev-parse HEAD)"
-if [ "$record" = 1 ] && [ -n "$(git -C "$SPEEDLE_PLUS_DIR" status --porcelain)" ]; then
-  echo "refusing to record: $SPEEDLE_PLUS_DIR has uncommitted changes, so $commit would not describe the build" >&2
+commit="$(git -C "$SPEEDLE_DIR" rev-parse HEAD)"
+if [ "$record" = 1 ] && [ -n "$(git -C "$SPEEDLE_DIR" status --porcelain)" ]; then
+  echo "refusing to record: $SPEEDLE_DIR has uncommitted changes, so $commit would not describe the build" >&2
   exit 1
 fi
-echo "== building Speedle+ $commit from $SPEEDLE_PLUS_DIR"
-go build -C "$SPEEDLE_PLUS_DIR" -mod=readonly -trimpath -o "$work/bin/" \
+echo "== building self-hosted Speedle $commit from $SPEEDLE_DIR"
+go build -C "$SPEEDLE_DIR" -mod=readonly -trimpath -o "$work/bin/" \
   ./cmd/speedle-pms ./cmd/speedle-ads ./cmd/spctl
-go build -C "$here" -o "$work/bin/e2e-speedle-plus" .
-tool="$work/bin/e2e-speedle-plus"
+go build -C "$here" -o "$work/bin/e2e-speedle" .
+tool="$work/bin/e2e-speedle"
 
 echo "== loading $e2e/policies.json through PMS with spctl"
 printf '{}\n' >"$work/store.json"
@@ -99,7 +99,7 @@ write=()
 [ "$record" = 1 ] && write=(-write)
 "$tool" parsed -store "$work/store.json" -service "$service" -policies "$e2e/policies.json" ${write[@]+"${write[@]}"}
 
-echo "== checking $e2e/vectors.json against Speedle+ ADS with raw HTTP"
+echo "== checking $e2e/vectors.json against self-hosted Speedle ADS with raw HTTP"
 "$work/bin/speedle-ads" --store-type file --filestore-loc "$work/store.json" \
   --endpoint "127.0.0.1:$ads_port" --grpc-endpoint 127.0.0.1:0 --insecure=true \
   >"$work/ads.log" 2>&1 &
@@ -115,9 +115,9 @@ fi
 
 failed=()
 for lang in ${langs[@]+"${langs[@]}"}; do
-  echo "== $lang SDK against Speedle+ ADS"
+  echo "== $lang SDK against self-hosted Speedle ADS"
   # The local ADS takes no token; never pass on one from the caller's shell.
-  if ! "$e2e/$lang/build.sh" || ! env -u SPEEDLE_E2E_TOKEN SPEEDLE_E2E_BACKEND=speedle-plus \
+  if ! "$e2e/$lang/build.sh" || ! env -u SPEEDLE_E2E_TOKEN SPEEDLE_E2E_BACKEND=speedle \
     SPEEDLE_E2E_ENDPOINT="http://127.0.0.1:$ads_port" \
     SPEEDLE_E2E_SERVICE="$service" \
     SPEEDLE_E2E_VECTORS="$e2e/vectors.json" \

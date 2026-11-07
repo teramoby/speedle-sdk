@@ -42,9 +42,9 @@ impl Hooks for Rec {
 const OK: &str = r#"{"allowed":true,"reason":0}"#;
 
 /// A self-hosted Speedle client over plain HTTP on loopback with a virtual clock.
-fn plus(srv: &TestServer, b: impl FnOnce(ClientBuilder) -> ClientBuilder) -> (Client, Arc<VirtualClock>) {
+fn self_hosted(srv: &TestServer, b: impl FnOnce(ClientBuilder) -> ClientBuilder) -> (Client, Arc<VirtualClock>) {
     let clock = Arc::new(VirtualClock::default());
-    let c = b(Client::builder(Backend::SpeedlePlus, &srv.url("http"), Auth::none(), "books"))
+    let c = b(Client::builder(Backend::Speedle, &srv.url("http"), Auth::none(), "books"))
         .build_with(clock.clone(), Arc::new(FixedRandom(1.0)))
         .unwrap();
     (c, clock)
@@ -61,7 +61,7 @@ fn alice() -> Subject {
 #[tokio::test]
 async fn request_format() {
     let srv = plain(vec![reply(200, OK), reply(200, OK)]).await;
-    let (c, _) = plus(&srv, |b| b);
+    let (c, _) = self_hosted(&srv, |b| b);
     let subject = Subject::of([
         Principal::new("", "bob"),
         Principal { kind: Principal::GROUP.into(), name: "readers".into(), idd: Some("corp".into()) },
@@ -96,7 +96,7 @@ async fn request_format() {
 async fn validation_sends_nothing() {
     let srv = plain(vec![]).await;
     let rec = Rec::default();
-    let (c, _) = plus(&srv, |b| b.hooks(rec.clone()));
+    let (c, _) = self_hosted(&srv, |b| b.hooks(rec.clone()));
     let empty = CallOptions { service_name: Some(String::new()) };
     let errs = [
         c.check(&Subject::of([]), "get", "/r", &[]).await,
@@ -118,7 +118,7 @@ async fn validation_sends_nothing() {
 async fn retries_503_with_backoff() {
     let srv = plain(vec![reply(503, ""), reply(503, ""), reply(200, OK)]).await;
     let rec = Rec::default();
-    let (c, clock) = plus(&srv, |b| b.hooks(rec.clone()));
+    let (c, clock) = self_hosted(&srv, |b| b.hooks(rec.clone()));
     assert!(c.is_allowed(&alice(), "get", "/r", &[]).await.unwrap());
     assert_eq!(clock.take_sleeps(), [Duration::from_millis(100), Duration::from_millis(200)]);
     let attempts = rec.0.attempts.lock().unwrap();
@@ -132,7 +132,7 @@ async fn retry_after_raises_the_delay() {
     let srv =
         plain(vec![Reply { status: 503, headers: vec![("Retry-After", "2")], ..Default::default() }, reply(200, OK)])
             .await;
-    let (c, clock) = plus(&srv, |b| b);
+    let (c, clock) = self_hosted(&srv, |b| b);
     assert!(c.is_allowed(&alice(), "get", "/r", &[]).await.unwrap());
     assert_eq!(clock.take_sleeps(), [Duration::from_secs(2)]);
 }
@@ -141,7 +141,7 @@ async fn retry_after_raises_the_delay() {
 async fn non_retryable_and_exhausted() {
     let rec = Rec::default();
     let srv = plain(vec![reply(500, ""), reply(429, ""), reply(502, ""), reply(502, ""), reply(502, "")]).await;
-    let (c, _) = plus(&srv, |b| b.hooks(rec.clone()));
+    let (c, _) = self_hosted(&srv, |b| b.hooks(rec.clone()));
     assert_eq!(c.check(&alice(), "get", "/r", &[]).await.err().unwrap().kind(), ErrorKind::Server);
     // A self-hosted Speedle 429 without Retry-After is a burst 429 that is not retried.
     assert_eq!(c.check(&alice(), "get", "/r", &[]).await.err().unwrap().kind(), ErrorKind::RateLimited);
@@ -157,7 +157,7 @@ async fn backoff_that_does_not_fit_gives_up_with_deadline() {
     let srv = plain(vec![reply(503, "")]).await;
     let policy =
         RetryPolicy { base_delay: Duration::from_secs(1), deadline: Duration::from_secs(1), ..Default::default() };
-    let (c, _) = plus(&srv, |b| b.retry(policy).hooks(rec.clone()));
+    let (c, _) = self_hosted(&srv, |b| b.retry(policy).hooks(rec.clone()));
     assert_eq!(c.check(&alice(), "get", "/r", &[]).await.err().unwrap().kind(), ErrorKind::ServiceUnavailable);
     assert_eq!(rec.0.give_ups.lock().unwrap()[0].1, GiveUpReason::Deadline);
 }
@@ -167,7 +167,7 @@ async fn timeouts_and_deadline() {
     let rec = Rec::default();
     let srv = plain(vec![hang(), reply(200, OK)]).await;
     let policy = RetryPolicy { attempt_timeout: Duration::from_millis(100), ..Default::default() };
-    let (c, _) = plus(&srv, |b| b.retry(policy).hooks(rec.clone()));
+    let (c, _) = self_hosted(&srv, |b| b.retry(policy).hooks(rec.clone()));
     assert!(c.is_allowed(&alice(), "get", "/r", &[]).await.unwrap());
     let a = rec.0.attempts.lock().unwrap()[0].clone();
     assert_eq!((a.status, a.error_kind), (None, Some(ErrorKind::Timeout)));
@@ -175,12 +175,12 @@ async fn timeouts_and_deadline() {
 
     let srv = plain(vec![hang()]).await;
     let policy = RetryPolicy { max_attempts: 1, attempt_timeout: Duration::from_millis(50), ..Default::default() };
-    let (c, _) = plus(&srv, |b| b.retry(policy));
+    let (c, _) = self_hosted(&srv, |b| b.retry(policy));
     assert_eq!(c.check(&alice(), "get", "/r", &[]).await.err().unwrap().kind(), ErrorKind::Timeout);
 
     let srv = plain(vec![hang()]).await;
     let policy = RetryPolicy { deadline: Duration::from_millis(80), ..Default::default() };
-    let (c, _) = plus(&srv, |b| b.retry(policy));
+    let (c, _) = self_hosted(&srv, |b| b.retry(policy));
     let e = c.check(&alice(), "get", "/r", &[]).await.err().unwrap();
     assert_eq!((e.kind(), e.status()), (ErrorKind::DeadlineExceeded, None));
 }
@@ -189,7 +189,7 @@ async fn timeouts_and_deadline() {
 async fn fail_closed() {
     let rec = Rec::default();
     let srv = plain(vec![reply(401, ""), reply(401, "")]).await;
-    let (c, _) = plus(&srv, |b| b.failure_mode(FailureMode::Closed).hooks(rec.clone()));
+    let (c, _) = self_hosted(&srv, |b| b.failure_mode(FailureMode::Closed).hooks(rec.clone()));
     assert!(!c.is_allowed(&alice(), "get", "/r", &[]).await.unwrap());
     assert!(!c.is_allowed(&Subject::of([]), "get", "/r", &[]).await.unwrap());
     assert_eq!(c.check(&alice(), "get", "/r", &[]).await.err().unwrap().kind(), ErrorKind::Unauthorized);
@@ -203,7 +203,7 @@ async fn breaker_opens_recovers_and_reopens() {
         plain(vec![reply(502, ""), reply(404, ""), reply(502, ""), reply(504, ""), reply(500, ""), reply(200, OK)])
             .await;
     let cb = CircuitBreaker { failure_threshold: 2, cool_down: Duration::from_secs(10) };
-    let (c, clock) = plus(&srv, |b| b.retry(RetryPolicy::disabled()).circuit_breaker(cb).hooks(rec.clone()));
+    let (c, clock) = self_hosted(&srv, |b| b.retry(RetryPolicy::disabled()).circuit_breaker(cb).hooks(rec.clone()));
     for _ in 0..4 {
         let _ = c.is_allowed(&alice(), "get", "/r", &[]).await;
     }
@@ -227,7 +227,7 @@ async fn breaker_opens_recovers_and_reopens() {
 async fn dropped_trial_frees_the_half_open_slot() {
     let srv = plain(vec![reply(503, ""), hang(), reply(200, OK)]).await;
     let cb = CircuitBreaker { failure_threshold: 1, cool_down: Duration::from_secs(1) };
-    let (c, clock) = plus(&srv, |b| b.retry(RetryPolicy::disabled()).circuit_breaker(cb));
+    let (c, clock) = self_hosted(&srv, |b| b.retry(RetryPolicy::disabled()).circuit_breaker(cb));
     let _ = c.check(&alice(), "get", "/r", &[]).await;
     clock.advance(Duration::from_secs(1));
     let trial = tokio::time::timeout(Duration::from_millis(100), c.check(&alice(), "get", "/r", &[])).await;
@@ -239,7 +239,7 @@ async fn dropped_trial_frees_the_half_open_slot() {
 async fn cancellation_during_a_real_delay() {
     let rec = Rec::default();
     let srv = plain(vec![reply(503, "")]).await;
-    let c = Client::builder(Backend::SpeedlePlus, &srv.url("http"), Auth::none(), "books")
+    let c = Client::builder(Backend::Speedle, &srv.url("http"), Auth::none(), "books")
         .retry(RetryPolicy {
             base_delay: Duration::from_secs(1),
             deadline: Duration::from_secs(60),
@@ -277,8 +277,9 @@ impl Hooks for Panicky {
 #[tokio::test]
 async fn hook_panics_are_ignored() {
     let srv = plain(vec![reply(503, ""), reply(200, r#"{"allowed":false,"reason":1}"#)]).await;
-    let (c, _) =
-        plus(&srv, |b| b.hooks(Panicky).circuit_breaker(CircuitBreaker { failure_threshold: 1, ..Default::default() }));
+    let (c, _) = self_hosted(&srv, |b| {
+        b.hooks(Panicky).circuit_breaker(CircuitBreaker { failure_threshold: 1, ..Default::default() })
+    });
     let prev = std::panic::take_hook();
     std::panic::set_hook(Box::new(|_| {}));
     let r = c.is_allowed(&alice(), "get", "/r", &[]).await;
@@ -294,7 +295,7 @@ async fn connection_refused_is_retried() {
     };
     let rec = Rec::default();
     let clock = Arc::new(VirtualClock::default());
-    let c = Client::builder(Backend::SpeedlePlus, &format!("http://{addr}"), Auth::none(), "s")
+    let c = Client::builder(Backend::Speedle, &format!("http://{addr}"), Auth::none(), "s")
         .hooks(rec.clone())
         .build_with(clock, Arc::new(FixedRandom(1.0)))
         .unwrap();
@@ -336,14 +337,14 @@ async fn untrusted_server_is_not_retried() {
 async fn mutual_tls() {
     let srv = start(Mode::MutualTls, vec![reply(200, OK)]).await;
     let auth = Auth::mutual_tls(srv.pki.client_cert_pem.as_bytes(), srv.pki.client_key_pem.as_bytes()).unwrap();
-    let c = Client::builder(Backend::SpeedlePlus, &srv.url("https"), auth, "books")
+    let c = Client::builder(Backend::Speedle, &srv.url("https"), auth, "books")
         .add_root_certificate_pem(srv.ca_pem.as_bytes())
         .build()
         .unwrap();
     assert!(c.is_allowed(&alice(), "get", "/r", &[]).await.unwrap());
 
     let rec = Rec::default();
-    let c = Client::builder(Backend::SpeedlePlus, &srv.url("https"), Auth::none(), "books")
+    let c = Client::builder(Backend::Speedle, &srv.url("https"), Auth::none(), "books")
         .add_root_certificate_pem(srv.ca_pem.as_bytes())
         .hooks(rec.clone())
         .build()
@@ -356,7 +357,7 @@ async fn mutual_tls() {
 #[test]
 fn futures_are_send() {
     fn send<T: Send>(_: T) {}
-    let c = Client::builder(Backend::SpeedlePlus, "http://127.0.0.1:1", Auth::none(), "s").build().unwrap();
+    let c = Client::builder(Backend::Speedle, "http://127.0.0.1:1", Auth::none(), "s").build().unwrap();
     let s = alice();
     send(c.is_allowed(&s, "a", "r", &[]));
     send(c.check_with(&s, "a", "r", &[], &CallOptions::default()));
@@ -371,7 +372,7 @@ fn blocking_client() {
     // client must not be called from inside a runtime.
     let rt = tokio::runtime::Runtime::new().unwrap();
     let srv = rt.block_on(plain(vec![reply(503, ""), reply(200, OK)]));
-    let c = blocking::Client::builder(Backend::SpeedlePlus, &srv.url("http"), Auth::none(), "books")
+    let c = blocking::Client::builder(Backend::Speedle, &srv.url("http"), Auth::none(), "books")
         .retry(RetryPolicy { base_delay: Duration::from_millis(1), ..Default::default() })
         .build()
         .unwrap();

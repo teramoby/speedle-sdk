@@ -14,7 +14,7 @@ SDK's directory.
 
 | Field | Meaning |
 | --- | --- |
-| `backend` | `speedle-cloud` or `speedle-plus`. Both get the same Speedle `JsonContext` body; the backend changes only auth and error handling. |
+| `backend` | `speedle-cloud` or `speedle`. Both get the same Speedle `JsonContext` body; the backend changes only auth and error handling. |
 | `config` | Client options: `auth` (`none` or `bearer`), `serviceName` (required), `retry` (`maxAttempts`, `baseDelayMs`, `maxDelayMs`, `attemptTimeoutMs`, `deadlineMs`), `failureMode` (`error` or `closed`), `circuitBreaker` (`failureThreshold`, `coolDownMs`). Unset values take the SDK defaults. The runner adds the endpoint (the mock's base URL) and the mock's test CA. |
 | `jitterFraction` | The value in [0, 1] that the injected random source returns; each backoff delay is `jitterFraction × min(maxDelay, baseDelay × 2^(n-1))`. Default 1. |
 | `call`, `expect` | One call: `method` (`isAllowed` or `check`), `subject` (a user name or a list of principals), `action`, `resource`, an optional `serviceName` override, and at most one of `attributes` (typed `{name, type, value}` items) or `inferredAttributes` (a name-to-value map for the inferred overload); and its outcome. |
@@ -155,8 +155,8 @@ fails the `conformance` workflow.
 | Vector | Covers |
 | --- | --- |
 | `cloud-allowed` | 200 allow; every attribute type in single and array form, including `datetime` and an empty array; bearer header; `X-Quota-Daily-Remaining` on the decision |
-| `speedle-plus-typed-attributes` | The same call and request body as `cloud-allowed` against self-hosted Speedle, without `Authorization` |
-| `speedle-plus-denied` | 200 deny, no `Authorization`, inferred attributes sent as typed items sorted by name |
+| `speedle-typed-attributes` | The same call and request body as `cloud-allowed` against self-hosted Speedle, without `Authorization` |
+| `speedle-denied` | 200 deny, no `Authorization`, inferred attributes sent as typed items sorted by name |
 | `cloud-invalid-request` | 400 `invalid_request`, charged, no retry |
 | `cloud-service-mismatch` | Per-call `serviceName` override that is not the token's service: 403 `service_mismatch`, `ForbiddenError`, charged, no retry |
 | `attribute-null-rejected` | Client-side rejection of a `null` inferred attribute, no request sent |

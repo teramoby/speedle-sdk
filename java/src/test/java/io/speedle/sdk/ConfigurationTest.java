@@ -16,9 +16,9 @@ import org.junit.jupiter.api.Test;
 
 class ConfigurationTest {
 
-  private static SpeedleClient.Builder plus(String endpoint) {
+  private static SpeedleClient.Builder selfHosted(String endpoint) {
     return SpeedleClient.builder()
-        .backend(Backend.SPEEDLE_PLUS)
+        .backend(Backend.SPEEDLE)
         .endpoint(URI.create(endpoint))
         .auth(Auth.none())
         .serviceName("books");
@@ -52,23 +52,25 @@ class ConfigurationTest {
   }
 
   @Test
-  void plaintextOnlyForSpeedlePlusWithoutCredentials() {
+  void plaintextOnlyForSpeedleWithoutCredentials() {
     for (String ok :
         new String[] {"http://127.0.0.1:6734", "http://localhost:6734", "http://[::1]:6734"}) {
-      assertDoesNotThrow(() -> plus(ok).build().close(), ok);
+      assertDoesNotThrow(() -> selfHosted(ok).build().close(), ok);
     }
-    assertThrows(ConfigurationError.class, () -> plus("http://10.0.0.5:6734").build());
-    assertThrows(ConfigurationError.class, () -> plus("http://127.evil.example").build());
-    assertDoesNotThrow(() -> plus("http://10.0.0.5:6734").allowInsecureHttp(true).build().close());
+    assertThrows(ConfigurationError.class, () -> selfHosted("http://10.0.0.5:6734").build());
+    assertThrows(ConfigurationError.class, () -> selfHosted("http://127.evil.example").build());
+    assertDoesNotThrow(
+        () -> selfHosted("http://10.0.0.5:6734").allowInsecureHttp(true).build().close());
     // A bearer token never goes over plaintext, not even with allowInsecureHttp.
     assertThrows(
         ConfigurationError.class,
-        () -> plus("http://127.0.0.1").auth(Auth.bearer("t")).allowInsecureHttp(true).build());
+        () ->
+            selfHosted("http://127.0.0.1").auth(Auth.bearer("t")).allowInsecureHttp(true).build());
     assertThrows(ConfigurationError.class, () -> cloud("http://127.0.0.1").build());
     assertThrows(
         ConfigurationError.class,
         () ->
-            plus("http://127.0.0.1")
+            selfHosted("http://127.0.0.1")
                 .auth(Auth.mutualTls(TestTls.get().clientKeys, TestTls.PASSWORD))
                 .build());
   }

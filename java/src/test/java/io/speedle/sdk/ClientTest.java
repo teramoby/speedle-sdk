@@ -59,7 +59,7 @@ class ClientTest {
     mock = new MockServer(null).script(json(200, ALLOW), json(200, ALLOW));
     try (SpeedleClient c =
         SpeedleClient.builder()
-            .backend(Backend.SPEEDLE_PLUS)
+            .backend(Backend.SPEEDLE)
             .endpoint(java.net.URI.create(mock.endpoint() + "/prefix/"))
             .auth(Auth.none())
             .serviceName("books")
@@ -113,14 +113,14 @@ class ClientTest {
   }
 
   @Test
-  void speedlePlusErrorsAreMessagesAndGateway429IsBurst() throws Exception {
+  void speedleErrorsAreMessagesAndGateway429IsBurst() throws Exception {
     try (SpeedleClient c =
-        client(Backend.SPEEDLE_PLUS, json(400, "{\"error\":\"invalid_request\"}")).build()) {
+        client(Backend.SPEEDLE, json(400, "{\"error\":\"invalid_request\"}")).build()) {
       InvalidRequestError e = fails(InvalidRequestError.class, c);
       assertEquals(Optional.empty(), e.code());
       assertTrue(e.getMessage().contains("invalid_request"));
     }
-    try (SpeedleClient c = client(Backend.SPEEDLE_PLUS, json(429, "slow down")).build()) {
+    try (SpeedleClient c = client(Backend.SPEEDLE, json(429, "slow down")).build()) {
       RateLimitedError e = fails(RateLimitedError.class, c);
       assertEquals(Optional.empty(), e.retryAfter());
       assertEquals(1, mock.requests().size(), "no Retry-After: not retried");
@@ -132,7 +132,7 @@ class ClientTest {
   void decisionDetails() throws Exception {
     try (SpeedleClient c =
         client(
-                Backend.SPEEDLE_PLUS,
+                Backend.SPEEDLE,
                 json(200, "{\"allowed\":false,\"reason\":4,\"errorMessage\":\"bad\",\"new\":1}"),
                 json(200, "{\"allowed\":true,\"reason\":99}"))
             .build()) {
@@ -149,7 +149,7 @@ class ClientTest {
   @Test
   void perCallServiceNameAndDeadline() throws Exception {
     try (SpeedleClient c =
-        client(Backend.SPEEDLE_PLUS, json(503, ""), json(503, ""), json(200, ALLOW))
+        client(Backend.SPEEDLE, json(503, ""), json(503, ""), json(200, ALLOW))
             .retry(
                 new RetryPolicy(
                     3,
@@ -205,7 +205,7 @@ class ClientTest {
           }
         };
     try (SpeedleClient c =
-        client(Backend.SPEEDLE_PLUS, json(503, ""), json(200, ALLOW)).hooks(bad).build()) {
+        client(Backend.SPEEDLE, json(503, ""), json(200, ALLOW)).hooks(bad).build()) {
       assertTrue(c.isAllowed(ALICE, "get", "/r"));
     }
   }
@@ -216,7 +216,7 @@ class ClientTest {
         new RetryPolicy(
             2, Duration.ZERO, Duration.ZERO, Duration.ofMillis(150), Duration.ofSeconds(5));
     try (SpeedleClient c =
-        client(Backend.SPEEDLE_PLUS, fault("no_response"), fault("no_response")).retry(p).build()) {
+        client(Backend.SPEEDLE, fault("no_response"), fault("no_response")).retry(p).build()) {
       TimeoutError e = fails(TimeoutError.class, c);
       assertEquals(TimeoutError.class, e.getClass());
       assertEquals(2, mock.requests().size());
@@ -228,7 +228,7 @@ class ClientTest {
   @Test
   void interruptionCancelsWithoutGivingUp() throws Exception {
     try (SpeedleClient c =
-        client(Backend.SPEEDLE_PLUS, fault("no_response"))
+        client(Backend.SPEEDLE, fault("no_response"))
             .failureMode(FailureMode.CLOSED)
             .circuitBreaker(new CircuitBreakerPolicy(1, Duration.ofSeconds(30)))
             .build()) {
@@ -263,7 +263,7 @@ class ClientTest {
             Duration.ofSeconds(1),
             Duration.ofSeconds(10));
     try (SpeedleClient c =
-        client(Backend.SPEEDLE_PLUS, json(503, "")).clock(Clock.SYSTEM).retry(p).build()) {
+        client(Backend.SPEEDLE, json(503, "")).clock(Clock.SYSTEM).retry(p).build()) {
       Thread caller = Thread.currentThread();
       Thread t =
           new Thread(() -> {
@@ -302,7 +302,7 @@ class ClientTest {
     mock = new MockServer(tls.serverContext(true), true).script(json(200, ALLOW));
     try (SpeedleClient c =
         SpeedleClient.builder()
-            .backend(Backend.SPEEDLE_PLUS)
+            .backend(Backend.SPEEDLE)
             .endpoint(mock.endpoint("localhost"))
             .auth(Auth.mutualTls(tls.clientKeys, TestTls.PASSWORD))
             .serviceName("books")
@@ -315,7 +315,7 @@ class ClientTest {
     mock = new MockServer(tls.serverContext(true), true).script(json(200, ALLOW));
     try (SpeedleClient c =
         SpeedleClient.builder()
-            .backend(Backend.SPEEDLE_PLUS)
+            .backend(Backend.SPEEDLE)
             .endpoint(mock.endpoint())
             .auth(Auth.none())
             .serviceName("books")
@@ -329,7 +329,7 @@ class ClientTest {
 
   @Test
   void closedClientRejectsCalls() throws Exception {
-    SpeedleClient c = client(Backend.SPEEDLE_PLUS).build();
+    SpeedleClient c = client(Backend.SPEEDLE).build();
     c.close();
     c.close();
     assertThrows(IllegalStateException.class, () -> c.isAllowed(ALICE, "get", "/r"));

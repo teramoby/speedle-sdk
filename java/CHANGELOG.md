@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0 (unreleased)
+
+- Breaking: `Backend.SPEEDLE_PLUS` is now `Backend.SPEEDLE`. There is no
+  alias for the old name.
+
 ## 0.1.0 (2026-11-05)
 
 - First version: `SpeedleClient` for `POST /authz-check/v1/is-allowed` on

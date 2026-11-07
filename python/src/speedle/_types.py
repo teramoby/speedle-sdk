@@ -29,7 +29,7 @@ __all__ = [
     "Subject",
 ]
 
-Backend = Literal["speedle-cloud", "speedle-plus"]
+Backend = Literal["speedle-cloud", "speedle"]
 FailureMode = Literal["error", "closed"]
 BreakerState = Literal["closed", "open", "half_open"]
 GiveUpReason = Literal[

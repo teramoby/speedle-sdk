@@ -456,8 +456,8 @@ public final class SpeedleClient implements AutoCloseable {
 
     /**
      * The base URL (scheme, host, optional port and path prefix); required. {@code https://} is
-     * required, except for {@link Backend#SPEEDLE_PLUS} with {@link Auth#none()} on a loopback
-     * host, or anywhere with {@link #allowInsecureHttp(boolean)}.
+     * required, except for {@link Backend#SPEEDLE} with {@link Auth#none()} on a loopback host, or
+     * anywhere with {@link #allowInsecureHttp(boolean)}.
      *
      * @param endpoint the base URL, without query or fragment
      * @return this builder
@@ -547,7 +547,7 @@ public final class SpeedleClient implements AutoCloseable {
     }
 
     /**
-     * Allows {@code http://} to non-loopback hosts for {@link Backend#SPEEDLE_PLUS} with {@link
+     * Allows {@code http://} to non-loopback hosts for {@link Backend#SPEEDLE} with {@link
      * Auth#none()}. Default false. Never allows a bearer token over plaintext.
      *
      * @param allow whether to allow it

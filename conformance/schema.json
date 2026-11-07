@@ -60,7 +60,7 @@
     "backend": {
       "enum": [
         "speedle-cloud",
-        "speedle-plus"
+        "speedle"
       ]
     },
     "config": {

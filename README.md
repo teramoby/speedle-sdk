@@ -5,7 +5,8 @@ Client libraries for the Speedle authorization decision API,
 "is this subject allowed to perform this action on this resource?" with a few
 lines of code.
 
-**Status:** all six SDKs are implemented at version 0.1.0. See the
+**Status:** all six SDKs are implemented at version 0.2.0, which is not yet
+released. The latest published version is 0.1.0. See the
 [Speedle SDK documentation](https://engine.speedle.io/docs/sdks/).
 
 ## Supported backends
@@ -23,12 +24,12 @@ conformance suite. Five packages are published; the npm release is pending.
 
 | Language | Package | Status |
 | --- | --- | --- |
-| Node.js/TypeScript | [npm `@speedle/sdk`](https://www.npmjs.com/package/@speedle/sdk) | Not yet published (0.1.0 pending) |
-| Python | [PyPI `speedle`](https://pypi.org/project/speedle/) | 0.1.0 (2026-11-05) |
-| Java | [Maven Central `io.speedle:speedle-sdk`](https://central.sonatype.com/artifact/io.speedle/speedle-sdk) | 0.1.0 (2026-11-05) |
-| Go | [`github.com/teramoby/speedle-sdk/go`](https://pkg.go.dev/github.com/teramoby/speedle-sdk/go) | 0.1.0 (2026-11-05) |
-| C# | [NuGet `Speedle.Sdk`](https://www.nuget.org/packages/Speedle.Sdk) | 0.1.0 (2026-11-05) |
-| Rust | [crates.io `speedle`](https://crates.io/crates/speedle) | 0.1.0 (2026-11-05) |
+| Node.js/TypeScript | [npm `@speedle/sdk`](https://www.npmjs.com/package/@speedle/sdk) | Not yet published (0.2.0 pending) |
+| Python | [PyPI `speedle`](https://pypi.org/project/speedle/) | 0.1.0 (2026-11-05); 0.2.0 pending |
+| Java | [Maven Central `io.speedle:speedle-sdk`](https://central.sonatype.com/artifact/io.speedle/speedle-sdk) | 0.1.0 (2026-11-05); 0.2.0 pending |
+| Go | [`github.com/teramoby/speedle-sdk/go`](https://pkg.go.dev/github.com/teramoby/speedle-sdk/go) | 0.1.0 (2026-11-05); 0.2.0 pending |
+| C# | [NuGet `Speedle.Sdk`](https://www.nuget.org/packages/Speedle.Sdk) | 0.1.0 (2026-11-05); 0.2.0 pending |
+| Rust | [crates.io `speedle`](https://crates.io/crates/speedle) | 0.1.0 (2026-11-05); 0.2.0 pending |
 
 ## Quickstart: self-hosted Speedle (local ADS)
 
