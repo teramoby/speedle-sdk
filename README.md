@@ -34,6 +34,8 @@ conformance suite. Five packages are published; the npm release is pending.
 A Speedle Cloud token is a server-side secret. Never ship it to browsers,
 mobile apps or any other client you do not control.
 
+To report a security issue, see [SECURITY.md](SECURITY.md).
+
 ## License
 
 Copyright (c) 2026 The Speedle Authors. Licensed under the
