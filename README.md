@@ -36,6 +36,10 @@ mobile apps or any other client you do not control.
 
 To report a security issue, see [SECURITY.md](SECURITY.md).
 
+## Contributing
+
+Contributions are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## License
 
 Copyright (c) 2026 The Speedle Authors. Licensed under the
