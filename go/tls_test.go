@@ -93,7 +93,7 @@ func TestMutualTLS(t *testing.T) {
 	roots := x509.NewCertPool()
 	roots.AddCert(srv.Certificate())
 
-	c, err := NewClient(Config{Backend: BackendSpeedlePlus, Endpoint: srv.URL, Auth: MutualTLS(clientPair), ServiceName: "s", RootCAs: roots})
+	c, err := NewClient(Config{Backend: BackendSpeedle, Endpoint: srv.URL, Auth: MutualTLS(clientPair), ServiceName: "s", RootCAs: roots})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +103,7 @@ func TestMutualTLS(t *testing.T) {
 	}
 
 	rec := &recorder{}
-	plain, err := NewClient(Config{Backend: BackendSpeedlePlus, Endpoint: srv.URL, Auth: NoAuth(), ServiceName: "s", RootCAs: roots, Hooks: rec.hooks()})
+	plain, err := NewClient(Config{Backend: BackendSpeedle, Endpoint: srv.URL, Auth: NoAuth(), ServiceName: "s", RootCAs: roots, Hooks: rec.hooks()})
 	if err != nil {
 		t.Fatal(err)
 	}

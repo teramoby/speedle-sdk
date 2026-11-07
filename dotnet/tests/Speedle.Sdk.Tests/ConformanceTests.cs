@@ -124,7 +124,7 @@ public class ConformanceTests
 
         return new SpeedleClientOptions
         {
-            Backend = (string?)v["backend"] == "speedle-cloud" ? Backend.SpeedleCloud : Backend.SpeedlePlus,
+            Backend = (string?)v["backend"] == "speedle-cloud" ? Backend.SpeedleCloud : Backend.Speedle,
             Endpoint = mock.Endpoint,
             Auth = (string?)auth["type"] == "bearer" ? Auth.Bearer((string)auth["token"]!) : Auth.None(),
             ServiceName = (string)config["serviceName"]!,

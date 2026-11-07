@@ -24,8 +24,8 @@ const invalid: [string, Partial<ClientOptions> | (() => unknown)][] = [
   ["fragment", { endpoint: "https://cloud.speedle.io/#x" }],
   ["credentials in URL", { endpoint: "https://u:p@cloud.speedle.io" }],
   ["ftp scheme", { endpoint: "ftp://cloud.speedle.io" }],
-  ["http with bearer", { backend: "speedle-plus", endpoint: "http://127.0.0.1:6734" }],
-  ["http to a remote host", { backend: "speedle-plus", auth: Auth.none(), endpoint: "http://ads.internal:6734" }],
+  ["http with bearer", { backend: "speedle", endpoint: "http://127.0.0.1:6734" }],
+  ["http to a remote host", { backend: "speedle", auth: Auth.none(), endpoint: "http://ads.internal:6734" }],
   ["maxAttempts 0", { retry: { maxAttempts: 0 } }],
   ["fractional maxAttempts", { retry: { maxAttempts: 1.5 } }],
   ["negative delay", { retry: { baseDelayMs: -1 } }],
@@ -47,11 +47,11 @@ for (const [name, value] of invalid) {
 test("valid endpoints: path prefix, loopback http, allowInsecureHttp", async () => {
   const clients = [
     new SpeedleClient({ ...base, endpoint: "https://gw.example.com/speedle/" }),
-    new SpeedleClient({ ...base, backend: "speedle-plus", auth: Auth.none(), endpoint: "http://localhost:6734" }),
-    new SpeedleClient({ ...base, backend: "speedle-plus", auth: Auth.none(), endpoint: "http://[::1]:6734" }),
+    new SpeedleClient({ ...base, backend: "speedle", auth: Auth.none(), endpoint: "http://localhost:6734" }),
+    new SpeedleClient({ ...base, backend: "speedle", auth: Auth.none(), endpoint: "http://[::1]:6734" }),
     new SpeedleClient({
       ...base,
-      backend: "speedle-plus",
+      backend: "speedle",
       auth: Auth.none(),
       endpoint: "http://ads.internal:6734",
       allowInsecureHttp: true,
@@ -103,7 +103,7 @@ test("mutual TLS presents the client certificate", async () => {
   const server = await startServer([{ status: 200, body: { allowed: true, reason: 0 } }], { tls: true, requestCert: true });
   after(() => server.close());
   const c = testCerts();
-  const { client } = build(server.url, { backend: "speedle-plus", auth: Auth.mutualTls({ cert: c.clientCert, key: c.clientKey }) });
+  const { client } = build(server.url, { backend: "speedle", auth: Auth.mutualTls({ cert: c.clientCert, key: c.clientKey }) });
   assert.equal(await client.isAllowed("alice", "get", "/r"), true);
   assert.equal(server.requests[0]?.headers.authorization, undefined);
   await client.close();
@@ -112,13 +112,13 @@ test("mutual TLS presents the client certificate", async () => {
 test("a TLS failure is a NetworkError that is not retried", async () => {
   const server = await startServer([], { tls: true, requestCert: true });
   after(() => server.close());
-  const { client, events } = build(server.url, { backend: "speedle-plus", auth: Auth.none() });
+  const { client, events } = build(server.url, { backend: "speedle", auth: Auth.none() });
   await assert.rejects(client.isAllowed("alice", "get", "/r"), E.NetworkError);
   assert.equal(events.filter((e) => e.type === "attempt").length, 1);
   assert.equal(events.at(-1)?.reason, "non_retryable");
   await client.close();
   // Without the test CA the server certificate is not trusted.
-  const untrusted = build(server.url, { backend: "speedle-plus", auth: Auth.none(), caCert: undefined });
+  const untrusted = build(server.url, { backend: "speedle", auth: Auth.none(), caCert: undefined });
   await assert.rejects(untrusted.client.isAllowed("alice", "get", "/r"), E.NetworkError);
   assert.equal(untrusted.events.at(-1)?.reason, "non_retryable");
   await untrusted.client.close();

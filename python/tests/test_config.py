@@ -30,8 +30,8 @@ INVALID: list[tuple[str, dict[str, Any]]] = [
     ("credentials", {"endpoint": "https://u:p@cloud.speedle.io"}),
     ("ftp", {"endpoint": "ftp://cloud.speedle.io"}),
     ("no host", {"endpoint": "https://"}),
-    ("http with bearer", {"backend": "speedle-plus", "endpoint": "http://127.0.0.1:6734"}),
-    ("http remote", {"backend": "speedle-plus", "auth": Auth.none(), "endpoint": "http://ads.internal:6734"}),
+    ("http with bearer", {"backend": "speedle", "endpoint": "http://127.0.0.1:6734"}),
+    ("http remote", {"backend": "speedle", "auth": Auth.none(), "endpoint": "http://ads.internal:6734"}),
     ("max_attempts 0", {"retry": RetryPolicy(max_attempts=0)}),
     ("float max_attempts", {"retry": RetryPolicy(max_attempts=1.5)}),  # type: ignore[arg-type]
     ("negative delay", {"retry": RetryPolicy(base_delay=-1)}),
@@ -67,10 +67,10 @@ def test_auth_factory_errors(make: Callable[[], Auth]) -> None:
 def test_valid_endpoints() -> None:
     for override in (
         {"endpoint": "https://gw.example.com/speedle/"},
-        {"backend": "speedle-plus", "auth": Auth.none(), "endpoint": "http://localhost:6734"},
-        {"backend": "speedle-plus", "auth": Auth.none(), "endpoint": "http://[::1]:6734"},
+        {"backend": "speedle", "auth": Auth.none(), "endpoint": "http://localhost:6734"},
+        {"backend": "speedle", "auth": Auth.none(), "endpoint": "http://[::1]:6734"},
         {
-            "backend": "speedle-plus",
+            "backend": "speedle",
             "auth": Auth.none(),
             "endpoint": "http://ads.internal",
             "allow_insecure_http": True,
@@ -117,7 +117,7 @@ def test_call_time_validation_sends_nothing(serve: Callable[..., ScriptServer]) 
 
 
 def test_closed_client_refuses_calls() -> None:
-    client = Client(**{**BASE, "backend": "speedle-plus", "auth": Auth.none(), "endpoint": "http://127.0.0.1:1"})
+    client = Client(**{**BASE, "backend": "speedle", "auth": Auth.none(), "endpoint": "http://127.0.0.1:1"})
     client.close()
     with pytest.raises(S.SpeedleError, match="closed"):
         client.is_allowed("alice", "get", "/r")
@@ -127,7 +127,7 @@ def test_mutual_tls(serve: Callable[..., ScriptServer]) -> None:
     server = serve([{"status": 200, "body": {"allowed": True, "reason": 0}}], tls=True, require_client_cert=True)
     c = certs()
     auth = Auth.mutual_tls(str(c.client_cert), str(c.client_key))
-    with build(server.url, backend="speedle-plus", auth=auth).client as client:
+    with build(server.url, backend="speedle", auth=auth).client as client:
         assert client.is_allowed("alice", "get", "/r") is True
     assert "authorization" not in server.requests[0].headers
 
@@ -136,7 +136,7 @@ def test_mutual_tls(serve: Callable[..., ScriptServer]) -> None:
 def test_tls_failures_are_not_retried(serve: Callable[..., ScriptServer], ca: bool) -> None:
     # With the CA the server rejects the missing client certificate; without it the client rejects the server.
     server = serve([], tls=True, require_client_cert=ca)
-    b = build(server.url, backend="speedle-plus", auth=Auth.none(), ca_file=str(certs().ca) if ca else None)
+    b = build(server.url, backend="speedle", auth=Auth.none(), ca_file=str(certs().ca) if ca else None)
     with b.client as client, pytest.raises(S.NetworkError):
         client.is_allowed("alice", "get", "/r")
     assert [e["type"] for e in b.events] == ["attempt", "giveUp"]

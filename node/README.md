@@ -44,7 +44,7 @@ import { readFileSync } from "node:fs";
 import { Auth, SpeedleClient } from "@speedle/sdk";
 
 const speedle = new SpeedleClient({
-  backend: "speedle-plus",
+  backend: "speedle",
   endpoint: "https://ads.internal:6734",
   auth: Auth.none(), // or Auth.mutualTls({ cert, key }) with --force-client-cert
   caCert: readFileSync("ca.pem"), // extra trust anchor for a private CA
@@ -55,7 +55,7 @@ const decision = await speedle.check("alice", "get", "/books/123", { team: "eng"
 // { allowed: false, reason: 3 }
 ```
 
-`http://` is accepted only for `speedle-plus` with `Auth.none()`, and only for
+`http://` is accepted only for backend `speedle` with `Auth.none()`, and only for
 loopback hosts unless you set `allowInsecureHttp: true`. Self-hosted Speedle
 warns that an unauthenticated plaintext endpoint lets anyone on the network ask
 for decisions; prefer HTTPS.

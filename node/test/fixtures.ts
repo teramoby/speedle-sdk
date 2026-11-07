@@ -13,10 +13,10 @@ export interface Built {
 export function build(endpoint: string, overrides: Partial<ClientOptions> = {}, jitter = 1): Built {
   const clock = new VirtualClock();
   const events: Record<string, unknown>[] = [];
-  const cloud = overrides.backend !== "speedle-plus" && endpoint.startsWith("https:");
+  const cloud = overrides.backend !== "speedle" && endpoint.startsWith("https:");
   const client = createClientForTesting(
     {
-      backend: cloud ? "speedle-cloud" : "speedle-plus",
+      backend: cloud ? "speedle-cloud" : "speedle",
       endpoint,
       auth: cloud ? Auth.bearer(TOKEN) : Auth.none(),
       serviceName: "books",

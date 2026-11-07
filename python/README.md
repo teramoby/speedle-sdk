@@ -47,7 +47,7 @@ with Client(
 from speedle import AsyncClient, Auth
 
 async with AsyncClient(
-    backend="speedle-plus",
+    backend="speedle",
     endpoint="https://ads.internal:6734",
     auth=Auth.none(),  # or Auth.mutual_tls("client.pem", "client.key") with --force-client-cert
     ca_file="ca.pem",  # extra trust anchor for a private CA
@@ -57,7 +57,7 @@ async with AsyncClient(
     # Decision(allowed=False, reason=<Reason.NO_APPLICABLE_POLICIES: 3>, ...)
 ```
 
-`http://` is accepted only for `speedle-plus` with `Auth.none()`, and only for
+`http://` is accepted only for backend `speedle` with `Auth.none()`, and only for
 loopback hosts unless you pass `allow_insecure_http=True`. Self-hosted Speedle
 warns that an unauthenticated plaintext endpoint lets anyone on the network ask
 for decisions; prefer HTTPS.

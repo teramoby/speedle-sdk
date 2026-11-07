@@ -12,7 +12,7 @@ two backends:
 | Backend id | What it is | Client authentication |
 | --- | --- | --- |
 | `speedle-cloud` | Speedle Cloud ADS (`https://cloud.speedle.io`, beta `https://b.speedle.io`) | Service-scoped bearer token |
-| `speedle-plus` | Self-hosted Speedle ADS (REST, default port 6734) | None, or mutual TLS |
+| `speedle` | Self-hosted Speedle ADS (REST, default port 6734) | None, or mutual TLS |
 
 Languages, all built together with no phases (owner decision on #212):
 Node.js/TypeScript, Python, Java, Go, C# and Rust. Every SDK has the same API
@@ -74,7 +74,7 @@ any gateway in front of self-hosted Speedle.
 | Item | Speedle Cloud | Self-hosted Speedle ADS | SDK |
 | --- | --- | --- | --- |
 | Method and path | `POST /authz-check/v1/is-allowed` | `POST /authz-check/v1/is-allowed` (`svcs.PolicyAtzPath`) | Same path for both; the endpoint setting is the base URL only. |
-| Scheme | HTTPS only | HTTPS by default; plaintext only with `--insecure=true` | Requires `https://`. `http://` is accepted only for `speedle-plus` with `Auth.none()`, and only for loopback hosts unless the caller sets `allowInsecureHttp`. |
+| Scheme | HTTPS only | HTTPS by default; plaintext only with `--insecure=true` | Requires `https://`. `http://` is accepted only for `speedle` with `Auth.none()`, and only for loopback hosts unless the caller sets `allowInsecureHttp`. |
 | `Authorization` | Required: `Bearer <AdsBearerToken>`; scheme case-insensitive, credential case-sensitive; otherwise 401 | Not read by ADS | Sent only with `Auth.bearer`. Never sent by `Auth.none()` or `Auth.mutualTls()`. A gateway in front of self-hosted Speedle may still use `Auth.bearer`. |
 | Client certificate | Not used | Required when the server runs with `--client-cert` and `--force-client-cert=true`; otherwise optional | `Auth.mutualTls(...)` presents it. A handshake failure is a `NetworkError` that is not retried. |
 | `Content-Type` | `application/json` | `application/json` (Swagger documents 415 otherwise) | Always `application/json`. |
@@ -159,7 +159,7 @@ Speedle error bodies are `{"error": "<free-text message>"}` from
 `httputils.HandleError`. The HTTP status selects the error type. For
 `speedle-cloud`, `error` is reported as `code` when it is one of the Cloud codes
 in this table and as `message` otherwise, so the SDK keeps working when
-#213 makes Cloud's 400 bodies match self-hosted Speedle. For `speedle-plus`,
+#213 makes Cloud's 400 bodies match self-hosted Speedle. For `speedle`,
 `error` is always `message` and `code` is empty. Error type names are in §7.
 
 | Status | Speedle Cloud | Self-hosted Speedle ADS | SDK error | Retried |
@@ -244,7 +244,7 @@ It is safe for concurrent use. The positional order is always
 ### 5.1 TypeScript (Node.js 22 or later, ESM and CJS)
 
 ```ts
-export type Backend = "speedle-cloud" | "speedle-plus";
+export type Backend = "speedle-cloud" | "speedle";
 export type AttributeType = "string" | "numeric" | "bool" | "datetime";
 export type Attribute =                      // one JsonAttribute
   | { readonly name: string; readonly type: "string";   readonly value: string  | readonly string[] }
@@ -367,7 +367,7 @@ and rejects with `signal.reason` in every failure mode;
 ### 5.2 Python (3.10 or later)
 
 ```python
-Backend = Literal["speedle-cloud", "speedle-plus"]
+Backend = Literal["speedle-cloud", "speedle"]
 AttributeType = Literal["string", "numeric", "bool", "datetime"]
 
 @dataclass(frozen=True)
@@ -539,7 +539,7 @@ a retry delay, and re-raises `asyncio.CancelledError` in every failure mode.
 ```java
 package io.speedle.sdk;   // Maven io.speedle:speedle-sdk, module name io.speedle.sdk
 
-public enum Backend { SPEEDLE_CLOUD, SPEEDLE_PLUS }
+public enum Backend { SPEEDLE_CLOUD, SPEEDLE }
 
 public record Principal(String type, String name, String idd) {
   public static Principal user(String name);
@@ -695,7 +695,7 @@ type Backend string
 
 const (
 	BackendSpeedleCloud Backend = "speedle-cloud"
-	BackendSpeedlePlus  Backend = "speedle-plus"
+	BackendSpeedle      Backend = "speedle"
 )
 
 type Principal struct {
@@ -873,7 +873,7 @@ which `errors.Is(err, ctx.Err())` holds. This error is returned even in
 ```csharp
 namespace Speedle.Sdk;   // NuGet package Speedle.Sdk, target net8.0
 
-public enum Backend { SpeedleCloud, SpeedlePlus }
+public enum Backend { SpeedleCloud, Speedle }
 
 public sealed record Principal(string Name, string Type = "user", string? Idd = null)
 {
@@ -1033,7 +1033,7 @@ a retry delay, and throws `OperationCanceledException`, also in
 
 ```rust
 // crate `speedle`
-pub enum Backend { SpeedleCloud, SpeedlePlus }
+pub enum Backend { SpeedleCloud, Speedle }
 
 pub struct Principal {
     pub kind: String,          // serialized as "type"; default "user"
@@ -1223,7 +1223,7 @@ bound. The blocking client is bounded by the deadline only.
   must be the bearer token's service: any other value returns 403
   `service_mismatch`, raised as `ForbiddenError` with `code`
   `service_mismatch`. That response is charged and not retried. On
-  `speedle-plus` an unknown service is not an error: the decision is a deny
+  `speedle` an unknown service is not an error: the decision is a deny
   with reason 2 `SERVICE_NOT_FOUND`.
 - Configuration errors raise `ConfigurationError` from the constructor, before
   any request.
@@ -1291,7 +1291,7 @@ and client-side validation errors.
   is the daily quota (`QuotaExceededError`), never retried; its
   `Retry-After` points at the next 00:00 UTC. Any other code, or a body that
   does not parse, gives `TooManyRequestsError` and is not retried.
-- `speedle-plus`: ADS has no rate limit or quota and never returns 429. A 429
+- `speedle`: ADS has no rate limit or quota and never returns 429. A 429
   can only come from a gateway, with a free-text body. The SDK treats it as a
   burst 429 (`RateLimitedError`, empty `code`).
 - In both cases a burst 429 is retried only when `Retry-After` is present, a
@@ -1506,7 +1506,7 @@ Layout: `node/`, `python/`, `java/`, `go/`, `dotnet/`, `rust/`,
 `conformance/`, `contract/`, `docs/`. Each language has its own directory, PR
 and CI workflow.
 
-License: UPL-1.0, the same license text as speedle-plus, with the copyright
+License: UPL-1.0, the same license text as teramoby/speedle-plus, with the copyright
 line `Copyright (c) 2026 The Speedle Authors` (owner decision on #212), in
 the root `LICENSE`. Every package declares the SPDX identifier `UPL-1.0` in its
 metadata and ships the license file.

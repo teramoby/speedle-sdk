@@ -31,7 +31,7 @@ type Config struct {
 	// Endpoint is the base URL: scheme, host, optional port and optional
 	// path prefix, for example "https://cloud.speedle.io". Query strings,
 	// fragments and user info are rejected. It must be https, except that
-	// http is accepted for BackendSpeedlePlus with NoAuth on a loopback host,
+	// http is accepted for BackendSpeedle with NoAuth on a loopback host,
 	// or on any host with AllowInsecureHTTP.
 	Endpoint string
 	Auth     Auth
@@ -90,7 +90,7 @@ func WithServiceName(name string) CallOption {
 // [ErrConfiguration].
 func NewClient(cfg Config) (*Client, error) {
 	switch cfg.Backend {
-	case BackendSpeedleCloud, BackendSpeedlePlus:
+	case BackendSpeedleCloud, BackendSpeedle:
 	case "":
 		return nil, configError("Backend is required")
 	default:
@@ -189,7 +189,7 @@ func checkEndpoint(cfg Config, kind authKind) (string, error) {
 	case "https":
 	case "http":
 		switch {
-		case cfg.Backend != BackendSpeedlePlus:
+		case cfg.Backend != BackendSpeedle:
 			return "", configError("Endpoint must use https for %s", cfg.Backend)
 		case kind != authNone:
 			return "", configError("Endpoint must use https with BearerToken or MutualTLS")

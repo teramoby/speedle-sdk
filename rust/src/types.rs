@@ -13,7 +13,7 @@ pub enum Backend {
     /// Speedle Cloud (`https://cloud.speedle.io`).
     SpeedleCloud,
     /// A self-hosted Speedle ADS.
-    SpeedlePlus,
+    Speedle,
 }
 
 /// One subject principal.

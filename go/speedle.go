@@ -35,7 +35,7 @@ type Backend string
 
 const (
 	BackendSpeedleCloud Backend = "speedle-cloud"
-	BackendSpeedlePlus  Backend = "speedle-plus"
+	BackendSpeedle      Backend = "speedle"
 )
 
 // Principal types known to Speedle. Type is an open string.

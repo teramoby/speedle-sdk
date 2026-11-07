@@ -42,7 +42,7 @@ def build(url: str, cls: type[Client] | type[AsyncClient] = Client, jitter: floa
     clock = VirtualClock()
     events: list[dict[str, Any]] = []
     https = url.startswith("https:")
-    cloud = overrides.get("backend", "speedle-cloud" if https else "speedle-plus") == "speedle-cloud"
+    cloud = overrides.get("backend", "speedle-cloud" if https else "speedle") == "speedle-cloud"
     hooks = Hooks(
         on_attempt=lambda e: events.append({"type": "attempt", "attempt": e.attempt, "status": e.status, "errorType": e.error_type}),
         on_retry=lambda e: events.append({"type": "retry", "attempt": e.attempt, "delay": e.delay, "errorType": e.error_type}),
@@ -50,7 +50,7 @@ def build(url: str, cls: type[Client] | type[AsyncClient] = Client, jitter: floa
         on_breaker_state_change=lambda e: events.append({"type": "breaker", "from": e.from_state, "to": e.to_state}),
     )  # fmt: skip
     kwargs: dict[str, Any] = {
-        "backend": "speedle-cloud" if cloud else "speedle-plus",
+        "backend": "speedle-cloud" if cloud else "speedle",
         "endpoint": url,
         "auth": Auth.bearer(TOKEN) if cloud else Auth.none(),
         "service_name": "books",

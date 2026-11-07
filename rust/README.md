@@ -52,7 +52,7 @@ to browsers, mobile apps or desktop clients.
 use speedle::{Auth, Backend, Client, Principal, Subject};
 
 let ca_pem = std::fs::read("ads-ca.pem")?; // your server's CA, if not in the platform store
-let client = Client::builder(Backend::SpeedlePlus, "https://ads.internal:6734", Auth::none(), "books")
+let client = Client::builder(Backend::Speedle, "https://ads.internal:6734", Auth::none(), "books")
     .add_root_certificate_pem(&ca_pem)
     .build()?;
 let subject = Subject::of([Principal::new(Principal::USER, "bob"), Principal::new(Principal::GROUP, "readers")]);
@@ -61,7 +61,7 @@ println!("{} {:?} {:?}", decision.allowed, decision.reason, decision.error_messa
 ```
 
 For mutual TLS use `Auth::mutual_tls(cert_pem, key_pem)?`. `http://` is
-accepted only for `Backend::SpeedlePlus` with `Auth::none()`, and only for
+accepted only for `Backend::Speedle` with `Auth::none()`, and only for
 loopback hosts unless `allow_insecure_http(true)` is set. Self-hosted Speedle
 warns that a plaintext endpoint has no authentication; keep it on a trusted
 network. An unknown service on self-hosted Speedle is not an error: the

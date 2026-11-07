@@ -1,6 +1,6 @@
 {
-  "description": "SDK end-to-end vectors for the policies in e2e/policies.json. request is a Speedle REST JsonContext without serviceName; the runner adds serviceName from SPEEDLE_E2E_SERVICE. expect is the is-allowed body that self-hosted Speedle returned (speedlePlus is its commit), which Speedle Cloud must return unchanged.",
-  "speedlePlus": "46a4f90a6338332352006c328371d04fc5b6106f",
+  "description": "SDK end-to-end vectors for the policies in e2e/policies.json. request is a Speedle REST JsonContext without serviceName; the runner adds serviceName from SPEEDLE_E2E_SERVICE. expect is the is-allowed body that self-hosted Speedle returned (speedleCommit is its commit), which Speedle Cloud must return unchanged.",
+  "speedleCommit": "46a4f90a6338332352006c328371d04fc5b6106f",
   "vectors": [
     {
       "name": "user-grant-get",

@@ -79,8 +79,8 @@ def main() -> None:
     service = required("SPEEDLE_E2E_SERVICE")
     backend = optional("SPEEDLE_E2E_BACKEND") or "speedle-cloud"
     token = optional("SPEEDLE_E2E_TOKEN")
-    if backend not in ("speedle-cloud", "speedle-plus"):
-        usage("SPEEDLE_E2E_BACKEND must be speedle-cloud or speedle-plus")
+    if backend not in ("speedle-cloud", "speedle"):
+        usage("SPEEDLE_E2E_BACKEND must be speedle-cloud or speedle")
     if backend == "speedle-cloud" and not token:
         usage("SPEEDLE_E2E_TOKEN is required for speedle-cloud")
     if len(sys.argv) != 2:

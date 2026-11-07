@@ -219,7 +219,7 @@ async fn run_vector(mock: &Mock, control: &reqwest::Client, raw: &str) -> Vec<St
     let cfg = &v["config"];
     let backend = match v["backend"].as_str().unwrap() {
         "speedle-cloud" => Backend::SpeedleCloud,
-        _ => Backend::SpeedlePlus,
+        _ => Backend::Speedle,
     };
     let auth = match cfg["auth"]["type"].as_str().unwrap() {
         "bearer" => Auth::bearer(cfg["auth"]["token"].as_str().unwrap()),

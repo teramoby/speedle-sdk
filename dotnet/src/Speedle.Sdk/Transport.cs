@@ -244,7 +244,7 @@ internal static class Responses
             case 413:
                 e = new RequestTooLargeException(info);
                 break;
-            case 429 when backend == Backend.SpeedlePlus || code == "rate_limited":
+            case 429 when backend == Backend.Speedle || code == "rate_limited":
                 e = new RateLimitedException(info);
                 retryable = retryAfter is not null;
                 break;

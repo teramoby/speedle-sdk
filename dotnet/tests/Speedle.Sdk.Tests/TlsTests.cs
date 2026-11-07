@@ -75,7 +75,7 @@ public sealed class TlsTests : IDisposable
     private SpeedleClient Client(Auth auth, bool trust, RetryPolicy? retry = null, SpeedleHooks? hooks = null) =>
         new(new SpeedleClientOptions
         {
-            Backend = Backend.SpeedlePlus,
+            Backend = Backend.Speedle,
             Endpoint = new Uri($"https://localhost:{Port}"),
             Auth = auth,
             ServiceName = "books",

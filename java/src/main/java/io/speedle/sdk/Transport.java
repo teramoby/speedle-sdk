@@ -199,7 +199,7 @@ final class Transport {
         case 403 -> e = new ForbiddenError(d);
         case 413 -> e = new RequestTooLargeError(d);
         case 429 -> {
-          if (backend == Backend.SPEEDLE_PLUS || "rate_limited".equals(code)) {
+          if (backend == Backend.SPEEDLE || "rate_limited".equals(code)) {
             e = new RateLimitedError(d);
             retryable = retryAfter != null;
           } else if ("daily_quota_exceeded".equals(code)) {

@@ -52,7 +52,7 @@ func runLoad(args []string) error {
 			return err
 		}
 	}
-	fmt.Printf("loaded %d policies into Speedle+ service %q\n", len(f.Policies), *service)
+	fmt.Printf("loaded %d policies into self-hosted Speedle service %q\n", len(f.Policies), *service)
 	return nil
 }
 
@@ -136,7 +136,7 @@ func runParsed(args []string) error {
 		if !*write {
 			w, _ := json.Marshal(want)
 			g, _ := json.Marshal(got)
-			diffs = append(diffs, fmt.Sprintf("%s %q:\n  file:      %s\n  Speedle+:  %s", p.Kind, p.Name, g, w))
+			diffs = append(diffs, fmt.Sprintf("%s %q:\n  file:      %s\n  Speedle:   %s", p.Kind, p.Name, g, w))
 			continue
 		}
 		if p.Parsed, err = marshalPlain(want); err != nil {
@@ -147,12 +147,12 @@ func runParsed(args []string) error {
 		if err := writeJSON(*policies, f); err != nil {
 			return err
 		}
-		fmt.Printf("wrote the Speedle+ parsed form of %d policies to %s\n", len(f.Policies), *policies)
+		fmt.Printf("wrote the self-hosted Speedle parsed form of %d policies to %s\n", len(f.Policies), *policies)
 		return nil
 	}
 	if len(diffs) > 0 {
-		return fmt.Errorf("parsed forms differ from Speedle+ (rerun with -write to update):\n%s", strings.Join(diffs, "\n"))
+		return fmt.Errorf("parsed forms differ from self-hosted Speedle (rerun with -write to update):\n%s", strings.Join(diffs, "\n"))
 	}
-	fmt.Printf("parsed forms of all %d policies match Speedle+\n", len(f.Policies))
+	fmt.Printf("parsed forms of all %d policies match self-hosted Speedle\n", len(f.Policies))
 	return nil
 }

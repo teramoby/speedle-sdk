@@ -25,8 +25,8 @@ internal static class Program
         Backend backend = backendName switch
         {
             "speedle-cloud" => Backend.SpeedleCloud,
-            "speedle-plus" => Backend.SpeedlePlus,
-            _ => throw Usage("SPEEDLE_E2E_BACKEND must be speedle-cloud or speedle-plus"),
+            "speedle" => Backend.Speedle,
+            _ => throw Usage("SPEEDLE_E2E_BACKEND must be speedle-cloud or speedle"),
         };
         if (backend == Backend.SpeedleCloud && token is null)
         {

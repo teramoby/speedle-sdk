@@ -56,7 +56,7 @@ desktop clients.
 
 ```java
 try (SpeedleClient speedle = SpeedleClient.builder()
-    .backend(Backend.SPEEDLE_PLUS)
+    .backend(Backend.SPEEDLE)
     .endpoint(URI.create("https://ads.internal.example:6734"))
     .auth(Auth.none())                  // or Auth.mutualTls(keyStore, password)
     .serviceName("books")
@@ -68,7 +68,7 @@ try (SpeedleClient speedle = SpeedleClient.builder()
 }
 ```
 
-`http://` is accepted only for `SPEEDLE_PLUS` with `Auth.none()`, and only for
+`http://` is accepted only for `Backend.SPEEDLE` with `Auth.none()`, and only for
 loopback hosts unless you set `allowInsecureHttp(true)`. A bearer token is
 never sent over plaintext. Self-hosted Speedle itself warns against
 unauthenticated plaintext endpoints; keep them on a trusted network.

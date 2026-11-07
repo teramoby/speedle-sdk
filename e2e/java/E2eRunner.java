@@ -37,10 +37,10 @@ public final class E2eRunner {
     Backend backend;
     if (backendName == null || backendName.equals("speedle-cloud")) {
       backend = Backend.SPEEDLE_CLOUD;
-    } else if (backendName.equals("speedle-plus")) {
-      backend = Backend.SPEEDLE_PLUS;
+    } else if (backendName.equals("speedle")) {
+      backend = Backend.SPEEDLE;
     } else {
-      throw usage("SPEEDLE_E2E_BACKEND must be speedle-cloud or speedle-plus");
+      throw usage("SPEEDLE_E2E_BACKEND must be speedle-cloud or speedle");
     }
     if (backend == Backend.SPEEDLE_CLOUD && token == null) {
       throw usage("SPEEDLE_E2E_TOKEN is required for speedle-cloud");

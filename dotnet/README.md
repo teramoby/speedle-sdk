@@ -52,7 +52,7 @@ desktop clients.
 ```csharp
 await using var speedle = new SpeedleClient(new SpeedleClientOptions
 {
-    Backend = Backend.SpeedlePlus,
+    Backend = Backend.Speedle,
     Endpoint = new Uri("https://ads.internal.example:6734"),
     Auth = Auth.None(),                 // or Auth.MutualTls(certificateWithKey)
     ServiceName = "books",
@@ -64,7 +64,7 @@ Decision d = await speedle.CheckAsync(
 Console.WriteLine($"{d.Allowed} {d.Reason}");
 ```
 
-`http://` is accepted only for `SpeedlePlus` with `Auth.None()`, and only for
+`http://` is accepted only for `Backend.Speedle` with `Auth.None()`, and only for
 loopback hosts unless you set `AllowInsecureHttp = true`. A bearer token is
 never sent over plaintext. Self-hosted Speedle itself warns against
 unauthenticated plaintext endpoints; keep them on a trusted network.

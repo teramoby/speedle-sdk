@@ -53,7 +53,7 @@ mobile apps or desktop clients.
 
 ```go
 client, err := speedle.NewClient(speedle.Config{
-	Backend:     speedle.BackendSpeedlePlus,
+	Backend:     speedle.BackendSpeedle,
 	Endpoint:    "https://ads.internal:6734",
 	Auth:        speedle.NoAuth(), // or speedle.MutualTLS(cert)
 	ServiceName: "books",
@@ -67,7 +67,7 @@ d, err := client.Check(ctx, speedle.Subject{
 // d.Allowed, d.Reason, d.ErrorMessage
 ```
 
-`http://` is accepted only for `BackendSpeedlePlus` with `NoAuth()`, and only
+`http://` is accepted only for `BackendSpeedle` with `NoAuth()`, and only
 for loopback hosts unless `AllowInsecureHTTP` is set. Self-hosted Speedle warns
 that a plaintext endpoint has no authentication; keep it on a trusted network.
 An unknown service on self-hosted Speedle is not an error: the decision is a

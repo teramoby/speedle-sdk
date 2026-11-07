@@ -17,9 +17,9 @@ import (
 
 // vectorFile is e2e/vectors.json.
 type vectorFile struct {
-	Description string   `json:"description"`
-	SpeedlePlus string   `json:"speedlePlus"`
-	Vectors     []vector `json:"vectors"`
+	Description   string   `json:"description"`
+	SpeedleCommit string   `json:"speedleCommit"`
+	Vectors       []vector `json:"vectors"`
 }
 
 type vector struct {
@@ -230,20 +230,20 @@ func runVectors(args []string) error {
 		}
 	}
 	if failed > 0 {
-		return fmt.Errorf("%d of %d vectors failed against Speedle+", failed, len(f.Vectors))
+		return fmt.Errorf("%d of %d vectors failed against self-hosted Speedle", failed, len(f.Vectors))
 	}
 	if *write {
 		if *commit == "" {
 			return errors.New("vectors: -write needs -commit")
 		}
-		f.SpeedlePlus = *commit
+		f.SpeedleCommit = *commit
 		if err := writeJSON(*path, f); err != nil {
 			return err
 		}
 		fmt.Printf("recorded %d decisions in %s\n", len(f.Vectors), *path)
 		return nil
 	}
-	fmt.Printf("all %d vectors match Speedle+\n", len(f.Vectors))
+	fmt.Printf("all %d vectors match self-hosted Speedle\n", len(f.Vectors))
 	return nil
 }
 
