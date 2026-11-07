@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0 (unreleased)
+## 0.2.0 (2026-11-07)
 
 - Breaking: `Backend.SpeedlePlus` is now `Backend.Speedle`. There is no
   alias for the old name.

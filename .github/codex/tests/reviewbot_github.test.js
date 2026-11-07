@@ -9,7 +9,9 @@ const path = require("node:path");
 
 const {
   validatePrEvent,
+  reviewGate,
   prepareCommand,
+  commandAnalyzeGate,
   publishReview,
 } = require("../reviewbot_github.js");
 
@@ -321,4 +323,67 @@ test("publishReview rejects a handoff bound to a stale head", async (t) => {
   );
   assert.equal(calls.createReview.length, 0);
   assert.equal(calls.createComment.length, 0);
+});
+
+function providerEnvironment(t, provider, arkKey, deepseekKey) {
+  setEnvironment(t, {
+    REVIEWBOT_PROVIDER: provider,
+    REVIEWBOT_API_KEY: arkKey,
+    REVIEWBOT_DEEPSEEK_API_KEY: deepseekKey,
+    REVIEWED_COMMIT: HEAD_SHA,
+    PULL_NUMBER: "18",
+    COMMAND: "review",
+  });
+}
+
+test("reviewGate defaults to Ark and uses the Ark secret", async (t) => {
+  providerEnvironment(t, "", "ark-test", "deepseek-test");
+  const fixture = commandFixture();
+  const { github } = githubDouble(fixture);
+  const core = coreDouble();
+  await reviewGate({ github, context: commandContext(fixture), core });
+  assert.equal(core.outputs.enabled, "true");
+  assert.equal(core.outputs.should_review, "true");
+});
+
+test("reviewGate uses only the selected provider secret", async (t) => {
+  providerEnvironment(t, "deepseek", "", "deepseek-test");
+  const fixture = commandFixture();
+  const { github } = githubDouble(fixture);
+  const core = coreDouble();
+  await reviewGate({ github, context: commandContext(fixture), core });
+  assert.equal(core.outputs.enabled, "true");
+  assert.equal(core.outputs.should_review, "true");
+});
+
+test("reviewGate disables DeepSeek without the DeepSeek secret", async (t) => {
+  providerEnvironment(t, "deepseek", "ark-test", "");
+  const fixture = commandFixture();
+  const { github } = githubDouble(fixture);
+  const core = coreDouble();
+  await reviewGate({ github, context: commandContext(fixture), core });
+  assert.equal(core.outputs.enabled, "false");
+  assert.equal(core.outputs.should_review, "false");
+  assert.match(core.notices[0], /DEEPSEEK_API_KEY/);
+});
+
+test("reviewGate rejects an unknown provider", async (t) => {
+  providerEnvironment(t, "other", "ark-test", "deepseek-test");
+  const fixture = commandFixture();
+  const { github } = githubDouble(fixture);
+  const core = coreDouble();
+  await reviewGate({ github, context: commandContext(fixture), core });
+  assert.equal(core.outputs.enabled, "false");
+  assert.equal(core.outputs.should_review, "false");
+  assert.match(core.notices[0], /REVIEWBOT_PROVIDER/);
+});
+
+test("commandAnalyzeGate honors the selected provider", async (t) => {
+  providerEnvironment(t, "deepseek", "", "deepseek-test");
+  const fixture = commandFixture();
+  const { github } = githubDouble(fixture);
+  const core = coreDouble();
+  await commandAnalyzeGate({ github, context: commandContext(fixture), core });
+  assert.equal(core.outputs.enabled, "true");
+  assert.equal(core.outputs.history_b64, "");
 });

@@ -25,12 +25,33 @@ async function validatePrEvent({ github, context, core }) {
   core.setOutput("should_run", "true");
 }
 
+function providerSettings() {
+  const provider = (process.env.REVIEWBOT_PROVIDER ?? "").trim().toLowerCase() || "ark";
+  if (provider === "deepseek") {
+    return {
+      provider,
+      enabled: Boolean(process.env.REVIEWBOT_DEEPSEEK_API_KEY),
+      secret: "DEEPSEEK_API_KEY",
+    };
+  }
+  if (provider === "ark") {
+    return {
+      provider,
+      enabled: Boolean(process.env.REVIEWBOT_API_KEY),
+      secret: "ARK_API_KEY",
+    };
+  }
+  return { provider, enabled: false, secret: null };
+}
+
 async function reviewGate({ github, context, core }) {
-  const enabled = Boolean(process.env.REVIEWBOT_API_KEY);
+  const { provider, enabled, secret } = providerSettings();
   core.setOutput("enabled", enabled ? "true" : "false");
   core.setOutput("should_review", "false");
   if (!enabled) {
-    core.notice("ReviewBot is disabled until the ARK_API_KEY repository secret is configured.");
+    core.notice(secret
+      ? `ReviewBot is disabled until the ${secret} repository secret is configured.`
+      : "ReviewBot is disabled: REVIEWBOT_PROVIDER must be ark or deepseek.");
     return;
   }
   const commit = process.env.REVIEWED_COMMIT;
@@ -48,7 +69,7 @@ async function reviewGate({ github, context, core }) {
       review.body?.startsWith(`${marker}\n`),
   );
   core.setOutput("should_review", exists ? "false" : "true");
-  if (exists) core.notice(`ReviewBot already reviewed ${commit}; skipping Ark analysis.`);
+  if (exists) core.notice(`ReviewBot already reviewed ${commit}; skipping ${provider} analysis.`);
 }
 
 async function prepareCommand({ github, context, core }) {
@@ -287,11 +308,13 @@ async function prepareCommand({ github, context, core }) {
 }
 
 async function commandAnalyzeGate({ github, context, core }) {
-  const enabled = Boolean(process.env.REVIEWBOT_API_KEY);
+  const { enabled, secret } = providerSettings();
   core.setOutput("enabled", enabled ? "true" : "false");
   core.setOutput("history_b64", "");
   if (!enabled) {
-    core.notice("ReviewBot is disabled until the ARK_API_KEY repository secret is configured.");
+    core.notice(secret
+      ? `ReviewBot is disabled until the ${secret} repository secret is configured.`
+      : "ReviewBot is disabled: REVIEWBOT_PROVIDER must be ark or deepseek.");
     return;
   }
   if (process.env.COMMAND !== "recheck") return;
@@ -459,7 +482,7 @@ async function publishCommand({ github, context, core }) {
   if (successful) {
     message = modelMessage;
   } else if (reviewBotEnabled !== "true") {
-    message = "## ReviewBot unavailable\n\nReviewBot is not configured for this repository. A repository administrator must configure the Ark credential before commands can run.";
+    message = "## ReviewBot unavailable\n\nReviewBot is not configured for this repository. A repository administrator must configure the model provider credential before commands can run.";
   } else {
     message = `## ReviewBot command failed\n\nReviewBot could not complete this command. See the [workflow run](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) for status, then post a new command to retry.`;
   }

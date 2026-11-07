@@ -5,7 +5,8 @@ ReviewBot as [teramoby/speedle-plus](https://github.com/teramoby/speedle-plus)
 (copied from `master` at `46a4f90`), which is adapted from
 [Pavu at a7b458e](https://github.com/pavulabs/pavu/tree/a7b458ee3194865b653826a1b0c1119c28634c9d)
 under Apache 2.0. It never runs, builds or tests PR code. It reads the diff and
-sends it, with trusted prompts, to an Ark model.
+sends it, with trusted prompts, to the configured model provider: Ark by
+default, or DeepSeek when selected.
 
 ## Flow
 
@@ -73,21 +74,28 @@ without model or error text.
 
 ## Owner setup
 
-ReviewBot does nothing until the secret exists. Without it, each run prints a
-notice, sends no code and publishes nothing.
+ReviewBot does nothing until the selected provider's secret exists. Without it,
+each run prints a notice, sends no code and publishes nothing.
 
 | Name | Kind | Required | Default | Purpose |
 | --- | --- | --- | --- | --- |
-| `ARK_API_KEY` | Actions secret | Yes | none | Ark Agent Plan API key. Either grant the existing organization secret to `speedle-sdk`, or create a repository secret with this name. |
+| `REVIEWBOT_PROVIDER` | Actions variable | No | `ark` | Model provider: `ark` or `deepseek`. Switching providers is a variable change only. |
+| `ARK_API_KEY` | Actions secret | When `ark` (default) | none | Ark Agent Plan API key. Either grant the existing organization secret to `speedle-sdk`, or create a repository secret with this name. |
 | `ARK_REVIEW_MODELS` | Actions variable | No | `kimi-k3.1-pro deepseek-v4.1-flash glm-5.3` | Space-separated Ark model IDs, tried in this order. |
 | `ARK_REVIEW_MAX_OUTPUT_TOKENS` | Actions variable | No | `32768` | Maximum output tokens per request. |
 | `ARK_REVIEW_REASONING_EFFORT` | Actions variable | No | `medium` | Ark reasoning effort: `low`, `medium` or `high`. |
 | `ARK_REVIEW_INPUT_LIMIT` | Actions variable | No | `750000` | Maximum input bytes before truncation. |
 | `ARK_REVIEW_MODEL` | Actions variable | No | none | Legacy override. If `ARK_REVIEW_MODELS` is unset, this model is tried before the default chain. |
+| `DEEPSEEK_API_KEY` | Actions secret | When `deepseek` | none | DeepSeek API key. |
+| `DEEPSEEK_REVIEW_MODEL` | Actions variable | No | `deepseek-flash` | DeepSeek model ID. The API's model list is `deepseek-flash` and `deepseek-v4-pro`. |
 
-All defaults live in `.github/codex/reviewbot_ark.py`; the workflow YAML only
-forwards variable values. The endpoint is
-`https://ark.cn-beijing.volces.com/api/plan/v3/responses`.
+All defaults live in `.github/codex/reviewbot_model.py`,
+`.github/codex/reviewbot_ark.py` and `.github/codex/reviewbot_deepseek.py`; the
+workflow YAML only forwards variable values. Ark uses
+`https://ark.cn-beijing.volces.com/api/plan/v3/responses`; DeepSeek uses
+`https://api.deepseek.com/chat/completions` (OpenAI-compatible,
+non-streaming).
+
 GitHub reads and writes use the job's `GITHUB_TOKEN`; no PAT or GitHub App is
 needed. The trusted workflows become active once they are on `main`, because
 `issue_comment` and `workflow_run` always run the default-branch version.
@@ -102,6 +110,31 @@ self-hosted runner:
 `reviewbot.yml`, `reviewbot-comment.yml` and `reviewbot-inline.yml` route
 untrusted events on `ubuntu-24.04` and must not be in the group.
 
+## Providers
+
+`REVIEWBOT_PROVIDER` selects the provider. It is unset by default, which means
+`ark`, so the existing Ark path is unchanged. Setting it to `deepseek` switches
+to DeepSeek without a workflow or script edit.
+
+- **Ark.** The trusted input is sent as one `input` string. Models from
+  `ARK_REVIEW_MODELS` are tried in order; `max_output_tokens`,
+  `reasoning.effort` and the input cap come from the `ARK_REVIEW_*` variables.
+- **DeepSeek.** The trusted prompt is the system message; the trusted policy
+  from the base revision, commit metadata and diff form the user message
+  (commands also include the untrusted request, context and prior output). The
+  model is `DEEPSEEK_REVIEW_MODEL` (default `deepseek-flash`), requested with
+  `max_tokens: 65536` and `stream: false`. `deepseek-flash` has a 1M-token
+  context and a 384K-token maximum output; the system-plus-user input is capped
+  at 750,000 bytes, so the request stays inside both. The review text is
+  `choices[0].message.content`; any `reasoning_content` is ignored.
+  `finish_reason: "length"` is the Ark output-token-limit case and retries once
+  with unified=3 diff context.
+
+Both providers use the same transport, HTTP-error, timeout and unusable-output
+handling and the same reason codes. Response parsing, the comment format,
+verdict markers and the footer are shared; the footer names the model that
+produced the review.
+
 ## Stable workflows, editable scripts
 
 GitHub can hold a new or changed privileged workflow for manual approval. Never
@@ -112,12 +145,14 @@ trusted default-branch checkouts, calls into trusted stage scripts, and the
 validated same-run handoff. The pointer-only routers stay unprivileged and
 contain no analysis or publishing logic.
 
-Request building, Ark calls, failover, response checks, parsing, authorization
-and publishing live under `.github/codex/`. Model selection and other tunables
-live in repository variables, with defaults in `reviewbot_ark.py`. Prompts are
-under `.github/codex/prompts/`. After the trusted change merges to the default
-branch, a diff that changes only these scripts or prompts, or a change only to
-the repository variables above, needs **no privileged-workflow approval**.
+Request building, provider calls, failover, response checks, parsing,
+authorization and publishing live under `.github/codex/`. Provider selection
+and other tunables live in repository variables, with defaults in
+`reviewbot_model.py`, `reviewbot_ark.py` and `reviewbot_deepseek.py`. Prompts
+are under `.github/codex/prompts/`. After the trusted change merges to the
+default branch, a diff that changes only these scripts or prompts, or a change
+only to the repository variables above, needs **no privileged-workflow
+approval**.
 
 ## Security model
 
@@ -137,22 +172,26 @@ the repository variables above, needs **no privileged-workflow approval**.
   the API and checks the router run, actor and timing. It also verifies the
   issue is a PR or the inline run's PR association before the usual permission
   check.
-- **Report handoff.** The analysis job has a read-only token and the Ark key;
-  the publishing job has write permissions and no model key. The report moves
+- **Report handoff.** The analysis job has a read-only token and the selected
+  provider's key; the publishing job has write permissions and no model key.
+  The report moves
   between them as a same-run artifact (`report.json`, 256 KiB at most, one-day
   retention), not a job output. Before upload, `.github/codex/reviewbot_handoff.py`
   rejects the report if it contains any repository secret value or the job
   token, logging the secret's name only. The publisher validates the schema and
   the run, attempt, PR, head and command binding before writing anything.
-- **Bounded requests and failover.** Input is capped by
+- **Bounded requests and failover.** Ark input is capped by
   `ARK_REVIEW_INPUT_LIMIT` (750,000 bytes by default) and output by
-  `ARK_REVIEW_MAX_OUTPUT_TOKENS` (32768 by default). Models are tried in
-  `ARK_REVIEW_MODELS` order on HTTP errors, request timeouts, incomplete
-  responses or reasoning-only answers. A response cut off by the output-token
-  limit is retried once on the same model with 3 lines of diff context instead
-  of 80; both attempts share that model's 360-second HTTP budget. The first
-  usable review is published with its model ID. If every model fails, nothing
-  is published and analysis fails with `all_models_failed`.
+  `ARK_REVIEW_MAX_OUTPUT_TOKENS` (32768 by default); DeepSeek caps the
+  system-plus-user input at 750,000 bytes and requests `max_tokens: 65536`.
+  Ark models are tried in `ARK_REVIEW_MODELS` order on HTTP errors, request
+  timeouts, incomplete responses or reasoning-only answers; DeepSeek uses one
+  model. A response cut off by the output-token limit (DeepSeek
+  `finish_reason: "length"`) is retried once on the same model with 3 lines of
+  diff context instead of 80; both attempts share that model's 360-second HTTP
+  budget. The first usable review is published with its model ID. If every
+  model fails, nothing is published and analysis fails with
+  `all_models_failed`.
 - Actions are pinned to full commit SHAs and every job declares its permissions.
 - **Runners.** Self-hosted jobs select the labels `self-hosted`, `aliyun-ecs`
   and `reviewbot`, served by the dedicated runner `ecs-light-teramoby` in the
@@ -161,10 +200,12 @@ the repository variables above, needs **no privileged-workflow approval**.
   routing run on GitHub-hosted `ubuntu-24.04`, so public PRs and comments reach
   the self-hosted runner only after validation.
 
-Data sent to Ark: the trusted prompts, `AGENTS.md` from the base revision if it
-exists, commit metadata and the static diff. Commands also send the comment
-text, its code context and, for `recheck`, earlier bot output. Fork PRs are not
-reviewed. To stop model calls, remove the secret or disable the workflows.
+Data sent to the selected provider: the trusted prompts, `AGENTS.md` from the
+base revision if it exists, commit metadata and the static diff. Under `ark`
+the provider is Ark; under `deepseek` it is DeepSeek. Commands also send the
+comment text, its code context and, for `recheck`, earlier bot output. Fork PRs
+are not reviewed. To stop model calls, remove the active provider's secret or
+disable the workflows.
 
 ## Differences from speedle-plus
 
@@ -190,9 +231,11 @@ reviewed. To stop model calls, remove the secret or disable the workflows.
 - `.github/actionlint.yaml`: the `aliyun-ecs` and `reviewbot` self-hosted labels
 - `.github/codex/reviewbot_github.js`: trusted validation, authorization and publishing stages
 - `.github/codex/reviewbot_analyze.sh`: immutable-commit input construction
-- `.github/codex/reviewbot_ark.py`: tunables, Ark requests and ordered model failover
+- `.github/codex/reviewbot_model.py`: provider selection, shared tunables, transport and ordered model failover
+- `.github/codex/reviewbot_ark.py`: Ark endpoint, defaults, request payload and response extraction
+- `.github/codex/reviewbot_deepseek.py`: DeepSeek endpoint, defaults, request payload and response extraction
 - `.github/codex/reviewbot_response.py`, `.github/codex/reviewbot_handoff.py`
-- `.github/codex/tests/test_reviewbot_ark.py`: local response and failover tests
+- `.github/codex/tests/test_reviewbot_model.py`: local provider, response and failover tests
 - `.github/codex/prompts/reviewbot.md`, `.github/codex/prompts/reviewbot-command.md`
 - `.github/codex/PAVU-LICENSE.txt`, `.github/codex/PAVU-NOTICE.txt`: the Apache 2.0
   license and notice for the reused ReviewBot source. The rest of the repository
@@ -204,6 +247,7 @@ Check workflow and script changes with:
 actionlint .github/workflows/reviewbot*.yml
 zizmor --offline .github/workflows/reviewbot*.yml
 node --check .github/codex/reviewbot_github.js
+node --test .github/codex/tests/reviewbot_github.test.js
 shellcheck .github/codex/reviewbot_analyze.sh
 python3 -I -m unittest discover -s .github/codex/tests -v
 ```
