@@ -101,7 +101,7 @@ func TestUserAgent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	re := regexp.MustCompile(`^speedle-sdk-go/0\.1\.0 \(go/[0-9][^;]*; [a-z0-9]+\) my-app/2$`)
+	re := regexp.MustCompile(`^speedle-sdk-go/0\.2\.0 \(go/[0-9][^;]*; [a-z0-9]+\) my-app/2$`)
 	if !re.MatchString(c.userAgent) {
 		t.Errorf("User-Agent %q", c.userAgent)
 	}

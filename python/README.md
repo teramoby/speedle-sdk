@@ -6,7 +6,8 @@ Speedle](https://github.com/teramoby/speedle-plus). Python 3.10 or later, sync
 and asyncio clients, fully typed. The only runtime dependency is `httpx`.
 The behaviour follows [docs/design.md](../docs/design.md).
 
-> Published on PyPI: 0.1.0 (2026-11-05).
+> Published on PyPI: 0.1.0 (2026-11-05). This README describes 0.2.0, which is
+> not yet released.
 
 ## Install
 

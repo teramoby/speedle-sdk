@@ -6,7 +6,7 @@ Speedle](https://github.com/teramoby/speedle-plus). Node.js 22 or later, ESM and
 CommonJS, no runtime dependencies. The behaviour follows
 [docs/design.md](../docs/design.md).
 
-> Not yet published on npm (0.1.0 pending).
+> Not yet published on npm. 0.2.0 will be the first npm release.
 
 ## Install
 

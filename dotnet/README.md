@@ -9,7 +9,8 @@ Client for the `is-allowed` authorization check of
   source generation. Trimming and AOT compatible.
 - License: UPL-1.0.
 
-Published on NuGet: 0.1.0 (2026-11-05). The design is in [docs/design.md](../docs/design.md).
+Published on NuGet: 0.1.0 (2026-11-05). This README describes 0.2.0, which is
+not yet released. The design is in [docs/design.md](../docs/design.md).
 
 ## Install
 
