@@ -122,9 +122,8 @@ Central releases cannot be removed.
 Repository `teramoby/speedle-sdk`, Settings:
 
 1. **Environment** (Environments → New environment), name **`release`**:
-   - Do not configure required reviewers. The owner decided on 2026-11-05 that
-     releases require no GitHub environment approval. The npm 2FA approval
-     happens on npmjs.com, not here.
+   - Do not configure required reviewers. Releases require no GitHub environment
+     approval. The npm 2FA approval happens on npmjs.com, not here.
    - Clear "Allow administrators to bypass configured protection rules".
    - Deployment branches and tags: "Selected branches and tags", with a
      **Branch** rule for `main` (Go dispatches) and five rules of type **Tag**:

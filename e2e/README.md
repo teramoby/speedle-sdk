@@ -4,8 +4,8 @@ These tests run every SDK against a real authorization decision service with
 a known policy set, and check each decision. They complement the conformance
 suite in `conformance/`, which tests each SDK against a scripted mock.
 
-Speedle Cloud must answer exactly like self-hosted Speedle (owner rule,
-[cloud.speedle.io#213](https://github.com/teramoby/cloud.speedle.io/issues/213)).
+Speedle Cloud must answer exactly like self-hosted Speedle
+([cloud.speedle.io#213](https://github.com/teramoby/cloud.speedle.io/issues/213)).
 So the expected decisions are recorded from a local self-hosted Speedle REST ADS
 loaded with the same policies, and the gamma run checks that Speedle Cloud gives
 the same answers through each SDK.
@@ -165,7 +165,7 @@ writes a warning and stops, and a manual run fails.
 
 - Scoped ADS bearer tokens:
   [cloud.speedle.io#136](https://github.com/teramoby/cloud.speedle.io/pull/136),
-  after the owner's #79 acceptance. Until then gamma answers 401 to
+  after #79 acceptance. Until then gamma answers 401 to
   `is-allowed` without a valid token.
 - The Speedle request format:
   [cloud.speedle.io#215](https://github.com/teramoby/cloud.speedle.io/pull/215).
