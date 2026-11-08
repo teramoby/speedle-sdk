@@ -102,13 +102,17 @@ request; the other five SDKs remain tag-driven.
 
 If a publish job fails before anything was uploaded (for example, a missing
 secret), fix the cause and use "Re-run failed jobs". If the npm stage publish
-succeeded, approve the staged version instead of re-running. If Go fails before
-`publish-go`, no module tag exists; fix the cause and dispatch the same version
-again. Never move or reuse a tag that was created. Registries do not allow a
-version to be replaced: to fix a bad release, release the next patch version
-and deprecate the bad one (`npm deprecate`, yank on PyPI and crates.io, unlist
-on NuGet, a `retract` directive in `go/go.mod`). Maven Central releases cannot
-be removed.
+succeeded, approve the staged version instead of re-running. If npm created
+`@speedle/sdk` with the `0.0.0-stage` placeholder but the version was not
+staged, the package now exists and the stage-token guard blocks a retry with
+`NPM_STAGE_TOKEN`: configure the trusted publisher (npm below, step 4),
+delete the `NPM_STAGE_TOKEN` secret (step 5), and re-run the failed jobs. If Go
+fails before `publish-go`, no module tag exists; fix the cause and dispatch the
+same version again. Never move or reuse a tag that was created. Registries do
+not allow a version to be replaced: to fix a bad release, release the next
+patch version and deprecate the bad one (`npm deprecate`, yank on PyPI and
+crates.io, unlist on NuGet, a `retract` directive in `go/go.mod`). Maven
+Central releases cannot be removed.
 
 ## Owner setup on GitHub
 
@@ -196,14 +200,21 @@ run it with a stage-only token that has no Bypass 2FA.
    - Leave **Bypass two-factor authentication** unchecked.
    - Shortest expiry.
 
+   Create a new token for this purpose; do not reuse or rename an older token,
+   in particular not the removed `NPM_BOOTSTRAP_TOKEN` (the workflow fails if
+   that secret is still set, see step 5).
+
    Use **All Packages** only as a fallback, and only if npm will not let the
    scope-scoped token create a brand-new package: `@speedle/sdk` does not
    exist yet, and npm's package selector matches existing packages, so on some
    accounts only All Packages can stage the version that creates the package.
    That token can stage any package the account can reach, so it is a
    fallback rather than the default; keep it equally short-lived and delete it
-   right after the first approval (step 5). The 2FA approval stays the
-   barrier either way, because a stage-only token can never approve.
+   right after the first approval (step 5). If it is needed, audit before
+   approving: list the staged versions of every package the account can reach
+   (`npm stage list <package>`), so nothing outside `@speedle/sdk` was staged.
+   The 2FA approval stays the barrier either way, because a stage-only token
+   can never approve.
 
    Store it as the `release` environment secret `NPM_STAGE_TOKEN`:
 

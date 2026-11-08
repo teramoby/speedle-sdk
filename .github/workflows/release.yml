@@ -151,7 +151,7 @@ jobs:
           retention-days: 7
 
   publish-node:
-    name: Publish @speedle/sdk to npm
+    name: Stage @speedle/sdk on npm (approval required)
     needs: [verify, node]
     if: needs.verify.outputs.language == 'node'
     runs-on: ubuntu-latest
@@ -189,12 +189,18 @@ jobs:
       # It is a stage-only granular token: it can queue a publish but cannot
       # approve it, so a maintainer still approves with 2FA on npmjs.com.
       # Once the package exists on npm, a still-set token fails the job, so it
-      # can never silently replace trusted publishing.
+      # can never silently replace trusted publishing. NPM_BOOTSTRAP_TOKEN is
+      # the removed bypass-2FA path; a leftover secret fails the job too.
       - name: Authentication mode
         id: mode
         env:
           NPM_STAGE_TOKEN: ${{ secrets.NPM_STAGE_TOKEN }}
+          NPM_BOOTSTRAP_TOKEN: ${{ secrets.NPM_BOOTSTRAP_TOKEN }}
         run: |
+          if [ -n "$NPM_BOOTSTRAP_TOKEN" ]; then
+            echo "::error::the release environment secret NPM_BOOTSTRAP_TOKEN (the removed bypass-2FA path) is still set. Delete that secret and revoke its token on npmjs.com (RELEASING.md, npm, step 5). NPM_STAGE_TOKEN must be a newly created stage-only token, not the old token renamed."
+            exit 1
+          fi
           if [ -n "$NPM_STAGE_TOKEN" ]; then
             status=$(curl -sS -o /dev/null -w '%{http_code}' https://registry.npmjs.org/@speedle%2fsdk) || status=error
             case "$status" in
@@ -234,9 +240,9 @@ jobs:
           VERSION: ${{ needs.verify.outputs.version }}
         run: |
           {
-            echo "### Approve the staged npm release"
+            echo "### Staged, not published: approve with 2FA"
             echo
-            echo "@speedle/sdk $VERSION is staged, not published. A maintainer must approve it with 2FA:"
+            echo "This run uploaded @speedle/sdk $VERSION to the staged queue; it is not a completed release. A maintainer must approve it with 2FA:"
             echo
             echo "1. Open https://www.npmjs.com/package/@speedle/sdk → Staged Packages."
             echo "2. Approve $VERSION, or run \`npm stage approve <stage-id>\` (\`npm stage list\` shows the id)."

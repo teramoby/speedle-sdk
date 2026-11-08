@@ -1561,12 +1561,13 @@ module path is written into `go.mod` and every import:
 - The release workflow, `.github/workflows/release.yml`, starts on a tag push
   for Node.js, Python, Java, .NET and Rust. Go starts from a manual dispatch
   with a version on the default branch, and its protected `publish-go` job
-  creates the `go/vX.Y.Z` tag only after verification, tests, conformance and
-  owner approval in the same run. Direct Go tag pushes are not a release path.
-  Every run first checks that the protected environment `release` exists and
-  has required reviewers. The workflow checks that the selected commit is on
-  the default branch and that the requested version matches the package
-  metadata, runs that SDK's tests and conformance, and uploads from `release`.
+  creates the `go/vX.Y.Z` tag only after verification, tests and conformance
+  pass in the same run; only a repository admin can dispatch it. Direct Go tag
+  pushes are not a release path. Every run first checks that the protected
+  environment `release` exists and is readable. The workflow checks that the
+  selected commit is on the default branch and that the requested version
+  matches the package metadata, runs that SDK's tests and conformance, and
+  uploads from `release`.
   npm, PyPI, NuGet and crates.io use OIDC trusted publishing; npm and
   crates.io need a short-lived token for the very first version only, because
   they add a trusted publisher only to a package that exists. For npm that
