@@ -204,7 +204,8 @@ need 2FA, so CI can run it with a stage-only token that has no Bypass 2FA.
 
    Create a new token for this purpose; do not reuse or rename an older token,
    in particular not the removed `NPM_BOOTSTRAP_TOKEN` (the workflow fails if
-   that secret is still set, see step 5).
+   that secret is still set, see step 5). If an earlier npm token for this
+   repository still exists, revoke it before the first release.
 
    Use **All Packages** only as a fallback, and only if npm will not let the
    scope-scoped token create a brand-new package: `@speedle/sdk` does not
