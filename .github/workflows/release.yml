@@ -204,7 +204,7 @@ jobs:
             exit 1
           fi
           if [ -n "$NPM_STAGE_TOKEN" ]; then
-            status=$(curl -sS -o /dev/null -w '%{http_code}' https://registry.npmjs.org/@speedle%2fsdk) || status=error
+            status=$(curl -sS --max-time 15 -o /dev/null -w '%{http_code}' https://registry.npmjs.org/@speedle%2fsdk) || status=error
             case "$status" in
               404) ;;
               200)
@@ -233,10 +233,15 @@ jobs:
           # shellcheck disable=SC2016 # the literal ${NODE_AUTH_TOKEN} is for npm to expand
           printf '%s\n' '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}' > "$NPM_CONFIG_USERCONFIG"
           npm stage publish "./dist/speedle-sdk-$VERSION.tgz" --provenance --access public --ignore-scripts --registry https://registry.npmjs.org/ | tee "$RUNNER_TEMP/npm-stage-publish.log"
-          # npm prints "+ @speedle/sdk@X.Y.Z (staged with id <uuid>)". Keep the
-          # id for the approval summary; an empty id is not fatal, because
-          # `npm stage list @speedle/sdk` shows it as well.
+          # npm 11.15.0 and later print
+          # "+ @speedle/sdk@X.Y.Z (staged with id <uuid>)". Without the id the
+          # approval summary cannot name the entry this run staged, so fail
+          # closed instead of reporting a green staged release.
           stage_id=$(sed -n 's/.*(staged with id \([^)]*\)).*/\1/p' "$RUNNER_TEMP/npm-stage-publish.log" | tail -n 1)
+          if [ -z "$stage_id" ]; then
+            echo "::error::npm stage publish printed no stage id; refusing to report a staged release. The version may be staged: check 'npm stage list @speedle/sdk' and approve or reject that entry (RELEASING.md, npm)."
+            exit 1
+          fi
           echo "stage_id=$stage_id" >> "$GITHUB_OUTPUT"
       - name: npm stage publish (trusted publishing)
         id: stage-trusted
@@ -246,25 +251,28 @@ jobs:
         run: |
           npm stage publish "./dist/speedle-sdk-$VERSION.tgz" --provenance --access public --ignore-scripts --registry https://registry.npmjs.org/ | tee "$RUNNER_TEMP/npm-stage-publish.log"
           stage_id=$(sed -n 's/.*(staged with id \([^)]*\)).*/\1/p' "$RUNNER_TEMP/npm-stage-publish.log" | tail -n 1)
+          if [ -z "$stage_id" ]; then
+            echo "::error::npm stage publish printed no stage id; refusing to report a staged release. The version may be staged: check 'npm stage list @speedle/sdk' and approve or reject that entry (RELEASING.md, npm)."
+            exit 1
+          fi
           echo "stage_id=$stage_id" >> "$GITHUB_OUTPUT"
       - name: Staged release needs a maintainer approval
         env:
           VERSION: ${{ needs.verify.outputs.version }}
           STAGE_ID: ${{ steps.stage-token.outputs.stage_id || steps.stage-trusted.outputs.stage_id }}
         run: |
+          artifact="dist/speedle-sdk-$VERSION.tgz"
+          artifact_sha1=$(sha1sum "$artifact" | awk '{print $1}')
+          artifact_sri="sha512-$(openssl dgst -sha512 -binary "$artifact" | openssl base64 -A)"
           {
             echo "### Staged, not published: approve with 2FA"
             echo
             echo "This run uploaded @speedle/sdk $VERSION to the staged queue; it is not a completed release. A maintainer must check and approve it with 2FA:"
             echo
-            echo "1. Confirm the staged entry before approving: \`npm stage list @speedle/sdk\` shows the id and version, \`npm stage view <stage-id>\` its details and shasum, and \`npm stage download <stage-id>\` the tarball."
-            if [ -n "$STAGE_ID" ]; then
-              echo "   This run staged id \`$STAGE_ID\`."
-            else
-              echo "   Find the id with \`npm stage list @speedle/sdk\`."
-            fi
-            echo "2. Approve $VERSION with that stage id: open https://www.npmjs.com/package/@speedle/sdk → Staged Packages, or run \`npm stage approve <stage-id>\`. Do not approve another id."
-            echo "3. After approval, verify the published version and its provenance (RELEASING.md, npm, step 3)."
+            echo "1. Confirm the staged entry before approving: \`npm stage list @speedle/sdk\` shows the id and version, and \`npm stage view <stage-id>\` its details and shasum. This run staged id \`$STAGE_ID\`."
+            echo "2. Compare that entry with the artifact this run built: sha1 \`$artifact_sha1\`, integrity \`$artifact_sri\`. \`npm stage download <stage-id>\` gets the staged tarball for inspection."
+            echo "3. Approve $VERSION with that stage id: open https://www.npmjs.com/package/@speedle/sdk → Staged Packages, or run \`npm stage approve <stage-id>\`. Do not approve another id."
+            echo "4. After approval, verify the published version and its provenance (RELEASING.md, npm, step 3)."
             echo
             echo "Until approval the registry shows the public placeholder 0.0.0-stage and \`npm install @speedle/sdk\` may fail. Do not announce the package before approval (RELEASING.md, npm)."
           } >> "$GITHUB_STEP_SUMMARY"

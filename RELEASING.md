@@ -1,7 +1,10 @@
 # Releasing
 
 Every SDK is released only by `.github/workflows/release.yml`, from a tag on a
-commit of `main` (design §12.3). Never publish a package by hand.
+commit of `main` (design §12.3). Never publish a package by hand. The one
+exception is npm: the workflow stages every version, and a maintainer
+approves the exact staged artifact with 2FA on npmjs.com (npm below). The
+approval is the human release gate, not a manual publish.
 
 | SDK | Tag | Registry and package |
 | --- | --- | --- |
@@ -236,11 +239,14 @@ need 2FA, so CI can run it with a stage-only token that has no Bypass 2FA.
    npm stage download <stage-id>    # optional: inspect the tarball
    ```
 
-   Approve that stage id and complete 2FA: open `@speedle/sdk` on npmjs.com →
-   **Staged Packages**, or run `npm stage approve <stage-id>`. Do not approve a
-   stage id the release run did not print. Until then the package page shows
-   the placeholder `0.0.0-stage`, `npm install @speedle/sdk` may fail with
-   `ETARGET`, and the package must not be announced.
+   The publish job summary prints the artifact sha1 and sha512 integrity.
+   Approve only if `npm stage view` reports the same version, shasum and (if
+   shown) integrity. Then approve that stage id and complete 2FA: open
+   `@speedle/sdk` on npmjs.com → **Staged Packages**, or run
+   `npm stage approve <stage-id>`. Do not approve a stage id the release run
+   did not print. Until then the package page shows the placeholder
+   `0.0.0-stage`, `npm install @speedle/sdk` may fail with `ETARGET`, and the
+   package must not be announced.
 3. **Verify the published version.** The approval publishes the version the
    workflow staged; a green workflow run alone does not. Confirm it on the
    registry:
