@@ -1580,8 +1580,9 @@ module path is written into `go.mod` and every import:
   version with `npm stage publish --provenance --access public`, which for a
   new package also publishes the public placeholder `0.0.0-stage`. A green
   run therefore means the version is staged, not published. A maintainer
+  checks the staged entry against the run (stage id, version, shasum), then
   approves exactly that staged version with 2FA on npmjs.com ("Staged
-  Packages", or `npm stage approve <stage-id>`), then verifies the published
+  Packages", or `npm stage approve <stage-id>`), and verifies the published
   version and its provenance attestation before the release counts as
   complete; the commands are in `RELEASING.md`. Approval is the only release
   step outside GitHub, and it replaces the old bypass-2FA token. The reason is

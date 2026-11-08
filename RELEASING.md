@@ -226,13 +226,21 @@ need 2FA, so CI can run it with a stage-only token that has no Bypass 2FA.
 
    Then cut `node/v0.1.0`. The workflow runs
    `npm stage publish --provenance --access public`.
-2. **Approve the staged version with 2FA.** The publish job summary links to
-   this. A maintainer opens `@speedle/sdk` on npmjs.com → **Staged Packages**
-   → approve the version, or runs `npm stage approve <stage-id>`
-   (`npm stage list @speedle/sdk` shows the id) and completes 2FA. Until then
-   the package page shows the placeholder `0.0.0-stage`, `npm install
-   @speedle/sdk` may fail with `ETARGET`, and the package must not be
-   announced.
+2. **Check the staged version, then approve it with 2FA.** The publish job
+   summary prints the stage id. Before approving, confirm that the staged
+   entry is the version the release workflow built:
+
+   ```sh
+   npm stage list @speedle/sdk      # id, version, status
+   npm stage view <stage-id>        # details and shasum
+   npm stage download <stage-id>    # optional: inspect the tarball
+   ```
+
+   Approve that stage id and complete 2FA: open `@speedle/sdk` on npmjs.com →
+   **Staged Packages**, or run `npm stage approve <stage-id>`. Do not approve a
+   stage id the release run did not print. Until then the package page shows
+   the placeholder `0.0.0-stage`, `npm install @speedle/sdk` may fail with
+   `ETARGET`, and the package must not be announced.
 3. **Verify the published version.** The approval publishes the version the
    workflow staged; a green workflow run alone does not. Confirm it on the
    registry:
