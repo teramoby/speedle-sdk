@@ -155,6 +155,13 @@ jobs:
     needs: [verify, node]
     if: needs.verify.outputs.language == 'node'
     runs-on: ubuntu-latest
+    # The first-release guard below reads the public registry, so two Node tags
+    # pushed at once could both see 404 and both publish with
+    # NPM_STAGE_TOKEN. One fixed group serializes every Node publish across
+    # tags; the workflow-level group is keyed on github.ref and cannot.
+    concurrency:
+      group: publish-node
+      cancel-in-progress: false
     timeout-minutes: 10
     environment:
       name: release

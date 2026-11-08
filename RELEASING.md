@@ -290,7 +290,10 @@ need 2FA, so CI can run it with a stage-only token that has no Bypass 2FA.
    `https://registry.npmjs.org/@speedle%2fsdk` (read-only, no token) and fails
    with "delete the ... secret" if the package already exists, or if the check
    gets any answer other than 404. A lingering stage token therefore blocks
-   the release instead of silently replacing trusted publishing.
+   the release instead of silently replacing trusted publishing. Because that
+   check reads the public registry, the publish job holds the fixed
+   concurrency group `publish-node`, so Node tags pushed at the same time run
+   one after another instead of both seeing 404.
 6. **Later releases** use trusted publishing (OIDC) and also stage the
    release, so a maintainer approves every version with 2FA as in steps 2
    and 3. After such a release succeeds: Settings → Publishing access →
