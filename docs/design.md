@@ -14,7 +14,7 @@ two backends:
 | `speedle-cloud` | Speedle Cloud ADS (`https://cloud.speedle.io`, beta `https://b.speedle.io`) | Service-scoped bearer token |
 | `speedle` | Self-hosted Speedle ADS (REST, default port 6734) | None, or mutual TLS |
 
-Languages, all built together with no phases (owner decision on #212):
+Languages, all built together with no phases:
 Node.js/TypeScript, Python, Java, Go, C# and Rust. Every SDK has the same API
 shape (§5), the same retry and failure behaviour (§6), the same error model
 (§7), and passes the same conformance suite (§11).
@@ -51,8 +51,8 @@ goes through a normal PR that updates the copy, the vectors and each SDK.
 
 "SDK" in the last column describes what every SDK does.
 
-**One request format for both backends** (owner decision,
-[cloud.speedle.io#213](https://github.com/teramoby/cloud.speedle.io/issues/213)).
+**One request format for both backends**
+([cloud.speedle.io#213](https://github.com/teramoby/cloud.speedle.io/issues/213)).
 Speedle Cloud is being changed to accept exactly the self-hosted Speedle REST
 `JsonContext` from `pkg/svcs/adsrest/check.go` and to return the same body.
 The SDK sends only that format, to both backends. The "Speedle Cloud"
@@ -1507,7 +1507,7 @@ Layout: `node/`, `python/`, `java/`, `go/`, `dotnet/`, `rust/`,
 and CI workflow.
 
 License: UPL-1.0, the same license text as teramoby/speedle-plus, with the copyright
-line `Copyright (c) 2026 The Speedle Authors` (owner decision on #212), in
+line `Copyright (c) 2026 The Speedle Authors`, in
 the root `LICENSE`. Every package declares the SPDX identifier `UPL-1.0` in its
 metadata and ships the license file.
 
