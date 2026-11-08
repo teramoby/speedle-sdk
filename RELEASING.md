@@ -210,13 +210,12 @@ need 2FA, so CI can run it with a stage-only token that has no Bypass 2FA.
    scope-scoped token create a brand-new package: `@speedle/sdk` does not
    exist yet, and npm's package selector matches existing packages, so on some
    accounts only All Packages can stage the version that creates the package.
-   That token can stage any package the account can reach, so it is a
-   fallback rather than the default; keep it equally short-lived and delete it
-   right after the first approval (step 5). If it is needed, audit before
-   approving: list the staged versions of every package the account can reach
-   (`npm stage list <package>`), so nothing outside `@speedle/sdk` was staged.
-   The 2FA approval stays the barrier either way, because a stage-only token
-   can never approve.
+   That token can stage any package the account can reach, so use it only on
+   an npm account whose package access is limited to the `@speedle`
+   organization (ideally a dedicated account). On an account that can reach
+   other packages, do not use the fallback. Keep it equally short-lived and
+   delete it right after the first approval (step 5). The 2FA approval stays
+   the barrier either way, because a stage-only token can never approve.
 
    Store it as the `release` environment secret `NPM_STAGE_TOKEN`:
 
@@ -288,8 +287,11 @@ With trusted publishing, npm authenticates through OIDC and adds provenance.
 human approval is needed for each npm version, allow **`npm publish`** on the
 trusted publisher (the `--allow-publish` flag of `npm trust`; it can be enabled
 together with stage publishing) and change both `npm stage publish` steps in
-`.github/workflows/release.yml` to `npm publish`. The `NPM_STAGE_TOKEN` path
-only exists for the first release, so nothing else changes.
+`.github/workflows/release.yml` to `npm publish`. Also rename the
+`publish-node` job, delete the "Staged, not published" job-summary step, and
+update the environment URL comment, because all three describe the staged flow.
+The `NPM_STAGE_TOKEN` path only exists for the first release, so nothing else
+changes.
 
 ### PyPI: `speedle`
 
