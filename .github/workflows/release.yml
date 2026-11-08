@@ -232,14 +232,17 @@ jobs:
         run: |
           # shellcheck disable=SC2016 # the literal ${NODE_AUTH_TOKEN} is for npm to expand
           printf '%s\n' '//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}' > "$NPM_CONFIG_USERCONFIG"
+          set -o pipefail
           npm stage publish "./dist/speedle-sdk-$VERSION.tgz" --provenance --access public --ignore-scripts --registry https://registry.npmjs.org/ | tee "$RUNNER_TEMP/npm-stage-publish.log"
           # npm 11.15.0 and later print
-          # "+ @speedle/sdk@X.Y.Z (staged with id <uuid>)". Without the id the
-          # approval summary cannot name the entry this run staged, so fail
-          # closed instead of reporting a green staged release.
-          stage_id=$(sed -n 's/.*(staged with id \([^)]*\)).*/\1/p' "$RUNNER_TEMP/npm-stage-publish.log" | tail -n 1)
-          if [ -z "$stage_id" ]; then
-            echo "::error::npm stage publish printed no stage id; refusing to report a staged release. The version may be staged: check 'npm stage list @speedle/sdk' and approve or reject that entry (RELEASING.md, npm)."
+          # "+ @speedle/sdk@X.Y.Z (staged with id <uuid>)". Require that exact
+          # line, for this version, with a UUID: the approval summary names the
+          # entry by it, and a failed or mismatched publish must not look green.
+          stage_line=$(grep -E '^\+ .*\(staged with id ' "$RUNNER_TEMP/npm-stage-publish.log" | tail -n 1 || true)
+          stage_id=$(printf '%s\n' "$stage_line" | sed -n 's/.*(staged with id \([^)]*\)).*/\1/p')
+          staged_pkg=$(printf '%s\n' "$stage_line" | sed -n 's/^+ \(.*\) (staged with id .*/\1/p')
+          if [ "$staged_pkg" != "@speedle/sdk@$VERSION" ] || ! printf '%s' "$stage_id" | grep -Eq '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'; then
+            echo "::error::npm stage publish did not report '@speedle/sdk@$VERSION (staged with id <uuid>)'; refusing to report a staged release. The version may be staged: check 'npm stage list @speedle/sdk' and approve or reject that entry (RELEASING.md, npm)."
             exit 1
           fi
           echo "stage_id=$stage_id" >> "$GITHUB_OUTPUT"
@@ -249,10 +252,13 @@ jobs:
         env:
           VERSION: ${{ needs.verify.outputs.version }}
         run: |
+          set -o pipefail
           npm stage publish "./dist/speedle-sdk-$VERSION.tgz" --provenance --access public --ignore-scripts --registry https://registry.npmjs.org/ | tee "$RUNNER_TEMP/npm-stage-publish.log"
-          stage_id=$(sed -n 's/.*(staged with id \([^)]*\)).*/\1/p' "$RUNNER_TEMP/npm-stage-publish.log" | tail -n 1)
-          if [ -z "$stage_id" ]; then
-            echo "::error::npm stage publish printed no stage id; refusing to report a staged release. The version may be staged: check 'npm stage list @speedle/sdk' and approve or reject that entry (RELEASING.md, npm)."
+          stage_line=$(grep -E '^\+ .*\(staged with id ' "$RUNNER_TEMP/npm-stage-publish.log" | tail -n 1 || true)
+          stage_id=$(printf '%s\n' "$stage_line" | sed -n 's/.*(staged with id \([^)]*\)).*/\1/p')
+          staged_pkg=$(printf '%s\n' "$stage_line" | sed -n 's/^+ \(.*\) (staged with id .*/\1/p')
+          if [ "$staged_pkg" != "@speedle/sdk@$VERSION" ] || ! printf '%s' "$stage_id" | grep -Eq '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'; then
+            echo "::error::npm stage publish did not report '@speedle/sdk@$VERSION (staged with id <uuid>)'; refusing to report a staged release. The version may be staged: check 'npm stage list @speedle/sdk' and approve or reject that entry (RELEASING.md, npm)."
             exit 1
           fi
           echo "stage_id=$stage_id" >> "$GITHUB_OUTPUT"
