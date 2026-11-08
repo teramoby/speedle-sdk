@@ -25,7 +25,7 @@ instead starts from a manual workflow dispatch with a version input; only a
 repository admin may dispatch it, and maintainers never push its final `go/v*`
 tag.
 
-Releases require no GitHub environment approval (owner decision, 2026-11-05).
+Releases require no GitHub environment approval.
 Only repository admins may start one: the tag rulesets restrict non-Go
 release-tag creation to admins, and the Go dispatch check below enforces the
 same boundary. npm is the exception to a fully unattended publish: the
