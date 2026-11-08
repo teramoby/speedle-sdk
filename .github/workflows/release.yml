@@ -158,7 +158,9 @@ jobs:
     timeout-minutes: 10
     environment:
       name: release
-      url: https://www.npmjs.com/package/@speedle/sdk
+      # Version-specific: it stays 404 until the staged version is approved, so
+      # the deployment URL itself shows that the release is not published yet.
+      url: https://www.npmjs.com/package/@speedle/sdk/v/${{ needs.verify.outputs.version }}
     permissions:
       id-token: write # npm trusted publishing and provenance
     steps:

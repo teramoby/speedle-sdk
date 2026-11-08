@@ -185,12 +185,14 @@ Every trusted publisher uses the same identity:
 ### npm: `@speedle/sdk`
 
 Prerequisite: the npm organization `speedle` on an account with 2FA (design
-§12.2). npm adds a trusted publisher only to a package that exists, so the
-first release uses a stage-only granular token. `npm stage publish` may create
-a brand-new package: the registry publishes a public placeholder version
-`0.0.0-stage`, and the real version waits in the staged queue until a
-maintainer approves it with 2FA. Staging itself does not need 2FA, so CI can
-run it with a stage-only token that has no Bypass 2FA.
+§12.2). That account keeps maintainer rights on `@speedle/sdk`; do not add npm
+maintainers who are not repository admins, because the 2FA approval is the
+human release gate. npm adds a trusted publisher only to a package that
+exists, so the first release uses a stage-only granular token.
+`npm stage publish` may create a brand-new package: the registry publishes a
+public placeholder version `0.0.0-stage`, and the real version waits in the
+staged queue until a maintainer approves it with 2FA. Staging itself does not
+need 2FA, so CI can run it with a stage-only token that has no Bypass 2FA.
 
 1. **Create the stage-only token**, once, before the first Node.js release.
    On npmjs.com: Access Tokens → Generate New Token → Granular Access Token:
@@ -267,14 +269,14 @@ run it with a stage-only token that has no Bypass 2FA.
 5. **Delete the stage-only token.** Delete the `NPM_STAGE_TOKEN` secret and
    revoke the token on npmjs.com. If the `release` environment still has the
    old `NPM_BOOTSTRAP_TOKEN` secret (the bypass-2FA path this design replaces),
-   delete that secret and revoke its token as well: the workflow no longer
-   reads it, so a leftover would otherwise stay valid without being used. The
-   workflow enforces the stage-token cleanup: when `NPM_STAGE_TOKEN` is set,
-   the publish job first checks `https://registry.npmjs.org/@speedle%2fsdk`
-   (read-only, no token) and fails with "delete the ... secret" if the package
-   already exists, or if the check gets any answer other than 404. A lingering
-   stage token therefore blocks the release instead of silently replacing
-   trusted publishing.
+   delete that secret and revoke its token as well: the workflow reads it only
+   to fail the job while it is set, and the token would otherwise stay valid.
+   The workflow enforces the stage-token cleanup: when `NPM_STAGE_TOKEN` is
+   set, the publish job first checks
+   `https://registry.npmjs.org/@speedle%2fsdk` (read-only, no token) and fails
+   with "delete the ... secret" if the package already exists, or if the check
+   gets any answer other than 404. A lingering stage token therefore blocks
+   the release instead of silently replacing trusted publishing.
 6. **Later releases** use trusted publishing (OIDC) and also stage the
    release, so a maintainer approves every version with 2FA as in steps 2
    and 3. After such a release succeeds: Settings → Publishing access →
