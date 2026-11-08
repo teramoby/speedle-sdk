@@ -240,6 +240,7 @@ jobs:
             echo
             echo "1. Open https://www.npmjs.com/package/@speedle/sdk → Staged Packages."
             echo "2. Approve $VERSION, or run \`npm stage approve <stage-id>\` (\`npm stage list\` shows the id)."
+            echo "3. After approval, verify the published version and its provenance (RELEASING.md, npm, step 3)."
             echo
             echo "Until approval the registry shows the public placeholder 0.0.0-stage and \`npm install @speedle/sdk\` may fail. Do not announce the package before approval (RELEASING.md, npm)."
           } >> "$GITHUB_STEP_SUMMARY"
