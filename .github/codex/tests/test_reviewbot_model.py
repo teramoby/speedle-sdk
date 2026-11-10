@@ -17,6 +17,7 @@ import reviewbot_ark
 import reviewbot_deepseek
 import reviewbot_handoff
 import reviewbot_model
+import reviewbot_response
 
 
 def ark_response(text=None, output=None, status="completed", incomplete_reason=None, model=None):
@@ -34,17 +35,29 @@ def ark_response(text=None, output=None, status="completed", incomplete_reason=N
     return result
 
 
-def sse(*events, done=False, terminated=True):
+def sse(*events, done=False, terminated=True, ensure_ascii=True):
     """Serialize events as a server-sent event body, as the providers stream it."""
     body = ": keep-alive\n\n"
     for event in events:
         name = event.get("type") if isinstance(event, dict) else None
         if name:
             body += f"event: {name}\n"
-        body += "data: " + json.dumps(event) + "\n\n"
+        body += "data: " + json.dumps(event, ensure_ascii=ensure_ascii) + "\n\n"
     if done:
         body += "data: [DONE]\n\n"
     return body if terminated else body.rstrip("\n")
+
+
+def streamed_message(response, provider):
+    if provider == "deepseek":
+        return response["choices"][0]["message"]["content"]
+    return next(
+        part["text"]
+        for item in response["output"]
+        if item.get("type") == "message"
+        for part in item["content"]
+        if part.get("type") == "output_text"
+    )
 
 
 def ark_stream(response, terminal="response.completed"):
@@ -933,6 +946,42 @@ class HandoffTests(unittest.TestCase):
     def test_unknown_provider_is_rejected(self):
         status, _ = self.seal("other", {"ARK_API_KEY": "ark-secret"})
         self.assertEqual(status, 1)
+
+
+class EventStreamLineEndingTests(unittest.TestCase):
+    def stream(self, provider, content, ensure_ascii=True):
+        if provider == "ark":
+            response = ark_response(content, model="kimi-k3.1-pro")
+            return sse(*ark_stream(response), ensure_ascii=ensure_ascii)
+        return sse(*deepseek_stream(content), done=True, ensure_ascii=ensure_ascii)
+
+    def test_unicode_separators_in_content_deltas_round_trip(self):
+        for separator in ("\u2028", "\u2029", "\u0085"):
+            content = f"a{separator}b"
+            for provider in ("ark", "deepseek"):
+                with self.subTest(provider=provider, separator=f"U+{ord(separator):04X}"):
+                    body = self.stream(provider, content, ensure_ascii=False)
+                    self.assertIn(content, body)
+                    response = reviewbot_response.load_response(body, provider)
+                    self.assertEqual(streamed_message(response, provider), content)
+
+    def test_crlf_and_cr_frames_parse(self):
+        content = "line-one\nline-two"
+        for provider in ("ark", "deepseek"):
+            body = self.stream(provider, content)
+            frames = {
+                "crlf": body.replace("\n", "\r\n"),
+                "cr": body.replace("\n", "\r"),
+            }
+            for name, framed in frames.items():
+                with self.subTest(provider=provider, frame=name):
+                    if name == "cr":
+                        self.assertNotIn("\n", framed)
+                    else:
+                        self.assertIn("\r\n", framed)
+                        self.assertNotIn("\n", framed.replace("\r\n", ""))
+                    response = reviewbot_response.load_response(framed, provider)
+                    self.assertEqual(streamed_message(response, provider), content)
 
 
 if __name__ == "__main__":

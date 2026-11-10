@@ -80,6 +80,25 @@ class IncompleteStream(Exception):
         self.snapshot = snapshot
 
 
+def sse_lines(text):
+    """Split on server-sent-event line endings only: CRLF, CR, or LF.
+
+    JSON strings may contain U+2028, U+2029, U+0085 and the other separators
+    that str.splitlines() breaks on. A terminal break does not add a line.
+    """
+    if not text:
+        return []
+    if text.endswith("\r\n"):
+        body = text[:-2]
+    elif text.endswith(("\n", "\r")):
+        body = text[:-1]
+    else:
+        body = text
+    if not body:
+        return [""]
+    return re.split(r"\r\n|\r|\n", body)
+
+
 def sse_events(text):
     """Yield the data payload of each dispatched server-sent event.
 
@@ -88,7 +107,7 @@ def sse_events(text):
     not terminated by a blank line before the end of the body is discarded.
     """
     data = []
-    for line in text.splitlines():
+    for line in sse_lines(text):
         if not line:
             if data:
                 yield "\n".join(data)
@@ -105,7 +124,7 @@ def sse_events(text):
 
 def looks_like_sse(text):
     return any(re.match(r"(?:data|event|id|retry)?:", line)
-               for line in text.lstrip().splitlines()[:1])
+               for line in sse_lines(text.lstrip())[:1])
 
 
 def stream_payloads(text):
