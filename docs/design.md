@@ -1543,7 +1543,7 @@ module path is written into `go.mod` and every import:
 
 | Registry | Owner action |
 | --- | --- |
-| npm | Create the npm organization `speedle` (free for public packages) on the project's npm account with 2FA. That reserves the `@speedle` scope. npm adds a trusted publisher only to a package that exists, so the first release uses one short-lived granular token with **Read and write (stage only)**, scoped to `@speedle`, with no Bypass 2FA; the workflow stages the version and a maintainer approves it with 2FA. If npm will not let a scope-scoped token create the new package, All Packages is the permitted fallback for that one short-lived token, only on an npm account whose package access is limited to `@speedle` (ideally a dedicated account), and it is revoked immediately after the approval. Once `@speedle/sdk` exists, configure trusted publishing (GitHub Actions OIDC, repository `teramoby/speedle-sdk`, workflow `release.yml`, environment `release`, allow staged publishing) and delete the token (§12.3). Only the account that owns the organization keeps npm maintainer rights, because the 2FA approval is the human release gate. |
+| npm | The npm organization `speedle` exists on the project's npm account with 2FA, and `@speedle/sdk` is published. Trusted publishing is GitHub Actions for repository `teramoby/speedle-sdk`, workflow file `release.yml`, environment `release`, with publish and stage publish allowed. A pushed `node/vX.Y.Z` tag publishes directly with `npm publish --provenance --access public` through OIDC. The publish job fails if `NPM_STAGE_TOKEN` or `NPM_BOOTSTRAP_TOKEN` is set. A new trusted-publisher configuration expires if it is not validated by a publish within 48 hours of creation; recreate it with `npm trust github @speedle/sdk --file release.yml --repo teramoby/speedle-sdk --env release --allow-publish --allow-stage-publish` (§12.3, `RELEASING.md`). Only the account that owns the organization keeps npm maintainer rights. |
 | PyPI | A PyPI account with 2FA. Add a pending trusted publisher for project `speedle` (repository `teramoby/speedle-sdk`, release workflow, environment). Optionally request a PyPI organization `speedle`. |
 | Maven Central | Done: namespace `io.speedle` verified. At release time, a Central Portal user token and a GPG signing key as secrets of the `release` environment in `teramoby/speedle-sdk`: `MAVEN_CENTRAL_USERNAME`, `MAVEN_CENTRAL_PASSWORD`, `MAVEN_GPG_KEY`, `MAVEN_GPG_PASSPHRASE` (see `RELEASING.md`). |
 | NuGet | A nuget.org account and an organization `speedle`. Request the ID prefix reservation `Speedle` from the nuget.org team, which marks `Speedle.*` packages as verified and blocks others from using the prefix. Configure trusted publishing for the repository if available, otherwise an API key scoped to `Speedle.*` in a protected environment. |
@@ -1568,37 +1568,25 @@ module path is written into `go.mod` and every import:
   selected commit is on the default branch and that the requested version
   matches the package metadata, runs that SDK's tests and conformance, and
   uploads from `release`.
-  npm, PyPI, NuGet and crates.io use OIDC trusted publishing; npm and
-  crates.io need a short-lived token for the very first version only, because
-  they add a trusted publisher only to a package that exists. For npm that
-  token is stage-only and a maintainer's 2FA approval finishes the release
-  (next bullet). Maven Central uses a user token and a GPG key; Go needs no
-  registry. Publishing waits for the owner actions in §12.2; the exact
-  registry fields and secret names are in `RELEASING.md`.
-- npm releases use staged publishing, and a maintainer's 2FA approval is the
-  human release gate. The workflow performs every upload: it stages the
-  version with `npm stage publish --provenance --access public`, which for a
-  new package also publishes the public placeholder `0.0.0-stage`. A green
-  run therefore means the version is staged, not published. A maintainer
-  checks the staged entry against the run (stage id, version, shasum and
-  artifact integrity), then approves exactly that staged version with 2FA on
-  npmjs.com ("Staged Packages", or `npm stage approve <stage-id>`), and
-  verifies the published version and its provenance attestation before the
-  release counts as complete; the commands are in `RELEASING.md`. Approval is
-  the only release step outside GitHub, and it replaces the old bypass-2FA
-  token. The reason is
-  npm policy: in 2026 npm restricted granular access tokens that bypass 2FA
-  ([2026-07-31](https://github.blog/changelog/2026-07-31-restricting-npm-bypass-2fa-granular-access-tokens/)),
-  added tokens that may only stage
-  ([2026-09-18](https://github.blog/changelog/2026-09-18-stage-only-npm-tokens-for-safer-automation/)),
-  and let staged publishing create new packages
-  ([2026-10-02](https://github.blog/changelog/2026-10-02-npm-staged-publishing-now-supports-creating-new-packages/)).
-  Because a trusted publisher can only be configured once the package exists,
-  the first version uses the stage-only token; later versions use trusted
-  publishing with `--allow-stage-publish`, which keeps the same 2FA approval
-  in the loop. This is the npm release policy for speedle-sdk; `RELEASING.md`
-  documents how to opt into direct `npm publish` later if the maintainers
-  decide to drop the per-version approval.
+  npm, PyPI, NuGet and crates.io use OIDC trusted publishing. crates.io needs
+  a short-lived token for the very first version only, because it adds a
+  trusted publisher only to a crate that exists. npm publishes directly with
+  `npm publish --provenance --access public` and no npm token (next bullet).
+  Maven Central uses a user token and a GPG key; Go needs no registry.
+  Publishing waits for the actions in §12.2; the exact registry fields and
+  secret names are in `RELEASING.md`.
+- A pushed `node/vX.Y.Z` tag publishes `@speedle/sdk` directly through npm
+  trusted publishing. The `publish-node` job has `id-token: write` and runs
+  `npm publish --provenance --access public` on the packed tarball. It fails
+  before publishing if the release environment still has `NPM_STAGE_TOKEN` or
+  `NPM_BOOTSTRAP_TOKEN`, so a token cannot replace OIDC. A green run means
+  the version is on npm. Verify it with
+  `npm view @speedle/sdk@X.Y.Z version dist.integrity dist.attestations`
+  and confirm the attestation points at the release workflow run for the tag.
+  A new trusted-publisher configuration expires if it is not validated by a
+  publish within 48 hours of creation; `RELEASING.md` has the command that
+  recreates it (`--allow-publish --allow-stage-publish`). Provenance comes
+  from the OIDC identity of that workflow.
 - Each SDK keeps a `CHANGELOG.md`; commits follow Conventional Commits with
   the SDK as scope, for example `feat(python): ...`.
 
@@ -1622,8 +1610,7 @@ module path is written into `go.mod` and every import:
 2. Go module path: keep the repository path (default if no answer) or choose
    the `speedle.io/sdk/go` vanity path before the first Go tag.
 3. Release credentials as GitHub Actions secrets or environments, listed in
-   `RELEASING.md`. The npm stage-only token `NPM_STAGE_TOKEN` exists only until
-   the first npm version is approved; delete it before the next Node.js
-   release.
+   `RELEASING.md`. Do not set `NPM_STAGE_TOKEN` or `NPM_BOOTSTRAP_TOKEN`; the
+   Node.js publish job fails while either secret is present.
 4. A beta-only test token for the smoke test, once the Cloud ADS cutover is
    live on beta.

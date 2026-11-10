@@ -7,7 +7,8 @@ CommonJS, no runtime dependencies. See the [Node.js SDK
 documentation](https://engine.speedle.io/docs/sdks/node/) and [design
 specification](https://github.com/teramoby/speedle-sdk/blob/main/docs/design.md).
 
-> Not yet published on npm. 0.2.0 will be the first npm release.
+> Published on npm: 0.2.0 (2026-11-10). This README describes 0.2.1, which is
+> not yet released.
 
 ## Install
 

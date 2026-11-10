@@ -5,8 +5,9 @@ Client libraries for the Speedle authorization decision API,
 "is this subject allowed to perform this action on this resource?" with a few
 lines of code.
 
-**Status:** all six SDKs are implemented at version 0.2.0. The Python, Java,
-Go, C# and Rust packages are published at 0.2.0; the npm release is pending.
+**Status:** all six SDKs are implemented. The Python, Java, Go, C# and Rust
+packages are published at 0.2.0. `@speedle/sdk` 0.2.0 is on npm; the Node.js
+package in this tree is 0.2.1.
 See the [Speedle SDK documentation](https://engine.speedle.io/docs/sdks/).
 
 ## Supported backends
@@ -20,11 +21,11 @@ See the [Speedle SDK documentation](https://engine.speedle.io/docs/sdks/).
 ## Packages
 
 All six SDKs are built together, with the same API, retry behaviour and
-conformance suite. Five packages are published; the npm release is pending.
+conformance suite. All six packages are published.
 
 | Language | Package | Status |
 | --- | --- | --- |
-| Node.js/TypeScript | [npm `@speedle/sdk`](https://www.npmjs.com/package/@speedle/sdk) | Not yet published (0.2.0 pending) |
+| Node.js/TypeScript | [npm `@speedle/sdk`](https://www.npmjs.com/package/@speedle/sdk) | 0.2.0 (2026-11-10) |
 | Python | [PyPI `speedle`](https://pypi.org/project/speedle/) | 0.2.0 (2026-11-07) |
 | Java | [Maven Central `io.speedle:speedle-sdk`](https://central.sonatype.com/artifact/io.speedle/speedle-sdk) | 0.2.0 (2026-11-07) |
 | Go | [`github.com/teramoby/speedle-sdk/go`](https://pkg.go.dev/github.com/teramoby/speedle-sdk/go) | 0.2.0 (2026-11-07) |

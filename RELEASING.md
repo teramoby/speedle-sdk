@@ -1,10 +1,7 @@
 # Releasing
 
 Every SDK is released only by `.github/workflows/release.yml`, from a tag on a
-commit of `main` (design §12.3). Never publish a package by hand. The one
-exception is npm: the workflow stages every version, and a maintainer
-approves the exact staged artifact with 2FA on npmjs.com (npm below). The
-approval is the human release gate, not a manual publish.
+commit of `main` (design §12.3). Never publish a package by hand.
 
 | SDK | Tag | Registry and package |
 | --- | --- | --- |
@@ -28,9 +25,8 @@ tag.
 Releases require no GitHub environment approval.
 Only repository admins may start one: the tag rulesets restrict non-Go
 release-tag creation to admins, and the Go dispatch check below enforces the
-same boundary. npm is the exception to a fully unattended publish: the
-workflow stages each npm version, and a maintainer approves it with 2FA on
-npmjs.com afterwards (see npm below).
+same boundary. A pushed `node/vX.Y.Z` tag publishes `@speedle/sdk` directly
+through npm trusted publishing (see npm below).
 
 1. **preflight**: reads the `release` environment with the workflow token's
    `actions: read` permission and fails if it is missing or unreadable. For a
@@ -45,9 +41,10 @@ npmjs.com afterwards (see npm below).
 4. **`publish-<language>`**: runs in the GitHub environment `release` without
    waiting for approval. For five SDKs it publishes the package built in step 3
    (Java and Rust rebuild from the same commit: Maven signs while it deploys,
-   and `cargo publish` packages from source with `--no-verify`). npm uses
-   `npm stage publish`, so the version waits in the staged queue until a
-   maintainer approves it with 2FA on npmjs.com.
+   and `cargo publish` packages from source with `--no-verify`). npm runs
+   `npm publish --provenance --access public` through trusted publishing
+   (OIDC) and does not use an npm token. The job fails before publishing if
+   `NPM_STAGE_TOKEN` or `NPM_BOOTSTRAP_TOKEN` is set.
    **`publish-go`** creates the `go/vX.Y.Z` tag at the verified commit only
    after the build and tests pass; `go-proxy` then confirms it on
    `proxy.golang.org`.
@@ -98,24 +95,20 @@ request; the other five SDKs remain tag-driven.
    - `preflight` passed, `verify` printed `... is on main` and an `ok:` line for
      every version source, and the build and test job is green.
 5. **Check** the registry or pkg.go.dev page linked from the `release`
-   environment in the run. For npm the version is staged, not published yet:
-   approve it with 2FA as described under npm below, then verify the published
-   version and provenance (npm, step 3). The publish job summary repeats these
-   approval steps.
+   environment in the run. For npm, verify the published version and its
+   provenance (npm below). The publish job summary prints the same command.
 
 If a publish job fails before anything was uploaded (for example, a missing
-secret), fix the cause and use "Re-run failed jobs". If the npm stage publish
-succeeded, approve the staged version instead of re-running. If npm created
-`@speedle/sdk` with the `0.0.0-stage` placeholder but the version was not
-staged, the package now exists and the stage-token guard blocks a retry with
-`NPM_STAGE_TOKEN`: configure the trusted publisher (npm below, step 4),
-delete the `NPM_STAGE_TOKEN` secret (step 5), and re-run the failed jobs. If Go
-fails before `publish-go`, no module tag exists; fix the cause and dispatch the
-same version again. Never move or reuse a tag that was created. Registries do
-not allow a version to be replaced: to fix a bad release, release the next
-patch version and deprecate the bad one (`npm deprecate`, yank on PyPI and
-crates.io, unlist on NuGet, a `retract` directive in `go/go.mod`). Maven
-Central releases cannot be removed.
+secret or a trusted-publisher rejection), fix the cause and use "Re-run failed
+jobs". If the Node.js publish job fails because `NPM_STAGE_TOKEN` or
+`NPM_BOOTSTRAP_TOKEN` is set, delete that secret and revoke the token, then
+re-run the failed jobs. If the registry already accepted the version, do not
+re-run that publish. If Go fails before `publish-go`, no module tag exists;
+fix the cause and dispatch the same version again. Never move or reuse a tag
+that was created. Registries do not allow a version to be replaced: to fix a
+bad release, release the next patch version and deprecate the bad one
+(`npm deprecate`, yank on PyPI and crates.io, unlist on NuGet, a `retract`
+directive in `go/go.mod`). Maven Central releases cannot be removed.
 
 ## Owner setup on GitHub
 
@@ -123,7 +116,7 @@ Repository `teramoby/speedle-sdk`, Settings:
 
 1. **Environment** (Environments → New environment), name **`release`**:
    - Do not configure required reviewers. Releases require no GitHub environment
-     approval. The npm 2FA approval happens on npmjs.com, not here.
+     approval.
    - Clear "Allow administrators to bypass configured protection rules".
    - Deployment branches and tags: "Selected branches and tags", with a
      **Branch** rule for `main` (Go dispatches) and five rules of type **Tag**:
@@ -165,8 +158,11 @@ and the Go build and tests. No reviewer approval follows in either case.
 | `MAVEN_GPG_KEY` | secret | Java | ASCII-armored secret signing key (see below) |
 | `MAVEN_GPG_PASSPHRASE` | secret | Java | Passphrase of that key |
 | `NUGET_USER` | variable | C# | nuget.org user name (profile name, not the email address) of the account that owns the trusted publishing policy |
-| `NPM_STAGE_TOKEN` | secret, first npm release only | Node.js | Short-lived npm stage-only granular token (see npm below); delete after the first release is approved |
 | `CARGO_BOOTSTRAP_TOKEN` | secret, first crates.io release only | Rust | Short-lived crates.io token (see crates.io below); delete after the first release |
+
+Node.js has no secret. Do not set `NPM_STAGE_TOKEN` or `NPM_BOOTSTRAP_TOKEN`
+on this environment: the Node.js publish job fails while either one is set,
+so an npm token cannot replace trusted publishing.
 
 Set them in the environment, not as repository or organization secrets, for
 example `gh secret set MAVEN_GPG_PASSPHRASE --env release --repo teramoby/speedle-sdk`
@@ -187,128 +183,55 @@ Every trusted publisher uses the same identity:
 ### npm: `@speedle/sdk`
 
 Prerequisite: the npm organization `speedle` on an account with 2FA (design
-§12.2). That account keeps maintainer rights on `@speedle/sdk`; do not add npm
-maintainers who are not repository admins, because the 2FA approval is the
-human release gate. npm adds a trusted publisher only to a package that
-exists, so the first release uses a stage-only granular token.
-`npm stage publish` may create a brand-new package: the registry publishes a
-public placeholder version `0.0.0-stage`, and the real version waits in the
-staged queue until a maintainer approves it with 2FA. Staging itself does not
-need 2FA, so CI can run it with a stage-only token that has no Bypass 2FA.
+§12.2). That account keeps maintainer rights on `@speedle/sdk`. Do not add npm
+maintainers who are not repository admins.
 
-1. **Create the stage-only token**, once, before the first Node.js release.
-   On npmjs.com: Access Tokens → Generate New Token → Granular Access Token:
-   - Packages: the **`@speedle` scope**. It is the least privilege that covers
-     `@speedle/sdk`, and it cannot stage packages outside the scope.
-   - Permission: **Read and write (stage only)**.
-   - Leave **Bypass two-factor authentication** unchecked.
-   - Shortest expiry.
+A pushed `node/vX.Y.Z` tag publishes directly. The `publish-node` job runs in
+the `release` environment with `id-token: write` and no npm token. It fails
+before publishing if the environment secret `NPM_STAGE_TOKEN` or
+`NPM_BOOTSTRAP_TOKEN` is set, then publishes the tarball built by the `node`
+job:
 
-   Create a new token for this purpose; do not reuse or rename an older token,
-   in particular not the removed `NPM_BOOTSTRAP_TOKEN` (the workflow fails if
-   that secret is still set, see step 5). If an earlier npm token for this
-   repository still exists, revoke it before the first release.
+```sh
+npm publish --provenance --access public
+```
 
-   Use **All Packages** only as a fallback, and only if npm will not let the
-   scope-scoped token create a brand-new package: `@speedle/sdk` does not
-   exist yet, and npm's package selector matches existing packages, so on some
-   accounts only All Packages can stage the version that creates the package.
-   That token can stage any package the account can reach, so use it only on
-   an npm account whose package access is limited to the `@speedle`
-   organization (ideally a dedicated account). On an account that can reach
-   other packages, do not use the fallback. Keep it equally short-lived and
-   delete it right after the first approval (step 5). The 2FA approval stays
-   the barrier either way, because a stage-only token can never approve.
+Trusted publishing authenticates with the GitHub Actions OIDC token, and npm
+records provenance for that workflow run. The publish job summary prints the
+verify command below.
 
-   Store it as the `release` environment secret `NPM_STAGE_TOKEN`:
+**Verify a release** after the publish job is green:
 
-   ```sh
-   gh secret set NPM_STAGE_TOKEN --env release --repo teramoby/speedle-sdk
-   ```
+```sh
+npm view @speedle/sdk@X.Y.Z version dist.integrity dist.attestations
+```
 
-   Then cut `node/v0.1.0`. The workflow runs
-   `npm stage publish --provenance --access public`.
-2. **Check the staged version, then approve it with 2FA.** The publish job
-   summary prints the stage id. Before approving, confirm that the staged
-   entry is the version the release workflow built:
+Check that the version is `X.Y.Z`, the package page shows the provenance
+badge, and the attestation points at the release workflow run for the tag.
+If the version or provenance does not match, deprecate it and release the
+next patch. A published npm version cannot be replaced.
 
-   ```sh
-   npm stage list @speedle/sdk      # id, version, status
-   npm stage view <stage-id>        # details and shasum
-   npm stage download <stage-id>    # optional: inspect the tarball
-   ```
+**Trusted publisher.** `@speedle/sdk` trusts GitHub Actions: workflow file
+`release.yml`, environment `release`, with publish and stage publish allowed.
+The workflow calls `npm publish`, not a stage command. A new trusted-publisher
+configuration expires if it is not validated by a publish within 48 hours of
+creation. Recreate it with:
 
-   The publish job summary prints the artifact sha1 and sha512 integrity.
-   Approve only if `npm stage view` reports the same version, shasum and (if
-   shown) integrity. Then approve that stage id and complete 2FA: open
-   `@speedle/sdk` on npmjs.com → **Staged Packages**, or run
-   `npm stage approve <stage-id>`. Do not approve a stage id the release run
-   did not print. Until then the package page shows the placeholder
-   `0.0.0-stage`, `npm install @speedle/sdk` may fail with `ETARGET`, and the
-   package must not be announced.
-3. **Verify the published version.** The approval publishes the version the
-   workflow staged; a green workflow run alone does not. Confirm it on the
-   registry:
+```sh
+npm trust github @speedle/sdk --file release.yml \
+  --repo teramoby/speedle-sdk --env release \
+  --allow-publish --allow-stage-publish
+```
 
-   ```sh
-   npm view @speedle/sdk@X.Y.Z version dist.integrity dist.attestations
-   ```
+The same values can be entered on npmjs.com under `@speedle/sdk` → Settings →
+Trusted publishing → GitHub Actions: organization or user `teramoby`,
+repository `speedle-sdk`, workflow filename `release.yml`, environment name
+`release`, and both publish actions allowed.
 
-   Check that the version is `X.Y.Z`, the package page shows the provenance
-   badge, and the attestation points at the release workflow run for the tag.
-   Only after this is the release complete. If the version or provenance does
-   not match, deprecate it and release the next patch; a published npm version
-   cannot be replaced.
-4. **Configure trusted publishing right after that first approval**, within
-   48 hours of the first successful publish. Open `@speedle/sdk` → Settings →
-   Trusted publishing → GitHub Actions and enter:
-   - Organization or user: `teramoby`
-   - Repository: `speedle-sdk`
-   - Workflow filename: `release.yml`
-   - Environment name: `release`
-   - Allowed actions: allow **`npm stage publish`** (the workflow stages every
-     release; direct `npm publish` stays disabled).
-
-   Or run:
-
-   ```sh
-   npm trust github @speedle/sdk --file release.yml \
-     --repo teramoby/speedle-sdk --env release --allow-stage-publish
-   ```
-
-   A new trusted-publisher configuration expires if no publish succeeds within
-   48 hours of its creation. If the next Node.js release is further away than
-   that, create the configuration again just before it.
-5. **Delete the stage-only token.** Delete the `NPM_STAGE_TOKEN` secret and
-   revoke the token on npmjs.com. If the `release` environment still has the
-   old `NPM_BOOTSTRAP_TOKEN` secret (the bypass-2FA path this design replaces),
-   delete that secret and revoke its token as well: the workflow reads it only
-   to fail the job while it is set, and the token would otherwise stay valid.
-   The workflow enforces the stage-token cleanup: when `NPM_STAGE_TOKEN` is
-   set, the publish job first checks
-   `https://registry.npmjs.org/@speedle%2fsdk` (read-only, no token) and fails
-   with "delete the ... secret" if the package already exists, or if the check
-   gets any answer other than 404. A lingering stage token therefore blocks
-   the release instead of silently replacing trusted publishing. Because that
-   check reads the public registry, the publish job holds the fixed
-   concurrency group `publish-node`, so Node tags pushed at the same time run
-   one after another instead of both seeing 404.
-6. **Later releases** use trusted publishing (OIDC) and also stage the
-   release, so a maintainer approves every version with 2FA as in steps 2
-   and 3. After such a release succeeds: Settings → Publishing access →
-   "Require two-factor authentication and disallow tokens".
-
-With trusted publishing, npm authenticates through OIDC and adds provenance.
-
-**Switching to direct `npm publish`.** If the maintainers later decide that no
-human approval is needed for each npm version, allow **`npm publish`** on the
-trusted publisher (the `--allow-publish` flag of `npm trust`; it can be enabled
-together with stage publishing) and change both `npm stage publish` steps in
-`.github/workflows/release.yml` to `npm publish`. Also rename the
-`publish-node` job, delete the "Staged, not published" job-summary step, and
-update the environment URL comment, because all three describe the staged flow.
-The `NPM_STAGE_TOKEN` path only exists for the first release, so nothing else
-changes.
+Do not set `NPM_STAGE_TOKEN` or `NPM_BOOTSTRAP_TOKEN` on the `release`
+environment. Either secret fails the publish job. Revoke any leftover npm
+token for this repository. Publishing access on the package can require
+two-factor authentication and disallow tokens; this workflow does not use one.
 
 ### PyPI: `speedle`
 
