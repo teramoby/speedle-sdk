@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1 (2026-11-10)
+
+- Releases now publish to npm directly with provenance through trusted publishing. No API or behaviour changes.
+
 ## 0.2.0 (2026-11-10)
 
 - Breaking: the self-hosted backend value `"speedle-plus"` is now
