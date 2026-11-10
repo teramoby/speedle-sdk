@@ -35,6 +35,19 @@ class ModelFailure(Exception):
         self.reason = reason
 
 
+class TransportError(ModelFailure):
+    """A non-zero curl exit. HTTP errors and unusable output are not transport errors."""
+
+    def __init__(self, curl_exit):
+        super().__init__("transport_error")
+        self.curl_exit = curl_exit
+
+
+TRANSPORT_BACKOFF_SECONDS = (5, 15)
+TRANSPORT_RETRY_RESERVE_SECONDS = 30
+MAX_TRANSPORT_SENDS = 3
+
+
 def _integer_setting(environment, name, default, maximum):
     value = environment.get(name, "").strip()
     if not value:
@@ -159,6 +172,7 @@ def http_post(request_path, response_path, timeout, url):
                 # Read the bearer header from stdin so it never appears in curl's argv.
                 "--config", "-",
                 "-H", "Content-Type: application/json",
+                "-H", "Accept: text/event-stream",
                 "--data-binary", f"@{request_path}",
             ],
             check=False,
@@ -172,10 +186,8 @@ def http_post(request_path, response_path, timeout, url):
         raise ModelFailure("request_timeout") from error
     except OSError as error:
         raise ModelFailure("transport_error") from error
-    if completed.returncode == 28:
-        raise ModelFailure("request_timeout")
     if completed.returncode != 0:
-        raise ModelFailure("transport_error")
+        raise TransportError(completed.returncode)
     status_text = completed.stdout.strip()
     if not re.fullmatch(r"[0-9]{3}", status_text):
         raise ModelFailure("http_error")
@@ -199,7 +211,48 @@ def _inputs(config, paths):
     return {"system": system, "user": [user, retry_user]}
 
 
-def run(config, paths, transport=None, clock=time.monotonic):
+def _send_with_transport_retries(transport, paths, deadline, clock, sleeper, model):
+    """Return the HTTP status, or None when this model attempt cannot continue.
+
+    A non-zero curl exit resends the same request after 5s, then 15s, at most
+    three times, and only while at least 30s of this model's budget would remain.
+    """
+    for send in range(1, MAX_TRANSPORT_SENDS + 1):
+        remaining = math.ceil(deadline - clock())
+        if remaining <= 0:
+            print(f"ReviewBot reason_code=request_timeout model={model}", file=sys.stderr)
+            return None
+        try:
+            return transport(paths["request"], paths["response"], remaining)
+        except TransportError as failure:
+            if send == MAX_TRANSPORT_SENDS:
+                print(
+                    "ReviewBot reason_code=retry_exhausted "
+                    f"transport curl_exit={failure.curl_exit} sends={send} model={model}",
+                    file=sys.stderr,
+                )
+                return None
+            backoff = TRANSPORT_BACKOFF_SECONDS[send - 1]
+            if deadline - clock() - backoff < TRANSPORT_RETRY_RESERVE_SECONDS:
+                print(
+                    "ReviewBot reason_code=request_timeout "
+                    f"transport curl_exit={failure.curl_exit} sends={send} model={model}",
+                    file=sys.stderr,
+                )
+                return None
+            print(
+                f"::notice::ReviewBot transport error (curl exit {failure.curl_exit}); "
+                f"resending to the same model in {backoff}s."
+            )
+            sleeper(backoff)
+        except ModelFailure as failure:
+            print(f"ReviewBot reason_code={failure.reason} model={model}", file=sys.stderr)
+            return None
+    return None
+
+
+def run(config, paths, transport=None, clock=time.monotonic, sleeper=time.sleep,
+        budget_seconds=HTTP_BUDGET_SECONDS):
     """Try each model; a token-limit retry stays on that model and shares its budget."""
     destination = Path(paths["result"])
     destination.unlink(missing_ok=True)
@@ -209,22 +262,17 @@ def run(config, paths, transport=None, clock=time.monotonic):
             return http_post(request_path, response_path, timeout, config["url"])
         transport = default_transport
     for model_index, model in enumerate(config["models"]):
-        deadline = clock() + HTTP_BUDGET_SECONDS
+        deadline = clock() + budget_seconds
         retried = False
         for attempt in (0, 1):
-            remaining = math.ceil(deadline - clock())
-            if remaining <= 0:
-                failure = ModelFailure("request_timeout")
-                print(f"ReviewBot reason_code={failure.reason} model={model}", file=sys.stderr)
-                break
             payload = config["build_payload"](model, config, inputs, attempt)
             Path(paths["request"]).write_text(
                 json.dumps(payload, ensure_ascii=False), encoding="utf-8"
             )
-            try:
-                status = transport(paths["request"], paths["response"], remaining)
-            except ModelFailure as failure:
-                print(f"ReviewBot reason_code={failure.reason} model={model}", file=sys.stderr)
+            status = _send_with_transport_retries(
+                transport, paths, deadline, clock, sleeper, model,
+            )
+            if status is None:
                 break
             if not 200 <= status <= 299:
                 print(

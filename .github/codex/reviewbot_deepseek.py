@@ -1,7 +1,7 @@
 # Modified for Speedle. Apache-2.0; see .github/codex/PAVU-LICENSE.txt.
 """DeepSeek chat-completions requests and response extraction.
 
-The endpoint is OpenAI-compatible and non-streaming. deepseek-flash has a
+The endpoint is OpenAI-compatible and streaming. deepseek-flash has a
 1M-token context window and a 384K-token maximum output; see
 https://api-docs.deepseek.com/zh-cn/quick_start/pricing.
 """
@@ -10,7 +10,12 @@ import json
 from pathlib import Path
 import sys
 
-from reviewbot_response import OUTPUT_TOKEN_LIMIT, format_markdown
+from reviewbot_response import (
+    OUTPUT_TOKEN_LIMIT,
+    IncompleteStream,
+    format_markdown,
+    load_response,
+)
 
 
 URL = "https://api.deepseek.com/chat/completions"
@@ -35,7 +40,8 @@ def payload(model, config, inputs, attempt):
         "model": model,
         "messages": messages,
         "max_tokens": config["max_output_tokens"],
-        "stream": False,
+        "stream": True,
+        "stream_options": {"include_usage": True},
     }
 
 
@@ -76,7 +82,17 @@ def diagnose(reason, response=None, choice=None):
 
 def extract(response_path, result_path, requested_model):
     try:
-        response = json.loads(Path(response_path).read_text())
+        response = load_response(Path(response_path).read_text(), "deepseek")
+    except IncompleteStream as stream:
+        # No terminal finish_reason: never publish partial text, and never
+        # treat the body as a transport error that the same request may be resent for.
+        response = stream.snapshot if isinstance(stream.snapshot, dict) else {}
+        choices = response.get("choices")
+        choice = None
+        if isinstance(choices, list) and choices and isinstance(choices[0], dict):
+            choice = choices[0]
+        diagnose("incomplete_stream", response, choice)
+        return 1
     except (OSError, ValueError, RecursionError):
         diagnose("malformed_json")
         return 1

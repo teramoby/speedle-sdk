@@ -56,7 +56,7 @@ jobs:
     name: Analyze ReviewBot command
     needs: prepare
     if: always() && needs.prepare.outputs.should_run == 'true'
-    runs-on: ["self-hosted","aliyun-ecs","reviewbot"]
+    runs-on: ${{ fromJSON(vars.REVIEWBOT_RUNS_ON || '["self-hosted","Linux","reviewbot"]') }}
     timeout-minutes: 25
     permissions:
       contents: read
@@ -143,7 +143,7 @@ jobs:
     name: Publish ReviewBot command response
     needs: [prepare, analyze]
     if: always() && needs.prepare.outputs.should_run == 'true'
-    runs-on: ["self-hosted","aliyun-ecs","reviewbot"]
+    runs-on: ${{ fromJSON(vars.REVIEWBOT_RUNS_ON || '["self-hosted","Linux","reviewbot"]') }}
     timeout-minutes: 5
     permissions:
       contents: read

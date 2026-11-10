@@ -17,4 +17,5 @@ def payload(model, config, inputs, attempt):
         "input": inputs["combined"][attempt],
         "max_output_tokens": config["max_output_tokens"],
         "reasoning": {"effort": config["reasoning_effort"]},
+        "stream": True,
     }

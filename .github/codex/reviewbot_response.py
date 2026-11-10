@@ -1,5 +1,9 @@
 # Adapted from Pavu a7b458e; modified for Speedle. Apache-2.0; see .github/codex/PAVU-LICENSE.txt.
-"""Extract a ReviewBot response without logging response text. Exit 10 permits one same-model retry."""
+"""Extract a ReviewBot response from a JSON body or event stream without logging response text.
+
+Exit 10 permits one same-model retry. A stream that ends before its terminal event is
+incomplete_stream: partial text is never published and the body is not a transport error.
+"""
 
 import json
 from pathlib import Path
@@ -68,9 +72,158 @@ def diagnose(reason, response=None):
     print("ReviewBot response: " + json.dumps(diagnostic, separators=(",", ":")), file=sys.stderr)
 
 
+class IncompleteStream(Exception):
+    """The event stream ended before its terminal event; carries a label-only snapshot."""
+
+    def __init__(self, snapshot):
+        super().__init__("incomplete_stream")
+        self.snapshot = snapshot
+
+
+def sse_lines(text):
+    """Split on server-sent-event line endings only: CRLF, CR, or LF.
+
+    JSON strings may contain U+2028, U+2029, U+0085 and the other separators
+    that str.splitlines() breaks on. A terminal break does not add a line.
+    """
+    if not text:
+        return []
+    if text.endswith("\r\n"):
+        body = text[:-2]
+    elif text.endswith(("\n", "\r")):
+        body = text[:-1]
+    else:
+        body = text
+    if not body:
+        return [""]
+    return re.split(r"\r\n|\r|\n", body)
+
+
+def sse_events(text):
+    """Yield the data payload of each dispatched server-sent event.
+
+    Follows the SSE framing rules: data lines accumulate until a blank line
+    dispatches the event, comment lines start with ':', and an event that is
+    not terminated by a blank line before the end of the body is discarded.
+    """
+    data = []
+    for line in sse_lines(text):
+        if not line:
+            if data:
+                yield "\n".join(data)
+            data = []
+            continue
+        if line.startswith(":"):
+            continue
+        field, _, value = line.partition(":")
+        if value.startswith(" "):
+            value = value[1:]
+        if field == "data":
+            data.append(value)
+
+
+def looks_like_sse(text):
+    return any(re.match(r"(?:data|event|id|retry)?:", line)
+               for line in sse_lines(text.lstrip())[:1])
+
+
+def stream_payloads(text):
+    for payload in sse_events(text):
+        if payload == "[DONE]":
+            yield None
+            continue
+        event = json.loads(payload)
+        if not isinstance(event, dict):
+            raise ValueError("event is not an object")
+        yield event
+
+
+def assemble_ark(text):
+    """Return the response object of the first terminal Responses API event."""
+    snapshot = {}
+    for event in stream_payloads(text):
+        if event is None:
+            continue
+        kind = event.get("type")
+        response = event.get("response")
+        if kind in ("response.completed", "response.incomplete", "response.failed"):
+            if not isinstance(response, dict):
+                raise ValueError("terminal event has no response object")
+            return response
+        if kind == "error":
+            return {"status": "failed", "error": {"type": "stream_error"}}
+        if isinstance(response, dict):
+            snapshot = response
+    raise IncompleteStream(snapshot)
+
+
+def assemble_deepseek(text):
+    """Join chat-completion chunks into the non-streaming response shape.
+
+    Only delta.content is review text; reasoning_content is dropped. The stream
+    counts as complete only after a chunk carries a non-null finish_reason;
+    a [DONE] sentinel alone is not enough.
+    """
+    response = {"object": "chat.completion"}
+    role = None
+    parts = []
+    finish_reason = None
+    for event in stream_payloads(text):
+        if event is None:
+            continue
+        if event.get("error"):
+            return {"error": {"type": "stream_error"}}
+        for key in ("id", "created", "model"):
+            if key in event and key not in response:
+                response[key] = event[key]
+        if isinstance(event.get("usage"), dict):
+            response["usage"] = event["usage"]
+        if finish_reason is not None:
+            continue
+        choices = event.get("choices")
+        if not isinstance(choices, list):
+            continue
+        for choice in choices:
+            if not isinstance(choice, dict) or choice.get("index", 0) != 0:
+                continue
+            delta = choice.get("delta")
+            if isinstance(delta, dict):
+                if role is None and delta.get("role") is not None:
+                    role = delta.get("role")
+                content = delta.get("content")
+                if content is not None:
+                    if not isinstance(content, str):
+                        raise ValueError("delta content is not a string")
+                    parts.append(content)
+            if choice.get("finish_reason") is not None:
+                finish_reason = choice.get("finish_reason")
+    message = {"role": role or "assistant", "content": "".join(parts) if parts else None}
+    response["choices"] = [{"index": 0, "message": message, "finish_reason": finish_reason}]
+    if finish_reason is None:
+        raise IncompleteStream(response)
+    return response
+
+
+def load_response(text, provider):
+    """Parse a plain JSON body, or reassemble a server-sent event stream."""
+    try:
+        return json.loads(text)
+    except ValueError:
+        if not looks_like_sse(text):
+            raise
+    if provider == "deepseek":
+        return assemble_deepseek(text)
+    return assemble_ark(text)
+
+
 def extract(response_path, result_path, requested_model):
     try:
-        response = json.loads(Path(response_path).read_text())
+        response = load_response(Path(response_path).read_text(), "ark")
+    except IncompleteStream as stream:
+        # No terminal event: never publish partial text, and never treat it
+        # as a transport error that the same request may be resent for.
+        diagnose("incomplete_stream", stream.snapshot)
+        return 1
     except (OSError, ValueError, RecursionError):
         diagnose("malformed_json")
         return 1
