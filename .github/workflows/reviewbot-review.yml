@@ -46,7 +46,7 @@ jobs:
     name: Analyze pull request
     needs: prepare
     if: needs.prepare.outputs.should_run == 'true'
-    runs-on: ["self-hosted","aliyun-ecs","reviewbot"]
+    runs-on: ${{ fromJSON(vars.REVIEWBOT_RUNS_ON || '["self-hosted","Linux","reviewbot"]') }}
     timeout-minutes: 25
     permissions:
       contents: read
@@ -130,7 +130,7 @@ jobs:
     name: Publish pull request review
     needs: [prepare, review]
     if: always() && needs.prepare.outputs.should_run == 'true'
-    runs-on: ["self-hosted","aliyun-ecs","reviewbot"]
+    runs-on: ${{ fromJSON(vars.REVIEWBOT_RUNS_ON || '["self-hosted","Linux","reviewbot"]') }}
     timeout-minutes: 5
     permissions:
       contents: read

@@ -22,8 +22,8 @@ ReviewBot follows the split from
    `workflow_run` from `main`. Its `prepare` job (`ubuntu-24.04`) checks that the
    source run is a successful `pull_request` run of `reviewbot.yml` from this
    repository, and that the PR is open, not a draft, from this repository and
-   still at that head SHA. Only then do `review` and `publish` run on the
-   self-hosted runner.
+   still at that head SHA. Only then do `review` and `publish` run on a
+   runner selected by `REVIEWBOT_RUNS_ON`.
 3. **Commands.** `reviewbot-comment.yml` ("ReviewBot Comment Command") runs on
    `issue_comment` on `ubuntu-24.04` with `permissions: {}`, no checkout and no
    secrets. Like `reviewbot-inline.yml` for code-line comments, it only records
@@ -80,6 +80,7 @@ each run prints a notice, sends no code and publishes nothing.
 | Name | Kind | Required | Default | Purpose |
 | --- | --- | --- | --- | --- |
 | `REVIEWBOT_PROVIDER` | Actions variable | No | `ark` | Model provider: `ark` or `deepseek`. Switching providers is a variable change only. |
+| `REVIEWBOT_RUNS_ON` | Actions variable | No | `["self-hosted","Linux","reviewbot"]` | JSON array of runner labels for the trusted ReviewBot jobs. |
 | `ARK_API_KEY` | Actions secret | When `ark` (default) | none | Ark Agent Plan API key. Either grant the existing organization secret to `speedle-sdk`, or create a repository secret with this name. |
 | `ARK_REVIEW_MODELS` | Actions variable | No | `kimi-k3.1-pro deepseek-v4.1-flash glm-5.3` | Space-separated Ark model IDs, tried in this order. |
 | `ARK_REVIEW_MAX_OUTPUT_TOKENS` | Actions variable | No | `32768` | Maximum output tokens per request. |
@@ -93,22 +94,18 @@ All defaults live in `.github/codex/reviewbot_model.py`,
 `.github/codex/reviewbot_ark.py` and `.github/codex/reviewbot_deepseek.py`; the
 workflow YAML only forwards variable values. Ark uses
 `https://ark.cn-beijing.volces.com/api/plan/v3/responses`; DeepSeek uses
-`https://api.deepseek.com/chat/completions` (OpenAI-compatible,
-non-streaming).
+`https://api.deepseek.com/chat/completions` (OpenAI-compatible, streaming).
 
 GitHub reads and writes use the job's `GITHUB_TOKEN`; no PAT or GitHub App is
 needed. The trusted workflows become active once they are on `main`, because
 `issue_comment` and `workflow_run` always run the default-branch version.
 
-The `aliyun-reviewbot` runner group must allow exactly these workflows on
-`main` of `teramoby/speedle-sdk`, the trusted ones whose jobs use the
-self-hosted runner:
-
-- `.github/workflows/reviewbot-review.yml`
-- `.github/workflows/reviewbot-command.yml`
-
-`reviewbot.yml`, `reviewbot-comment.yml` and `reviewbot-inline.yml` route
-untrusted events on `ubuntu-24.04` and must not be in the group.
+Trusted jobs in `reviewbot-review.yml` and `reviewbot-command.yml` (the review,
+command analysis and publish jobs) take runner labels from `REVIEWBOT_RUNS_ON`.
+When that variable is unset, the labels are `self-hosted`, `Linux` and
+`reviewbot`, so any runner with those labels can run the job. Their prepare
+jobs, and `reviewbot.yml`, `reviewbot-comment.yml` and `reviewbot-inline.yml`,
+stay on GitHub-hosted `ubuntu-24.04`.
 
 ## Providers
 
@@ -123,7 +120,8 @@ to DeepSeek without a workflow or script edit.
   from the base revision, commit metadata and diff form the user message
   (commands also include the untrusted request, context and prior output). The
   model is `DEEPSEEK_REVIEW_MODEL` (default `deepseek-flash`), requested with
-  `max_tokens: 65536` and `stream: false`. `deepseek-flash` has a 1M-token
+  `max_tokens: 65536`, `stream: true` and `stream_options.include_usage`.
+  `deepseek-flash` has a 1M-token
   context and a 384K-token maximum output; the system-plus-user input is capped
   at 750,000 bytes, so the request stays inside both. The review text is
   `choices[0].message.content`; any `reasoning_content` is ignored.
@@ -134,6 +132,24 @@ Both providers use the same transport, HTTP-error, timeout and unusable-output
 handling and the same reason codes. Response parsing, the comment format,
 verdict markers and the footer are shared; the footer names the model that
 produced the review.
+
+Both providers are called with `stream: true` and `Accept: text/event-stream`.
+The response helper reassembles the event stream into the same response shape a
+non-streaming call returns, then applies the same checks. A plain JSON body is
+still accepted. On Ark the first `response.completed`, `response.incomplete` or
+`response.failed` event is the response. On DeepSeek the helper joins
+`delta.content`, drops reasoning, and treats the stream as complete only after a
+chunk carries a non-null `finish_reason` (`[DONE]` alone is not enough). A stream
+that ends without that terminal event fails with `incomplete_stream` and publishes
+nothing.
+
+A transport error (non-zero `curl` exit) resends the same request to the same
+model after 5 seconds, then 15 seconds, for at most three sends, and only while
+at least 30 seconds of that model's HTTP budget would remain. When the sends are
+used up the model fails with `retry_exhausted`; when too little budget remains it
+fails with `request_timeout`. The next configured model is then tried. HTTP
+errors and unusable output are not resent as transport errors, and transport
+resends do not use the output-token retry.
 
 ## Stable workflows, editable scripts
 
@@ -189,16 +205,17 @@ approval**.
   model. A response cut off by the output-token limit (DeepSeek
   `finish_reason: "length"`) is retried once on the same model with 3 lines of
   diff context instead of 80; both attempts share that model's 360-second HTTP
-  budget. The first usable review is published with its model ID. If every
-  model fails, nothing is published and analysis fails with
-  `all_models_failed`.
+  budget. A non-zero curl exit resends the same request up to three times
+  (after 5 seconds, then 15 seconds) while at least 30 seconds of that budget
+  would remain. `incomplete_stream` publishes nothing and is not resent. The
+  first usable review is published with its model ID. If every model fails,
+  nothing is published and analysis fails with `all_models_failed`.
 - Actions are pinned to full commit SHAs and every job declares its permissions.
-- **Runners.** Self-hosted jobs select the labels `self-hosted`, `aliyun-ecs`
-  and `reviewbot`, served by the dedicated runner `ecs-light-teramoby` in the
-  `aliyun-reviewbot` runner group (see Owner setup for the allowed workflows).
-  PR event routing, PR event validation, command authorization and inline
-  routing run on GitHub-hosted `ubuntu-24.04`, so public PRs and comments reach
-  the self-hosted runner only after validation.
+- **Runners.** Trusted self-hosted jobs use `REVIEWBOT_RUNS_ON` when it is set,
+  and otherwise the labels `self-hosted`, `Linux` and `reviewbot`. PR event
+  routing, PR event validation, command authorization and inline routing run on
+  GitHub-hosted `ubuntu-24.04`. Those routers do not receive secrets; a
+  self-hosted job runs only after validation.
 
 Data sent to the selected provider: the trusted prompts, `AGENTS.md` from the
 base revision if it exists, commit metadata and the static diff. Under `ark`
@@ -212,8 +229,8 @@ disable the workflows.
 - Trigger: the `pull_request` + `workflow_run` split from cloud.speedle.io
   replaces speedle-plus's PR-target review. Fork PRs are no longer
   reviewed automatically.
-- Runners: the dedicated `aliyun-reviewbot` group (labels `aliyun-ecs`,
-  `reviewbot`) instead of the shared `speedle-runner`.
+- Runners: trusted jobs read `REVIEWBOT_RUNS_ON` (default labels `self-hosted`,
+  `Linux` and `reviewbot`). Untrusted routers stay on `ubuntu-24.04`.
 - The report handoff and the lowercase `github_token` key fix come from
   [cloud.speedle.io#118](https://github.com/teramoby/cloud.speedle.io/pull/118)
   and [#130](https://github.com/teramoby/cloud.speedle.io/pull/130). They
@@ -228,7 +245,7 @@ disable the workflows.
 
 - `.github/workflows/reviewbot.yml`, `reviewbot-review.yml`, `reviewbot-comment.yml`,
   `reviewbot-command.yml`, `reviewbot-inline.yml`
-- `.github/actionlint.yaml`: the `aliyun-ecs` and `reviewbot` self-hosted labels
+- `.github/actionlint.yaml`: the `Linux` and `reviewbot` self-hosted labels
 - `.github/codex/reviewbot_github.js`: trusted validation, authorization and publishing stages
 - `.github/codex/reviewbot_analyze.sh`: immutable-commit input construction
 - `.github/codex/reviewbot_model.py`: provider selection, shared tunables, transport and ordered model failover
