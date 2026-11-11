@@ -54,7 +54,7 @@ const speedle = new SpeedleClient({
   backend: "speedle-cloud",
   endpoint: "https://cloud.speedle.io",
   auth: Auth.bearer(process.env.SPEEDLE_TOKEN!),
-  serviceName: "books", // the token's service
+  serviceName: "books", // the service to check
 });
 
 if (await speedle.isAllowed("alice", "get", "/books/123", [
@@ -65,6 +65,8 @@ if (await speedle.isAllowed("alice", "get", "/books/123", [
   // allowed
 }
 ```
+
+Pass the API key to `Auth.bearer`. The parameter is still named `token`. An unknown service is HTTP 404 `service_not_found` (`HttpError`, `code` `service_not_found`) and is not retried. Older Cloud deployments return 403 `service_mismatch` (`ForbiddenError`).
 
 CommonJS works the same way: `const { SpeedleClient } = require("@speedle/sdk")`.
 
@@ -90,8 +92,9 @@ CommonJS works the same way: `const { SpeedleClient } = require("@speedle/sdk")`
   request. Numbers above 2^53 lose precision, because self-hosted Speedle
   decodes numbers as `float64`.
 - `options.serviceName` overrides the client's `serviceName` for one call.
-  On Speedle Cloud a service other than the token's fails with
-  `ForbiddenError` (`code` `service_mismatch`); that call is charged.
+  On current Speedle Cloud an unknown service fails with `HttpError`
+  (`code` `service_not_found`) and is not retried. Older Cloud deployments
+  fail with `ForbiddenError` (`code` `service_mismatch`); that call is charged.
 - `options.signal`: aborting stops the call, also during a retry delay, and
   rejects with `signal.reason` in every failure mode.
   `AbortSignal.timeout(ms)` gives a shorter bound for one call.
@@ -124,7 +127,8 @@ error code), `message` and `quotaDailyRemaining`. The types are
 `ConfigurationError`, `InvalidRequestError`, `UnauthorizedError`,
 `ForbiddenError`, `RequestTooLargeError`, `TooManyRequestsError` (with
 `retryAfter` in seconds; subtypes `RateLimitedError` and
-`QuotaExceededError`), `ServiceUnavailableError`, `ServerError`, `HttpError`,
+`QuotaExceededError`), `ServiceUnavailableError`, `ServerError`, `HttpError`
+(including Cloud 404 `service_not_found`, with that `code`),
 `UnexpectedResponseError`, `NetworkError` (subtype `TimeoutError`, whose
 subtype is `DeadlineExceededError`) and `CircuitOpenError`. The SDK's
 `TimeoutError` is its own class, not the global one.
@@ -158,9 +162,10 @@ plus `userAgentSuffix`.
 
 ## Security
 
-- The Speedle Cloud token is a server-side secret. Never ship it to browsers,
-  mobile apps or desktop clients. This package targets Node.js only.
-- `Auth.bearer` requires HTTPS. The token is redacted from `toString`,
+- The Speedle Cloud API key is a server-side secret. Never ship it to browsers,
+  mobile apps or desktop clients. This package targets Node.js only. Pass it
+  to `Auth.bearer`; the parameter is still named `token`.
+- `Auth.bearer` requires HTTPS. The API key is redacted from `toString`,
   `JSON.stringify`, `util.inspect`, hook payloads and error messages.
 - Redirects are never followed. TLS verification cannot be disabled.
 - Take subjects and attributes from your own authenticated context, never

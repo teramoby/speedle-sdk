@@ -74,7 +74,10 @@ export interface ClientOptions {
   /** Base URL, for example "https://cloud.speedle.io". */
   endpoint: string;
   auth: Auth;
-  /** Required; on Speedle Cloud, the token's service. */
+  /**
+   * Required service name. Current Speedle Cloud returns 404 `service_not_found`
+   * for an unknown service. Older Cloud returns 403 `service_mismatch`.
+   */
   serviceName: string;
   retry?: RetryPolicy;
   failureMode?: FailureMode;

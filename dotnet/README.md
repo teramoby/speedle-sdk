@@ -52,7 +52,7 @@ await using var speedle = new SpeedleClient(new SpeedleClientOptions
     Backend = Backend.SpeedleCloud,
     Endpoint = new Uri("https://cloud.speedle.io"),
     Auth = Auth.Bearer(Environment.GetEnvironmentVariable("SPEEDLE_TOKEN")!),
-    ServiceName = "books",              // must be the token's service
+    ServiceName = "books",              // the service to check
 });
 
 if (await speedle.IsAllowedAsync("alice", "get", "/books/123",
@@ -69,7 +69,9 @@ await speedle.IsAllowedAsync("alice", "get", "/books/123",
     new Dictionary<string, object?> { ["team"] = "eng", ["clearance"] = 4 });
 ```
 
-The token is a server-side secret. Never ship it to browsers, mobile apps or
+Pass the API key to `Auth.Bearer`. The parameter is still named `token`. An unknown service is HTTP 404 `service_not_found` (`HttpException`, `Code` `service_not_found`) and is not retried. Older Cloud deployments return 403 `service_mismatch` (`ForbiddenException`).
+
+The API key is a server-side secret. Never ship it to browsers, mobile apps or
 desktop clients.
 
 ## API
@@ -105,21 +107,21 @@ it; `Dispose` releases the pool.
 
 All errors derive from `SpeedleException`, with `Status`, `Code` (Speedle Cloud
 error code), `Message` and `QuotaDailyRemaining`. Messages never contain the
-token or the request.
+API key or the request.
 
 | Exception | When | Retried |
 | --- | --- | --- |
 | `ConfigurationException` | Invalid options | |
 | `InvalidRequestException` | 400, or a client-side check failed (nothing sent) | No |
 | `UnauthorizedException` | 401 | No |
-| `ForbiddenException` | 403, including Cloud `service_mismatch` | No |
+| `ForbiddenException` | 403, including older Cloud `service_mismatch` | No |
 | `RequestTooLargeException` | 413 | No |
 | `TooManyRequestsException` | 429 with an unknown code; has `RetryAfter` | No |
 | `RateLimitedException` | Burst 429 | If `Retry-After` fits the deadline |
 | `QuotaExceededException` | 429 `daily_quota_exceeded` | Never |
 | `ServiceUnavailableException` | 503 | Yes |
 | `ServerException` | 500 and other 5xx | 502 and 504 only |
-| `HttpException` | Other statuses, including 3xx (redirects are never followed) and 404 | No |
+| `HttpException` | Other statuses, including 3xx (redirects are never followed) and 404. Cloud 404 `service_not_found` sets `Code` | No |
 | `UnexpectedResponseException` | Body is not the expected JSON | No |
 | `NetworkException` | Transport failure | Yes, except TLS failures |
 | `SpeedleTimeoutException` | The last attempt hit `AttemptTimeout` | Yes |

@@ -52,7 +52,11 @@ class Auth:
 
     @staticmethod
     def bearer(token: str) -> Auth:
-        """``Authorization: Bearer <token>``. Requires HTTPS."""
+        """``Authorization: Bearer <token>``.
+
+        On Speedle Cloud, ``token`` is the account-level API key. The parameter
+        name is unchanged. Requires HTTPS.
+        """
         if not isinstance(token, str) or token == "":
             raise ConfigurationError("bearer token is empty")
         if _BAD_TOKEN.search(token):

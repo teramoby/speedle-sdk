@@ -74,8 +74,9 @@ struct WireRequest<'a> {
 
 impl Client {
     /// Starts building a client. `endpoint` is the base URL, for example
-    /// `https://cloud.speedle.io`; `service_name` is sent on every call and on
-    /// Speedle Cloud must be the token's service.
+    /// `https://cloud.speedle.io`. `service_name` is sent on every call.
+    /// Current Speedle Cloud returns 404 `service_not_found` for an unknown
+    /// service. Older Cloud returns 403 `service_mismatch`.
     pub fn builder(backend: Backend, endpoint: &str, auth: Auth, service_name: impl Into<String>) -> ClientBuilder {
         ClientBuilder::new(backend, endpoint, auth, service_name.into())
     }

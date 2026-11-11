@@ -50,7 +50,7 @@ with Client(
     backend="speedle-cloud",
     endpoint="https://cloud.speedle.io",
     auth=Auth.bearer(os.environ["SPEEDLE_TOKEN"]),
-    service_name="books",  # the token's service
+    service_name="books",  # the service to check
 ) as speedle:
     if speedle.is_allowed(
         "alice",
@@ -64,6 +64,8 @@ with Client(
     ):
         ...
 ```
+
+Pass the API key to `Auth.bearer`. The parameter is still named `token`. An unknown service is HTTP 404 `service_not_found` (`HttpError`, `code` `service_not_found`) and is not retried. Older Cloud deployments return 403 `service_mismatch` (`ForbiddenError`).
 
 ## API
 
@@ -88,9 +90,10 @@ with Client(
   infinities, `bool` as a number, naive datetimes, mixed or empty inferred
   lists) raise `InvalidRequestError` before any request. Numbers above 2^53
   lose precision, because self-hosted Speedle decodes numbers as `float64`.
-- `service_name=` overrides the client's service for one call. On Speedle
-  Cloud a service other than the token's fails with `ForbiddenError` (`code`
-  `service_mismatch`); that call is charged.
+- `service_name=` overrides the client's service for one call. On current
+  Speedle Cloud an unknown service fails with `HttpError` (`code`
+  `service_not_found`) and is not retried. Older Cloud deployments fail with
+  `ForbiddenError` (`code` `service_mismatch`); that call is charged.
 - `deadline=` replaces the client's deadline (seconds) for one call.
 - `AsyncClient` honours task cancellation and `asyncio.timeout()`, also during
   a retry delay; `asyncio.CancelledError` is re-raised in every failure mode.
@@ -127,7 +130,8 @@ error code), `message` and `quota_daily_remaining`. The types are
 `ConfigurationError`, `InvalidRequestError`, `UnauthorizedError`,
 `ForbiddenError`, `RequestTooLargeError`, `TooManyRequestsError` (with
 `retry_after` in seconds; subtypes `RateLimitedError` and
-`QuotaExceededError`), `ServiceUnavailableError`, `ServerError`, `HttpError`,
+`QuotaExceededError`), `ServiceUnavailableError`, `ServerError`, `HttpError`
+(including Cloud 404 `service_not_found`, with that `code`),
 `UnexpectedResponseError`, `NetworkError` (subtype `speedle.TimeoutError`,
 whose subtype is `DeadlineExceededError`) and `CircuitOpenError`.
 `speedle.TimeoutError` is the SDK's own class, not the built-in.
@@ -160,9 +164,10 @@ variables are not used.
 
 ## Security
 
-- The Speedle Cloud token is a server-side secret. Never ship it to browsers,
-  mobile apps or desktop clients.
-- `Auth.bearer` requires HTTPS. The token is redacted from `repr`, hook
+- The Speedle Cloud API key is a server-side secret. Never ship it to browsers,
+  mobile apps or desktop clients. Pass it to `Auth.bearer`; the parameter is
+  still named `token`.
+- `Auth.bearer` requires HTTPS. The API key is redacted from `repr`, hook
   payloads and error messages, and `Auth` cannot be pickled.
 - Redirects are never followed. TLS verification cannot be disabled.
 - Take subjects and attributes from your own authenticated context, never

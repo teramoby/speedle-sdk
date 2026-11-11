@@ -479,8 +479,9 @@ public final class SpeedleClient implements AutoCloseable {
     }
 
     /**
-     * The service name sent on every call; required and not empty. On Speedle Cloud it must be the
-     * token's service.
+     * The service name sent on every call; required and not empty. Current Speedle Cloud returns
+     * 404 {@code service_not_found} for an unknown service. Older Cloud returns 403 {@code
+     * service_mismatch}.
      *
      * @param serviceName the service name
      * @return this builder

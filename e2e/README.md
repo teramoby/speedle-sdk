@@ -98,8 +98,8 @@ Every `e2e/<language>/` directory has two scripts:
 | Variable | Meaning |
 | --- | --- |
 | `SPEEDLE_E2E_ENDPOINT` | Required. Base URL, for example `https://g.speedle.io`. |
-| `SPEEDLE_E2E_SERVICE` | Required. The `serviceName` to send; on Speedle Cloud, the token's service. |
-| `SPEEDLE_E2E_TOKEN` | The bearer token. Required for `speedle-cloud`; for `speedle` the runner uses no authentication when it is unset. |
+| `SPEEDLE_E2E_SERVICE` | Required. The `serviceName` to send. |
+| `SPEEDLE_E2E_TOKEN` | The API key, sent as a bearer credential. The variable name is unchanged. Required for `speedle-cloud`; for `speedle` the runner uses no authentication when it is unset. |
 | `SPEEDLE_E2E_BACKEND` | `speedle-cloud` (default) or `speedle`. |
 | `SPEEDLE_E2E_VECTORS` | Vector file, default `e2e/vectors.json`. |
 

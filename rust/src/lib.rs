@@ -30,7 +30,8 @@
 //! (or, with [`FailureMode::Closed`], makes `is_allowed` return `false`), and
 //! never returns `true` without a 200 response whose `allowed` is `true`.
 //!
-//! The Speedle Cloud token is a server-side secret: never ship it to
+//! The Speedle Cloud API key is a server-side secret. Pass it to
+//! [`Auth::bearer`]; the parameter is still named `token`. Never ship it to
 //! browsers, mobile apps or desktop clients. Subjects and attributes must
 //! come from the application's own authenticated context, not from untrusted
 //! client input. The crate sends nothing but the is-allowed request: no

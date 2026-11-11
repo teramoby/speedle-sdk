@@ -89,9 +89,11 @@ impl Auth {
     }
 
     /// Sends `Authorization: Bearer <token>`: Speedle Cloud, or
-    /// self-hosted Speedle behind an authenticating gateway. Requires `https`.
-    /// `build` rejects an empty token and one with whitespace or control
-    /// characters. The token is never printed by `Debug`, hooks or errors.
+    /// self-hosted Speedle behind an authenticating gateway. On Speedle Cloud,
+    /// `token` is the account-level API key; the parameter name is unchanged.
+    /// Requires `https`. `build` rejects an empty value and one with whitespace
+    /// or control characters. The credential is never printed by `Debug`, hooks
+    /// or errors.
     pub fn bearer(token: impl Into<String>) -> Self {
         Auth(AuthKind::Bearer(token.into()))
     }

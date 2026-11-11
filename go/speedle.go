@@ -12,7 +12,8 @@
 // [FailureModeClosed], makes IsAllowed return false), and never returns
 // true without a 200 response whose allowed field is true.
 //
-// The Speedle Cloud token is a server-side secret. Never ship it to
+// The Speedle Cloud API key is a server-side secret. Pass it to BearerToken;
+// the parameter is still named token. Never ship it to
 // browsers, mobile apps or desktop clients. Subjects and attributes must
 // come from the application's own authenticated context, not from untrusted
 // client input.

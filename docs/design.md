@@ -11,7 +11,7 @@ two backends:
 
 | Backend id | What it is | Client authentication |
 | --- | --- | --- |
-| `speedle-cloud` | Speedle Cloud ADS (`https://cloud.speedle.io`, beta `https://b.speedle.io`) | Service-scoped bearer token |
+| `speedle-cloud` | Speedle Cloud ADS (`https://cloud.speedle.io`, beta `https://b.speedle.io`) | Account-level API key, sent as a bearer credential |
 | `speedle` | Self-hosted Speedle ADS (REST, default port 6734) | None, or mutual TLS |
 
 Languages, all built together with no phases:
@@ -60,10 +60,11 @@ column describes Cloud contract 0.4.0 as it is today; each difference that
 #213 removes is marked "being removed by cloud.speedle.io#213", and the SDK
 does not code against it. The differences that stay are:
 
-- authentication: a bearer token on Cloud (§3.1, §6.2);
-- Cloud-only responses: 401, 403 `service_mismatch` when `serviceName` is not
-  the token's service, burst and daily-quota 429 with `Retry-After`, and the
-  quota headers (§3.4, §3.5).
+- authentication: an account-level API key, sent as a bearer credential, on Cloud (§3.1, §6.2);
+- Cloud-only responses: 401, 404 `service_not_found` when the request names a
+  missing, non-string or unknown service, 403 `service_mismatch` from older
+  deployments when `serviceName` is not the API key's service, burst and
+  daily-quota 429 with `Retry-After`, and the quota headers (§3.4, §3.5).
 
 The SDK handles Cloud's operational responses (413 `request_too_large`, 503
 `quota_unavailable` and `snapshot_unavailable`) by status, as it would from
@@ -94,7 +95,7 @@ The SDK sends a Speedle `JsonContext` with the fields in this order:
 | Principal `type` values | Any string | `user`, `group`, `role`, `entity` (`api/ads/types.go`) | Open string with constants for the four Speedle values. |
 | `subject.token`, `subject.tokenType` | Non-empty value returns 400 `unsupported_token_assertion`. Being removed by cloud.speedle.io#213 | Used by the configured token asserter | Never sent in 0.x. Token assertion may come later as an option. |
 | `subject.asserted` | Boolean, accepted. Being removed by cloud.speedle.io#213 (not a `JsonContext` field) | Not a field; ignored | Never sent. |
-| `serviceName` | Optional; empty or omitted means the token's service. Being removed by cloud.speedle.io#213, which makes it required. Cloud-only and staying: a value other than the token's service returns 403 `service_mismatch` | Required by Swagger. An unknown name gives a 200 with reason 2 `SERVICE_NOT_FOUND` | Always sent and never empty. It comes from the client's `serviceName` setting, required for both backends, and can be overridden per call (§5). On Cloud it must be the token's service; otherwise the call fails with `ForbiddenError`, `code` `service_mismatch`, not retried and charged (§3.6). |
+| `serviceName` | The service comes from the request, not from the API key. A missing, non-string or unknown name returns 404 `service_not_found`. Older deployments return 403 `service_mismatch` when the name is not the API key's service | Required by Swagger. An unknown name gives a 200 with reason 2 `SERVICE_NOT_FOUND` | Always sent and never empty. It comes from the client's `serviceName` setting, required for both backends, and can be overridden per call (§5). On current Cloud a missing or unknown service fails with `HttpError`, `code` `service_not_found`, not retried. Older Cloud returns `ForbiddenError`, `code` `service_mismatch`, not retried and charged (§3.6). |
 | `resource`, `action` | String | String | Required string arguments. |
 | `attributes` | Object: name to any JSON value; at most 50 properties and 16,384 canonical UTF-8 bytes. Being removed by cloud.speedle.io#213, which takes the Speedle array | Array of `{name, type, value}`, converted by `DumpRequestAttributes` (§3.2.1) | Always the Speedle array, one item per typed attribute, in the caller's order. Omitted when there are no attributes, which self-hosted Speedle treats like an empty array. |
 | Date and time attributes | No date type. Being removed by cloud.speedle.io#213 | `datetime` strings are converted to Unix seconds (`ConvSingleValue`) | `datetime` attributes, built from the language's time type (§3.2.1). |
@@ -166,8 +167,8 @@ in this table and as `message` otherwise, so the SDK keeps working when
 | --- | --- | --- | --- | --- |
 | 400 | `invalid_request`, `unsupported_token_assertion`. Being aligned with self-hosted Speedle by cloud.speedle.io#213 | Invalid JSON or attribute conversion (`SPDL-0004`) | `InvalidRequestError` | No |
 | 401 | `unauthorized`, with `WWW-Authenticate: Bearer`; not charged | Not produced by ADS (a gateway may) | `UnauthorizedError` | No |
-| 403 | `service_mismatch`: `serviceName` is not the token's service (Cloud-only, stays) | `ExceedLimit` maps to 403; not expected on `is-allowed` | `ForbiddenError` | No |
-| 404 | Not declared | Wrong path or method | `HttpError` | No |
+| 403 | `service_mismatch`: older deployments, when `serviceName` is not the API key's service | `ExceedLimit` maps to 403; not expected on `is-allowed` | `ForbiddenError` | No |
+| 404 | `service_not_found`: the request names a missing, non-string or unknown service. A 404 without that code (wrong path) has no code | Wrong path or method | `HttpError`. `code` is `service_not_found` only for that Cloud body | No |
 | 413 | `request_too_large`; not charged | Not produced | `RequestTooLargeError` | No |
 | 415 | Not declared | Documented in Swagger | `HttpError` (the SDK always sends JSON) | No |
 | 429 burst | `rate_limited` (per token, 600 per 60 s); `Retry-After: 60` | Not produced by ADS; a gateway may send any 429 | `RateLimitedError`, with `retryAfter` | Only if `Retry-After` fits the remaining deadline (§6.3) |
@@ -303,7 +304,7 @@ export interface ClientOptions {
   backend: Backend;
   endpoint: string;              // base URL, e.g. "https://cloud.speedle.io"
   auth: Auth;
-  serviceName: string;           // required; on Cloud, the token's service
+  serviceName: string;           // required; the service to check
   retry?: RetryPolicy;
   failureMode?: FailureMode;
   circuitBreaker?: CircuitBreakerOptions; // absent means no breaker
@@ -476,7 +477,7 @@ class Decision:
 
 class Client:
     def __init__(self, *, backend: Backend, endpoint: str, auth: Auth,
-                 service_name: str,             # on Cloud, the token's service
+                 service_name: str,             # required; the service to check
                  retry: RetryPolicy = RetryPolicy(),
                  failure_mode: FailureMode = "error",
                  circuit_breaker: CircuitBreaker | None = None,
@@ -800,7 +801,7 @@ type Config struct {
 	Backend           Backend
 	Endpoint          string // base URL
 	Auth              Auth
-	ServiceName       string // required; on Cloud, the token's service
+	ServiceName       string // required; the service to check
 	Retry             RetryPolicy
 	FailureMode       FailureMode
 	CircuitBreaker    *CircuitBreaker // nil means no breaker
@@ -960,7 +961,7 @@ public sealed class SpeedleClientOptions
     public required Backend Backend { get; init; }
     public required Uri Endpoint { get; init; }
     public required Auth Auth { get; init; }
-    public required string ServiceName { get; init; }       // on Cloud, the token's service
+    public required string ServiceName { get; init; }       // required; the service to check
     public RetryPolicy Retry { get; init; } = new();
     public FailureMode FailureMode { get; init; } = FailureMode.Error;
     public CircuitBreakerPolicy? CircuitBreaker { get; init; } // null means no breaker
@@ -1219,11 +1220,12 @@ bound. The blocking client is bounded by the deadline only.
   prefix. The SDK appends `/authz-check/v1/is-allowed`. Query strings and
   fragments are rejected.
 - `serviceName` is required for both backends and must not be empty; it is
-  sent on every call. A call can override it (§5). On `speedle-cloud` it
-  must be the bearer token's service: any other value returns 403
-  `service_mismatch`, raised as `ForbiddenError` with `code`
-  `service_mismatch`. That response is charged and not retried. On
-  `speedle` an unknown service is not an error: the decision is a deny
+  sent on every call. A call can override it (§5). On current `speedle-cloud`
+  a missing, non-string or unknown service returns 404 `service_not_found`,
+  raised as `HttpError` with `code` `service_not_found`. That response is not
+  retried. Older Cloud deployments return 403 `service_mismatch`, raised as
+  `ForbiddenError` with `code` `service_mismatch`, charged and not retried.
+  On `speedle` an unknown service is not an error: the decision is a deny
   with reason 2 `SERVICE_NOT_FOUND`.
 - Configuration errors raise `ConfigurationError` from the constructor, before
   any request.
@@ -1237,7 +1239,7 @@ API.
 
 | Implementation | Use | Behaviour |
 | --- | --- | --- |
-| `bearer(token)` | Speedle Cloud; self-hosted Speedle behind an authenticating gateway | Sends `Authorization: Bearer <token>`. Rejects empty tokens and tokens with whitespace or control characters. It does not check the `spdl_` format, so a future token format keeps working. Requires HTTPS. |
+| `bearer(token)` | Speedle Cloud; self-hosted Speedle behind an authenticating gateway | Sends `Authorization: Bearer <token>`. On Speedle Cloud, `token` is the account-level API key; the parameter name stays `token`. Rejects an empty value and one with whitespace or control characters. It does not check the `spdl_` format, so a future key format keeps working. Requires HTTPS. |
 | `none()` | Self-hosted Speedle on a trusted network or loopback | Sends no credential. |
 | `mutualTls(...)` | Self-hosted Speedle with `--client-cert` and `--force-client-cert=true` | Presents the client certificate on the TLS handshake. Server verification stays on. |
 
@@ -1386,7 +1388,7 @@ in an error (attempts made, reason, error) and `onBreakerStateChange`
 All SDK errors share one base type. Each error carries `status` (HTTP status
 or empty), `code` (Cloud error code or empty), `message`, and
 `quotaDailyRemaining` when the header was present. Messages never contain the
-token, request attributes or the full request body.
+API key, request attributes or the full request body.
 
 | Error | When | TypeScript / Python / Java | Go | C# | Rust `ErrorKind` |
 | --- | --- | --- | --- | --- | --- |
@@ -1394,14 +1396,14 @@ token, request attributes or the full request body.
 | Configuration | Invalid client options | `ConfigurationError` | `ErrConfiguration` | `ConfigurationException` | `Configuration` |
 | Invalid request | 400; the attribute checks of §3.2.1 before sending | `InvalidRequestError` | `ErrInvalidRequest` | `InvalidRequestException` | `InvalidRequest` |
 | Unauthorized | 401 | `UnauthorizedError` | `ErrUnauthorized` | `UnauthorizedException` | `Unauthorized` |
-| Forbidden | 403, including Cloud `service_mismatch` (`serviceName` is not the token's service) | `ForbiddenError` | `ErrForbidden` | `ForbiddenException` | `Forbidden` |
+| Forbidden | 403, including older Cloud `service_mismatch` (`serviceName` is not the API key's service) | `ForbiddenError` | `ErrForbidden` | `ForbiddenException` | `Forbidden` |
 | Request too large | 413 | `RequestTooLargeError` | `ErrRequestTooLarge` | `RequestTooLargeException` | `RequestTooLarge` |
 | Too many requests | 429 with an unknown code | `TooManyRequestsError` | `ErrTooManyRequests` | `TooManyRequestsException` | `TooManyRequests` |
 | Rate limited | Burst 429 (§6.3) | `RateLimitedError` | `ErrRateLimited` | `RateLimitedException` | `RateLimited` |
 | Daily quota exceeded | 429 `daily_quota_exceeded` | `QuotaExceededError` | `ErrQuotaExceeded` | `QuotaExceededException` | `QuotaExceeded` |
 | Service unavailable | 503 | `ServiceUnavailableError` | `ErrServiceUnavailable` | `ServiceUnavailableException` | `ServiceUnavailable` |
 | Server error | 500 and other 5xx | `ServerError` | `ErrServer` | `ServerException` | `Server` |
-| HTTP error | Any other status, including 3xx and 404 | `HttpError` | `ErrHTTP` | `HttpException` | `Http` |
+| HTTP error | Any other status, including 3xx and 404. Cloud 404 `service_not_found` uses this type with `code` `service_not_found` | `HttpError` | `ErrHTTP` | `HttpException` | `Http` |
 | Unexpected response | Body is not the expected JSON | `UnexpectedResponseError` | `ErrUnexpectedResponse` | `UnexpectedResponseException` | `UnexpectedResponse` |
 | Network | Transport failure | `NetworkError` | `ErrNetwork` | `NetworkException` | `Network` |
 | Timeout | The last attempt hit `attemptTimeout` (subtype of Network) | `TimeoutError` | `ErrTimeout` | `SpeedleTimeoutException` | `Timeout` |
@@ -1443,11 +1445,11 @@ service, and no caching of errors.
 
 ## 10. Security
 
-- The Cloud token is a server-side secret. Every README and quickstart says
+- The Cloud API key is a server-side secret. Every README and quickstart says
   never to ship it to browsers, mobile apps or desktop clients. The Node
   package targets Node only and is not built for browsers.
-- `Auth.bearer` refuses `http://` endpoints. The token is redacted from
-  `toString`, `repr`, hook payloads and error messages.
+- `Auth.bearer` refuses `http://` endpoints. The API key, passed as `token`,
+  is redacted from `toString`, `repr`, hook payloads and error messages.
 - Redirects are never followed, so the `Authorization` header cannot leak to
   another host.
 - TLS verification cannot be disabled.
