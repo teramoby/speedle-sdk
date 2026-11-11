@@ -4,7 +4,10 @@
  */
 package io.speedle.sdk;
 
-/** Any other HTTP status, including 3xx (redirects are never followed) and 404. */
+/**
+ * Any other HTTP status, including 3xx (redirects are never followed) and 404. Speedle Cloud 404
+ * {@code service_not_found} uses this type with code {@code service_not_found}.
+ */
 public class HttpError extends SpeedleException {
   private static final long serialVersionUID = 1L;
 

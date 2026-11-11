@@ -28,6 +28,7 @@ var cloudCodes = map[string]bool{
 	"unsupported_token_assertion": true,
 	"unauthorized":                true,
 	"service_mismatch":            true,
+	"service_not_found":           true,
 	"request_too_large":           true,
 	"rate_limited":                true,
 	"daily_quota_exceeded":        true,

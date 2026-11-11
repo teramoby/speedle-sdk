@@ -113,6 +113,32 @@ class ClientTest {
   }
 
   @Test
+  void cloudServiceNotFoundAndMismatch() throws Exception {
+    try (SpeedleClient c =
+        client(Backend.SPEEDLE_CLOUD, json(404, "{\"error\":\"service_not_found\"}")).build()) {
+      HttpError e = fails(HttpError.class, c);
+      assertEquals(404, e.status().getAsInt());
+      assertEquals(Optional.of("service_not_found"), e.code());
+      assertEquals(1, mock.requests().size());
+    }
+    mock.close();
+    try (SpeedleClient c =
+        client(Backend.SPEEDLE_CLOUD, json(403, "{\"error\":\"service_mismatch\"}")).build()) {
+      ForbiddenError e = fails(ForbiddenError.class, c);
+      assertEquals(403, e.status().getAsInt());
+      assertEquals(Optional.of("service_mismatch"), e.code());
+      assertEquals(1, mock.requests().size());
+    }
+    mock.close();
+    try (SpeedleClient c =
+        client(Backend.SPEEDLE, json(404, "{\"error\":\"service_not_found\"}")).build()) {
+      HttpError e = fails(HttpError.class, c);
+      assertEquals(Optional.empty(), e.code());
+      assertTrue(e.getMessage().contains("service_not_found"));
+    }
+  }
+
+  @Test
   void speedleErrorsAreMessagesAndGateway429IsBurst() throws Exception {
     try (SpeedleClient c =
         client(Backend.SPEEDLE, json(400, "{\"error\":\"invalid_request\"}")).build()) {

@@ -15,7 +15,7 @@ internal readonly record struct ErrorInfo(
     Exception? Inner = null);
 
 /// <summary>
-/// Base type of every error the SDK raises. Messages never contain the bearer token, the request
+/// Base type of every error the SDK raises. Messages never contain the API key or other bearer credential, the request
 /// attributes or the request body.
 /// </summary>
 public class SpeedleException : Exception
@@ -31,7 +31,7 @@ public class SpeedleException : Exception
     /// <summary>The HTTP status of the response that caused this error, or null.</summary>
     public int? Status { get; }
 
-    /// <summary>The Speedle Cloud error code, for example <c>service_mismatch</c>, or null.</summary>
+    /// <summary>The Speedle Cloud error code, for example <c>service_mismatch</c> or <c>service_not_found</c>, or null.</summary>
     public string? Code { get; }
 
     /// <summary>Speedle Cloud's <c>X-Quota-Daily-Remaining</c> header, or null when absent or malformed.</summary>
@@ -56,7 +56,7 @@ public sealed class UnauthorizedException : SpeedleException
     internal UnauthorizedException(ErrorInfo info) : base(info) { }
 }
 
-/// <summary>HTTP 403, including Speedle Cloud <c>service_mismatch</c>. Never retried.</summary>
+/// <summary>HTTP 403, including older Speedle Cloud <c>service_mismatch</c>. Never retried.</summary>
 public sealed class ForbiddenException : SpeedleException
 {
     internal ForbiddenException(ErrorInfo info) : base(info) { }
@@ -108,7 +108,10 @@ public sealed class ServerException : SpeedleException
     internal ServerException(ErrorInfo info) : base(info) { }
 }
 
-/// <summary>Any other HTTP status, including 3xx (redirects are never followed) and 404.</summary>
+/// <summary>
+/// Any other HTTP status, including 3xx (redirects are never followed) and 404.
+/// Speedle Cloud 404 <c>service_not_found</c> uses this type with <c>Code</c> <c>service_not_found</c>.
+/// </summary>
 public sealed class HttpException : SpeedleException
 {
     internal HttpException(ErrorInfo info) : base(info) { }

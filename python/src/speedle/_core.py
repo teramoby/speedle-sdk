@@ -49,6 +49,7 @@ CLOUD_CODES = frozenset(
         "unsupported_token_assertion",
         "unauthorized",
         "service_mismatch",
+        "service_not_found",
         "request_too_large",
         "rate_limited",
         "daily_quota_exceeded",
