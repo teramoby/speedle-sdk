@@ -132,6 +132,8 @@ func TestErrorMapping(t *testing.T) {
 		{BackendSpeedle, 400, nil, `{"error":"invalid_request"}`, KindInvalidRequest, "", "invalid_request", 0, -1, 1},
 		{BackendSpeedleCloud, 401, nil, `{"error":"unauthorized"}`, KindUnauthorized, "unauthorized", "", 0, -1, 1},
 		{BackendSpeedleCloud, 403, nil, `{"error":"service_mismatch"}`, KindForbidden, "service_mismatch", "", 0, -1, 1},
+		{BackendSpeedleCloud, 404, nil, `{"error":"service_not_found"}`, KindHTTP, "service_not_found", "", 0, -1, 1},
+		{BackendSpeedle, 404, nil, `{"error":"service_not_found"}`, KindHTTP, "", "service_not_found", 0, -1, 1},
 		{BackendSpeedleCloud, 404, nil, `404 page not found`, KindHTTP, "", "", 0, -1, 1},
 		{BackendSpeedleCloud, 413, nil, `{"error":"request_too_large"}`, KindRequestTooLarge, "request_too_large", "", 0, -1, 1},
 		{BackendSpeedleCloud, 415, nil, ``, KindHTTP, "", "", 0, -1, 1},

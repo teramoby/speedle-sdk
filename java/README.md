@@ -59,7 +59,7 @@ try (SpeedleClient speedle = SpeedleClient.builder()
     .backend(Backend.SPEEDLE_CLOUD)
     .endpoint(URI.create("https://cloud.speedle.io"))
     .auth(Auth.bearer(System.getenv("SPEEDLE_TOKEN")))
-    .serviceName("books")               // must be the token's service
+    .serviceName("books")               // the service to check
     .build()) {
 
   boolean ok = speedle.isAllowed(Subject.user("alice"), "get", "/books/123", List.of(
@@ -73,7 +73,9 @@ try (SpeedleClient speedle = SpeedleClient.builder()
 }
 ```
 
-The token is a server-side secret. Never ship it to browsers, mobile apps or
+Pass the API key to `Auth.bearer`. The parameter is still named `token`. An unknown service is HTTP 404 `service_not_found` (`HttpError`, code `service_not_found`) and is not retried. Older Cloud deployments return 403 `service_mismatch` (`ForbiddenError`).
+
+The API key is a server-side secret. Never ship it to browsers, mobile apps or
 desktop clients.
 
 ## API
@@ -107,21 +109,21 @@ once per endpoint and share it; `close()` releases the pool.
 
 All errors are unchecked and extend `SpeedleException`, which carries
 `status()`, `code()` (Speedle Cloud error code), `getMessage()` and
-`quotaDailyRemaining()`. Messages never contain the token or the request.
+`quotaDailyRemaining()`. Messages never contain the API key or the request.
 
 | Error | When | Retried |
 | --- | --- | --- |
 | `ConfigurationError` | Invalid builder settings | |
 | `InvalidRequestError` | 400, or a client-side check failed (nothing sent) | No |
 | `UnauthorizedError` | 401 | No |
-| `ForbiddenError` | 403, including Cloud `service_mismatch` | No |
+| `ForbiddenError` | 403, including older Cloud `service_mismatch` | No |
 | `RequestTooLargeError` | 413 | No |
 | `TooManyRequestsError` | 429 with an unknown code; has `retryAfter()` | No |
 | `RateLimitedError` | Burst 429 | If `Retry-After` fits the deadline |
 | `QuotaExceededError` | 429 `daily_quota_exceeded` | Never |
 | `ServiceUnavailableError` | 503 | Yes |
 | `ServerError` | 500 and other 5xx | 502 and 504 only |
-| `HttpError` | Other statuses, including 3xx (redirects are never followed) and 404 | No |
+| `HttpError` | Other statuses, including 3xx (redirects are never followed) and 404. Cloud 404 `service_not_found` sets `code()` | No |
 | `UnexpectedResponseError` | Body is not the expected JSON | No |
 | `NetworkError` | Transport failure | Yes, except TLS failures |
 | `TimeoutError` | The last attempt hit `attemptTimeout` | Yes |

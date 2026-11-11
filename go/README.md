@@ -61,7 +61,7 @@ client, err := speedle.NewClient(speedle.Config{
 	Backend:     speedle.BackendSpeedleCloud,
 	Endpoint:    "https://cloud.speedle.io",
 	Auth:        speedle.BearerToken(os.Getenv("SPEEDLE_TOKEN")),
-	ServiceName: "books", // must be the token's service
+	ServiceName: "books", // the service to check
 })
 if err != nil {
 	return err
@@ -81,7 +81,9 @@ if ok {
 }
 ```
 
-The Speedle Cloud token is a server-side secret. Never ship it to browsers,
+Pass the API key to `BearerToken`. The parameter is still named `token`. An unknown service is HTTP 404 `service_not_found` (`ErrHTTP`, `Code` `service_not_found`) and is not retried. Older Cloud deployments return 403 `service_mismatch` (`ErrForbidden`).
+
+The Speedle Cloud API key is a server-side secret. Never ship it to browsers,
 mobile apps or desktop clients.
 
 ## Calls
@@ -131,14 +133,14 @@ kind with `errors.Is`:
 | `ErrConfiguration` | `NewClient` rejected the config |
 | `ErrInvalidRequest` | 400, or the attribute and subject checks before sending |
 | `ErrUnauthorized` | 401 |
-| `ErrForbidden` | 403, including Cloud `service_mismatch` |
+| `ErrForbidden` | 403, including older Cloud `service_mismatch` |
 | `ErrRequestTooLarge` | 413 |
 | `ErrTooManyRequests` | 429; also matches the two below |
 | `ErrRateLimited` | burst 429 |
 | `ErrQuotaExceeded` | Cloud daily quota (`daily_quota_exceeded`) |
 | `ErrServiceUnavailable` | 503 |
 | `ErrServer` | 500, 502, 504 and other 5xx |
-| `ErrHTTP` | any other status, including 3xx (redirects are never followed) and 404 |
+| `ErrHTTP` | any other status, including 3xx (redirects are never followed) and 404. Cloud 404 `service_not_found` sets `Code` |
 | `ErrUnexpectedResponse` | a 200 whose body is not a decision |
 | `ErrNetwork` | transport failure, including TLS; also matches the two below |
 | `ErrTimeout` | the last attempt hit `AttemptTimeout` |

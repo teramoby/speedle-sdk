@@ -36,7 +36,8 @@ type Config struct {
 	Endpoint string
 	Auth     Auth
 	// ServiceName is sent on every call; WithServiceName overrides it per
-	// call. On Speedle Cloud it must be the token's service.
+	// call. Current Speedle Cloud returns 404 service_not_found for an
+	// unknown service. Older Cloud returns 403 service_mismatch.
 	ServiceName    string
 	Retry          RetryPolicy
 	FailureMode    FailureMode

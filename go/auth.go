@@ -38,9 +38,11 @@ func (noAuth) apply(c *transportConfig) error { c.kind = authNone; return nil }
 func (noAuth) String() string                 { return "NoAuth()" }
 
 // BearerToken sends "Authorization: Bearer <token>": Speedle Cloud, or
-// self-hosted Speedle behind an authenticating gateway. It requires an https
-// endpoint. NewClient rejects an empty token and one with whitespace or
-// control characters. The token is never printed by fmt, hooks or errors.
+// self-hosted Speedle behind an authenticating gateway. On Speedle Cloud,
+// token is the account-level API key; the parameter name is unchanged. It
+// requires an https endpoint. NewClient rejects an empty value and one with
+// whitespace or control characters. The credential is never printed by fmt,
+// hooks or errors.
 func BearerToken(token string) Auth { return bearerAuth{token: token} }
 
 type bearerAuth struct{ token string }

@@ -4,7 +4,10 @@
  */
 package io.speedle.sdk;
 
-/** HTTP 401: the bearer token was missing, malformed, revoked or unknown. Never retried. */
+/**
+ * HTTP 401: the API key or bearer credential was missing, malformed, revoked or unknown. Never
+ * retried.
+ */
 public class UnauthorizedError extends SpeedleException {
   private static final long serialVersionUID = 1L;
 

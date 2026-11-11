@@ -158,7 +158,7 @@ fails the `conformance` workflow.
 | `speedle-typed-attributes` | The same call and request body as `cloud-allowed` against self-hosted Speedle, without `Authorization` |
 | `speedle-denied` | 200 deny, no `Authorization`, inferred attributes sent as typed items sorted by name |
 | `cloud-invalid-request` | 400 `invalid_request`, charged, no retry |
-| `cloud-service-mismatch` | Per-call `serviceName` override that is not the token's service: 403 `service_mismatch`, `ForbiddenError`, charged, no retry |
+| `cloud-service-mismatch` | Older Speedle Cloud: a per-call `serviceName` that is not the API key's service returns 403 `service_mismatch`, `ForbiddenError`, charged, no retry |
 | `attribute-null-rejected` | Client-side rejection of a `null` inferred attribute, no request sent |
 | `cloud-unauthorized` | 401, not charged, never retried |
 | `cloud-daily-quota-exceeded` | 429 `daily_quota_exceeded` with `Retry-After: 3600`, never retried although attempts remain |

@@ -11,7 +11,8 @@ import java.util.OptionalLong;
 /**
  * Base type of every error the SDK raises. Unchecked.
  *
- * <p>Messages never contain the bearer token, the request attributes or the request body.
+ * <p>Messages never contain the API key or other bearer credential, the request attributes or the
+ * request body.
  */
 public class SpeedleException extends RuntimeException {
   private static final long serialVersionUID = 1L;
@@ -33,7 +34,8 @@ public class SpeedleException extends RuntimeException {
   }
 
   /**
-   * The Speedle Cloud error code, for example {@code service_mismatch}.
+   * The Speedle Cloud error code, for example {@code service_mismatch} or {@code
+   * service_not_found}.
    *
    * @return the code, or empty
    */

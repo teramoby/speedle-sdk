@@ -40,7 +40,10 @@ export const Auth = Object.freeze({
   none(): Auth {
     return make("none", {});
   },
-  /** `Authorization: Bearer <token>`. Requires HTTPS. */
+  /**
+   * `Authorization: Bearer <token>`. On Speedle Cloud, `token` is the account-level
+   * API key. The parameter name is unchanged. Requires HTTPS.
+   */
   bearer(token: string): Auth {
     if (typeof token !== "string" || token === "") throw new ConfigurationError("bearer token is empty");
     if (BAD_TOKEN_CHARS.test(token)) {

@@ -90,8 +90,8 @@ type Error struct {
 	Kind ErrorKind
 	// Status is the HTTP status, or 0 when there was no response.
 	Status int
-	// Code is the Speedle Cloud error code, such as "service_mismatch", or
-	// "" (always "" for self-hosted Speedle).
+	// Code is the Speedle Cloud error code, such as "service_mismatch" or
+	// "service_not_found", or "" (always "" for self-hosted Speedle).
 	Code string
 	// Message is the server's error text or the SDK's description. It never
 	// contains the token, attributes or the request body.

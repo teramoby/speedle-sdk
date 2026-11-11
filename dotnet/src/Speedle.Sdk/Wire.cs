@@ -22,6 +22,7 @@ internal static class Wire
     internal static readonly HashSet<string> CloudCodes = new(StringComparer.Ordinal)
     {
         "invalid_request", "unsupported_token_assertion", "unauthorized", "service_mismatch",
+        "service_not_found",
         "request_too_large", "rate_limited", "daily_quota_exceeded", "internal_error",
         "quota_unavailable", "snapshot_unavailable",
     };

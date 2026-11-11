@@ -97,6 +97,30 @@ public class ClientTests
         Assert.DoesNotContain("spdl_t", e.Message, StringComparison.Ordinal);
     }
 
+    [Theory]
+    [InlineData(404, "{\"error\":\"service_not_found\"}", "service_not_found", typeof(HttpException))]
+    [InlineData(403, "{\"error\":\"service_mismatch\"}", "service_mismatch", typeof(ForbiddenException))]
+    public async Task CloudServiceErrors(int status, string body, string code, Type type)
+    {
+        handler.Reply(status, body);
+        using SpeedleClient c = Client();
+        SpeedleException e = await Assert.ThrowsAnyAsync<SpeedleException>(() => c.IsAllowedAsync("alice", "get", "/r"));
+        Assert.Equal(type, e.GetType());
+        Assert.Equal(status, e.Status);
+        Assert.Equal(code, e.Code);
+        Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task SelfHostedServiceNotFoundIsAMessage()
+    {
+        handler.Reply(404, "{\"error\":\"service_not_found\"}");
+        using SpeedleClient c = Client(Backend.Speedle);
+        HttpException e = await Assert.ThrowsAsync<HttpException>(() => c.IsAllowedAsync("a", "g", "/r"));
+        Assert.Null(e.Code);
+        Assert.Contains("service_not_found", e.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task SpeedleErrorsAreMessagesAndGateway429IsBurst()
     {

@@ -64,10 +64,12 @@ if speedle.is_allowed(&"alice".into(), "get", "/books/123", &attrs).await? {
 }
 ```
 
-The service name (`"books"`) is sent on every call; on Speedle Cloud it must
-be the token's service, otherwise the call fails with `ErrorKind::Forbidden`
-and code `service_mismatch`. The token is a server-side secret: never ship it
-to browsers, mobile apps or desktop clients.
+The service name (`"books"`) is sent on every call. Pass the API key to
+`Auth::bearer`; the parameter is still named `token`. On current Speedle Cloud
+an unknown service fails with `ErrorKind::Http` and code `service_not_found`,
+and is not retried. Older Cloud deployments fail with `ErrorKind::Forbidden`
+and code `service_mismatch`. The API key is a server-side secret: never ship
+it to browsers, mobile apps or desktop clients.
 
 ## Calls
 
@@ -114,14 +116,14 @@ context, never from untrusted client input.
 | `Configuration` | `build` rejected the options |
 | `InvalidRequest` | 400, or the checks before sending |
 | `Unauthorized` | 401 |
-| `Forbidden` | 403, including Cloud `service_mismatch` |
+| `Forbidden` | 403, including older Cloud `service_mismatch` |
 | `RequestTooLarge` | 413 |
 | `TooManyRequests` | 429 with an unknown Cloud code |
 | `RateLimited` | burst 429 |
 | `QuotaExceeded` | Cloud daily quota (`daily_quota_exceeded`) |
 | `ServiceUnavailable` | 503 |
 | `Server` | 500, 502, 504 and other 5xx |
-| `Http` | any other status, including 3xx (redirects are never followed) and 404 |
+| `Http` | any other status, including 3xx (redirects are never followed) and 404. Cloud 404 `service_not_found` sets `code()` |
 | `UnexpectedResponse` | a 200 whose body is not a decision |
 | `Network` | transport failure, including TLS |
 | `Timeout` | the last attempt hit `attempt_timeout` |

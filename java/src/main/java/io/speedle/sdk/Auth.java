@@ -26,12 +26,14 @@ public sealed interface Auth permits Auth.None, Auth.Bearer, Auth.MutualTls {
 
   /**
    * {@code Authorization: Bearer <token>}: Speedle Cloud, or self-hosted Speedle behind an
-   * authenticating gateway. Requires an {@code https://} endpoint. The token is a server-side
-   * secret: never ship it to browsers, mobile apps or desktop clients.
+   * authenticating gateway. On Speedle Cloud, {@code token} is the account-level API key; the
+   * parameter name is unchanged. Requires an {@code https://} endpoint. The API key is a
+   * server-side secret: never ship it to browsers, mobile apps or desktop clients.
    *
-   * @param token the token; not empty, without whitespace or control characters
+   * @param token the API key or gateway credential; not empty, without whitespace or control
+   *     characters
    * @return the auth
-   * @throws ConfigurationError if the token is empty or contains whitespace or control characters
+   * @throws ConfigurationError if the value is empty or contains whitespace or control characters
    */
   static Auth bearer(String token) {
     if (token == null || token.isEmpty()) {

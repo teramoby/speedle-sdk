@@ -17,7 +17,7 @@ pub enum ErrorKind {
     InvalidRequest,
     /// HTTP 401.
     Unauthorized,
-    /// HTTP 403, including Speedle Cloud `service_mismatch`.
+    /// HTTP 403, including older Speedle Cloud `service_mismatch`.
     Forbidden,
     /// HTTP 413.
     RequestTooLarge,
@@ -32,6 +32,9 @@ pub enum ErrorKind {
     /// HTTP 500, 502, 504 and other 5xx.
     Server,
     /// Any other status, including 3xx and 404.
+    ///
+    /// Speedle Cloud 404 `service_not_found` uses this kind with code
+    /// `service_not_found`.
     Http,
     /// A 200 whose body is not the expected JSON.
     UnexpectedResponse,
@@ -151,8 +154,8 @@ impl Error {
         self.0.status
     }
 
-    /// The Speedle Cloud error code, such as `service_mismatch`. Always
-    /// `None` for self-hosted Speedle.
+    /// The Speedle Cloud error code, such as `service_mismatch` or
+    /// `service_not_found`. Always `None` for self-hosted Speedle.
     pub fn code(&self) -> Option<&str> {
         self.0.code.as_deref()
     }

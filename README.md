@@ -16,7 +16,7 @@ See the [Speedle SDK documentation](https://engine.speedle.io/docs/sdks/).
   the Authorization Decision Service you run yourself, with no client
   authentication or with mutual TLS.
 - **Speedle Cloud (coming soon)** ([cloud.speedle.io](https://cloud.speedle.io)):
-  the hosted service. Requests authenticate with a service-scoped bearer token.
+  the hosted service. Requests authenticate with an account-level API key, sent as a bearer credential.
 
 ## Packages
 
@@ -51,7 +51,7 @@ configuration example for use when access is available.
 
 ## Security
 
-A Speedle Cloud token is a server-side secret. Never ship it to browsers,
+A Speedle Cloud API key is a server-side secret. Never ship it to browsers,
 mobile apps or any other client you do not control.
 
 To report a security issue, see [SECURITY.md](SECURITY.md).

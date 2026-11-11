@@ -62,7 +62,7 @@ class UnauthorizedError(SpeedleError):
 
 
 class ForbiddenError(SpeedleError):
-    """HTTP 403, including Speedle Cloud ``service_mismatch``."""
+    """HTTP 403, including older Speedle Cloud ``service_mismatch``."""
 
 
 class RequestTooLargeError(SpeedleError):
@@ -102,7 +102,11 @@ class ServerError(SpeedleError):
 
 
 class HttpError(SpeedleError):
-    """Any other HTTP status, including 3xx and 404."""
+    """Any other HTTP status, including 3xx and 404.
+
+    Speedle Cloud 404 ``service_not_found`` uses this type with ``code``
+    ``service_not_found``.
+    """
 
 
 class UnexpectedResponseError(SpeedleError):

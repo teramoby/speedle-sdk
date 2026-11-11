@@ -19,12 +19,13 @@ public abstract class Auth
     public static Auth None() => NoneAuth.Instance;
 
     /// <summary>
-    /// <c>Authorization: Bearer &lt;token&gt;</c>. Requires an <c>https://</c> endpoint. The token is a
-    /// server-side secret: never ship it to browsers, mobile apps or desktop clients.
+    /// <c>Authorization: Bearer &lt;token&gt;</c>. On Speedle Cloud, <c>token</c> is the account-level
+    /// API key; the parameter name is unchanged. Requires an <c>https://</c> endpoint. The API key
+    /// is a server-side secret: never ship it to browsers, mobile apps or desktop clients.
     /// </summary>
-    /// <param name="token">Not empty, without whitespace or control characters.</param>
+    /// <param name="token">The API key or gateway credential. Not empty, without whitespace or control characters.</param>
     /// <returns>The auth.</returns>
-    /// <exception cref="ConfigurationException">The token is empty or has whitespace or control characters.</exception>
+    /// <exception cref="ConfigurationException">The value is empty or has whitespace or control characters.</exception>
     public static Auth Bearer(string token)
     {
         if (string.IsNullOrEmpty(token))
@@ -226,7 +227,10 @@ public sealed class SpeedleClientOptions
     /// <summary>The authentication.</summary>
     public required Auth Auth { get; init; }
 
-    /// <summary>Sent on every call; not empty. On Speedle Cloud, the token's service.</summary>
+    /// <summary>
+    /// Sent on every call; not empty. Current Speedle Cloud returns 404 <c>service_not_found</c>
+    /// for an unknown service. Older Cloud returns 403 <c>service_mismatch</c>.
+    /// </summary>
     public required string ServiceName { get; init; }
 
     /// <summary>Retry, timeout and deadline settings.</summary>
