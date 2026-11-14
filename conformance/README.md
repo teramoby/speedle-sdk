@@ -202,4 +202,4 @@ These commands load the same policies, check the stored parsed forms and raw
 HTTP decisions, then run every SDK against the local ADS. They do not change
 the recorded expectations. CI's regular `e2e-local` workflow uses the older
 commit pinned in `e2e/vectors.json`; release-bound checks and their results
-are recorded separately in the release-preparation PR.
+are recorded separately in the [1.0.0 release-preparation PR](https://github.com/teramoby/speedle-sdk/pull/58).

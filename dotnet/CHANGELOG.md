@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.0 (unreleased)
+## 1.0.0 (2026-11-15)
 
 - Mark the existing public API stable; no API or decision behaviour changes.
 - Document compatibility with self-hosted Engine >= 1.6 and Speedle Cloud
