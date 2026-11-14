@@ -49,7 +49,8 @@ for the lower bound and the scope of the tests.
 
 Use [Engine v1.8.0](https://github.com/teramoby/speedle-plus/releases/tag/v1.8.0)
 for a new self-hosted installation. Start with a local ADS; no token is
-needed for an unauthenticated loopback endpoint. Each package README puts its self-hosted example first:
+needed for an unauthenticated loopback endpoint. Each package README puts
+its self-hosted example first:
 
 - [Node.js/TypeScript](node/README.md#quickstart-self-hosted-speedle)
 - [Python](python/README.md#quickstart-self-hosted-speedle-with-asyncio)

@@ -77,7 +77,7 @@ func verify(t *testing.T, inst *instance) verifyReport {
 
 // sampleHeader gives a value that satisfies a pattern matcher in the vectors.
 var sampleHeader = map[string]string{
-	"user-agent":   "speedle-sdk-test/0.1.0 (go/1.26.0; linux)",
+	"user-agent":   "speedle-sdk-test/1.0.0 (go/1.26.0; linux)",
 	"content-type": "application/json",
 }
 
@@ -217,7 +217,7 @@ func post(t *testing.T, inst *instance, path string, headers map[string]string, 
 func TestMatchingRequestPasses(t *testing.T) {
 	inst := startTest(t)
 	loadVector(t, inst, []byte(oneExchange))
-	resp := post(t, inst, isAllowedPath, map[string]string{"User-Agent": "speedle-sdk-go/0.1.0", "x-exact": "yes"},
+	resp := post(t, inst, isAllowedPath, map[string]string{"User-Agent": "speedle-sdk-go/1.0.0", "x-exact": "yes"},
 		`{"attributes": [{"name": "y"}, {"name": "x"}], "subject": {"principals": [{"name": "a"}]}}`)
 	if resp.StatusCode != 200 {
 		t.Fatalf("status %d", resp.StatusCode)
