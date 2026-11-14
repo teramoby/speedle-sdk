@@ -178,3 +178,28 @@ Cloud contract. It is not a real token.
 Add `vectors/<id>.json`, validate it against `schema.json`, and make every
 SDK pass it in the same PR, or mark the PR as contract-only and open one
 issue per SDK.
+
+## Engine compatibility
+
+SDK 1.x targets self-hosted Engine >= 1.6 and Speedle Cloud API v1; see the
+[compatibility table](../README.md#compatibility). The mock vectors verify
+the decision request/response contract and resilience rules for both
+backends. They do not start an Engine binary or prove compatibility with a
+particular Engine release on their own.
+
+The real-Engine proof uses the 34 decision vectors in
+[`e2e/vectors.json`](../e2e/vectors.json), including role grants, denials and
+all typed attribute forms. Run the existing harness against clean checkouts
+of the lower bound [v1.6.0](https://github.com/teramoby/speedle-plus/tree/17da10eb3d4efd80f95aee0da909640f632e6fa7)
+and the installation reference [v1.8.0](https://github.com/teramoby/speedle-plus/tree/a5cff51c71935d7867b12827f200652bee15412c):
+
+```sh
+SPEEDLE_DIR=/path/to/engine-v1.6.0 e2e/speedle/run-local.sh all
+SPEEDLE_DIR=/path/to/engine-v1.8.0 e2e/speedle/run-local.sh all
+```
+
+These commands load the same policies, check the stored parsed forms and raw
+HTTP decisions, then run every SDK against the local ADS. They do not change
+the recorded expectations. CI's regular `e2e-local` workflow uses the older
+commit pinned in `e2e/vectors.json`; release-bound checks and their results
+are recorded separately in the release-preparation PR.

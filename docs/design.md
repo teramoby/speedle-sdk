@@ -1,8 +1,8 @@
 # Speedle SDK design
 
-Status: design phase, proposed in
+Status: implemented; stable 1.0.0 releases are being prepared. Originally proposed in
 [teramoby/cloud.speedle.io#212](https://github.com/teramoby/cloud.speedle.io/issues/212).
-Nothing here is implemented or published.
+The retry, attribute and error contracts below remain binding for 1.x.
 
 ## 1. Scope
 
@@ -23,7 +23,7 @@ The SDK is more than a thin wrapper: retries with backoff, deadlines,
 cancellation, an opt-in fail-closed mode, an optional circuit breaker and
 observability hooks are part of the spec (§6).
 
-Out of scope for 0.x: the other ADS operations (`all-granted-roles`,
+Out of scope for 1.x: the other ADS operations (`all-granted-roles`,
 `all-granted-permissions`, `diagnose`, `discover`), PMS, gRPC, browser use
 and Speedle token assertion (`subject.token`/`tokenType`, see §3.2).
 
@@ -93,7 +93,7 @@ The SDK sends a Speedle `JsonContext` with the fields in this order:
 | `subject` | Optional object or `null`. Being removed by cloud.speedle.io#213 | Object; Swagger marks it required | Always sent. |
 | `subject.principals[]` | Array or `null`; items are `{type, name, idd}` or `null`; no extra keys. Being removed by cloud.speedle.io#213 | Array of `{type, name, idd}`, all `omitempty` | Sends a non-empty array of non-null items. `name` is required; `type` defaults to `user`; `idd` is sent only when set. |
 | Principal `type` values | Any string | `user`, `group`, `role`, `entity` (`api/ads/types.go`) | Open string with constants for the four Speedle values. |
-| `subject.token`, `subject.tokenType` | Non-empty value returns 400 `unsupported_token_assertion`. Being removed by cloud.speedle.io#213 | Used by the configured token asserter | Never sent in 0.x. Token assertion may come later as an option. |
+| `subject.token`, `subject.tokenType` | Non-empty value returns 400 `unsupported_token_assertion`. Being removed by cloud.speedle.io#213 | Used by the configured token asserter | Never sent in 1.x. Token assertion may come later as an option. |
 | `subject.asserted` | Boolean, accepted. Being removed by cloud.speedle.io#213 (not a `JsonContext` field) | Not a field; ignored | Never sent. |
 | `serviceName` | The service comes from the request, not from the API key. A missing, non-string or unknown name returns 404 `service_not_found`. Older deployments return 403 `service_mismatch` when the name is not the API key's service | Required by Swagger. An unknown name gives a 200 with reason 2 `SERVICE_NOT_FOUND` | Always sent and never empty. It comes from the client's `serviceName` setting, required for both backends, and can be overridden per call (§5). On current Cloud a missing or unknown service fails with `HttpError`, `code` `service_not_found`, not retried. Older Cloud returns `ForbiddenError`, `code` `service_mismatch`, not retried and charged (§3.6). |
 | `resource`, `action` | String | String | Required string arguments. |
@@ -144,7 +144,7 @@ code point order, so the request does not depend on map iteration order.
 | `allowed` | Required boolean | Boolean | `isAllowed` returns it. Anything other than JSON `true`/`false` raises `UnexpectedResponseError`. |
 | `reason` | Required integer 0 to 6 | `int32`, same codes | `Decision.reason`, an enum with a fallback that keeps unknown integers. |
 | `errorMessage` | Not allowed (`additionalProperties: false`). Being removed by cloud.speedle.io#213, which returns evaluator errors as self-hosted Speedle does | Set, with HTTP 200, when the evaluator returns an error; the decision is then a denial, normally reason 4 `ERROR_IN_EVALUATION` | `Decision.errorMessage`, optional. `isAllowed` still returns the server's `allowed` value (false). |
-| `requestContext`, `attributes`, `grantedRoles`, `rolePolicies`, `policies` | Optional in the schema (diagnostic shape); not in the examples. Being removed by cloud.speedle.io#213 | Never returned by `is-allowed` | Ignored. Not exposed in 0.x. |
+| `requestContext`, `attributes`, `grantedRoles`, `rolePolicies`, `policies` | Optional in the schema (diagnostic shape); not in the examples. Being removed by cloud.speedle.io#213 | Never returned by `is-allowed` | Ignored. Not exposed in 1.x. |
 | Other fields | None allowed | None | Ignored, so a server can add fields without breaking clients. |
 
 Reason codes are identical in both backends: 0 `GRANT_POLICY_FOUND`,
@@ -1426,7 +1426,7 @@ error of the last attempt, except for `DeadlineExceededError` and
 ## 8. User-Agent, telemetry and logging
 
 - `User-Agent: speedle-sdk-<language>/<sdk version> (<runtime>/<version>; <os>)`,
-  for example `speedle-sdk-go/0.1.0 (go/1.26.1; linux)`. `<language>` is
+  for example `speedle-sdk-go/1.0.0 (go/1.26.1; linux)`. `<language>` is
   `node`, `python`, `java`, `go`, `dotnet` or `rust`. `userAgentSuffix` is
   appended after a space.
 - No telemetry: the SDK sends nothing except the `is-allowed` request, adds no
@@ -1435,7 +1435,7 @@ error of the last attempt, except for `DeadlineExceededError` and
 
 ## 9. Decision caching
 
-Off, and not offered in 0.x. Cloud returns `Cache-Control: no-store`.
+Off, and not offered in 1.x. Cloud returns `Cache-Control: no-store`.
 Policy changes reach Cloud in about 60 seconds and token revocation takes
 effect within 60 seconds; a client cache would extend both windows without
 the server knowing. A cache keyed on the subject and attributes is also easy
@@ -1554,11 +1554,19 @@ module path is written into `go.mod` and every import:
 
 ### 12.3 Versioning and releases
 
-- Each SDK has its own semantic version, starting at `0.1.0`. Breaking API
-  changes before `1.0.0` bump the minor version.
+- All six SDKs mark their existing APIs stable at `1.0.0`. Each SDK then
+  keeps its own semantic version, independent of Engine and Speedle Cloud.
+  Breaking API changes require a major version bump.
+- SDK 1.x supports self-hosted Engine >= 1.6 and Speedle Cloud API v1.
+  The decision API used by the SDKs is unchanged through Engine v1.8.0.
+  The [compatibility evidence](../conformance/README.md#engine-compatibility)
+  records how the lower bound is checked. Engine v1.8.0 is the installation
+  reference for new deployments; the two backends remain self-hosted ADS
+  (no authentication or mutual TLS) and Cloud (an account API key as a
+  bearer credential).
 - Releases come only from tags on the default branch, one tag prefix per SDK:
-  `node/v0.1.0`, `python/v0.1.0`, `java/v0.1.0`, `go/v0.1.0`,
-  `dotnet/v0.1.0`, `rust/v0.1.0`. The Go prefix is what Go modules in a
+  `node/v1.0.0`, `python/v1.0.0`, `java/v1.0.0`, `go/v1.0.0`,
+  `dotnet/v1.0.0`, `rust/v1.0.0`. The Go prefix is what Go modules in a
   subdirectory require.
 - The release workflow, `.github/workflows/release.yml`, starts on a tag push
   for Node.js, Python, Java, .NET and Rust. Go starts from a manual dispatch

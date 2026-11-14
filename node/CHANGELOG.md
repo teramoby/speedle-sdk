@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.0 (unreleased)
+
+- Mark the existing public API stable; no API or decision behaviour changes.
+- Document compatibility with self-hosted Engine >= 1.6 and Speedle Cloud
+  API v1. SDK, Engine and Cloud versions are independent.
+
 ## 0.2.1 (2026-11-10)
 
 - Releases now publish to npm directly with provenance through trusted publishing. No API or behaviour changes.

@@ -7,8 +7,11 @@ CommonJS, no runtime dependencies. See the [Node.js SDK
 documentation](https://engine.speedle.io/docs/sdks/node/) and [design
 specification](https://github.com/teramoby/speedle-sdk/blob/main/docs/design.md).
 
-> Published on npm: 0.2.0 (2026-11-10). This README describes 0.2.1, which is
-> not yet released.
+> This README describes 1.0.0, prepared for release and not yet published.
+
+See the [compatibility table](https://github.com/teramoby/speedle-sdk#compatibility)
+for supported Engine and Cloud API versions. SDK, Engine and Cloud versions
+are independent.
 
 ## Install
 
