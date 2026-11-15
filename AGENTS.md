@@ -16,17 +16,18 @@ Speedle.
   `rust/`), and one PR per language. Do not mix languages in a PR. A
   coordinated release bump across SDKs may be one PR when it changes only
   version sources, lockfiles, changelogs and READMEs as follows: version-only
-  substitutions in version sources, install snippets and examples; each SDK's
-  own version entries in lockfiles, never dependency entries; changelog or
-  README text about versions, release dates or status notes; and README text
-  that restates design §12.3. Reviewers reject any other change in such a PR,
-  including any change to API documentation, dependencies, scripts, plugins,
-  build configuration, license or package metadata, package names, registry
-  URLs, install commands, credential setup or other setup instructions, any
-  change to the supported Engine or Cloud API ranges or other compatibility
-  claims (those need a design change with conformance evidence), and any
-  weakening or removal of security guidance, such as the design §10 API-key
-  warning.
+  substitutions of the SDK's own version in version sources, install snippets
+  and examples; each SDK's own version entries in lockfiles, never dependency
+  entries; changelog or README text about versions, release dates or status
+  notes; and README links to the compatibility documentation. Reviewers reject
+  any other change in such a PR, including any change to API documentation,
+  dependency declarations or versions, integrity data, scripts, plugins, build
+  configuration, license or package metadata, package names, registry URLs,
+  install commands, credential setup or other setup instructions, any change
+  to compatibility or security claims, even where design §12.3 or §10 states
+  the current text (those need a design change with conformance evidence), and
+  any weakening or removal of security guidance, such as the design §10
+  API-key warning.
 - Every SDK must pass the shared vectors in `conformance/` against the mock
   server in `conformance/mock`, in its CI workflow.
 

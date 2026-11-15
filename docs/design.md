@@ -1508,16 +1508,18 @@ Layout: `node/`, `python/`, `java/`, `go/`, `dotnet/`, `rust/`,
 `conformance/`, `contract/`, `docs/`. Each language has its own directory, PR
 and CI workflow. A coordinated release bump across SDKs may be one PR when it
 changes only version sources, lockfiles, changelogs and READMEs as follows:
-version-only substitutions in version sources, install snippets and examples;
-each SDK's own version entries in lockfiles, never dependency entries;
-changelog or README text about versions, release dates or status notes; and
-README text that restates §12.3. Reviewers reject any other change in such a
-PR, including any change to API documentation, dependencies, scripts,
+version-only substitutions of the SDK's own version in version sources,
+install snippets and examples; each SDK's own version entries in lockfiles,
+never dependency entries; changelog or README text about versions, release
+dates or status notes; and README links to the compatibility documentation.
+Reviewers reject any other change in such a PR, including any change to API
+documentation, dependency declarations or versions, integrity data, scripts,
 plugins, build configuration, license or package metadata, package names,
 registry URLs, install commands, credential setup or other setup instructions,
-any change to the supported Engine or Cloud API ranges or other compatibility
-claims (those need a design change with conformance evidence), and any
-weakening or removal of security guidance, such as the §10 API-key warning.
+any change to compatibility or security claims, even where §12.3 or §10
+states the current text (those need a design change with conformance
+evidence), and any weakening or removal of security guidance, such as the §10
+API-key warning.
 
 License: UPL-1.0, the same license text as teramoby/speedle-plus, with the copyright
 line `Copyright (c) 2026 The Speedle Authors`, in
