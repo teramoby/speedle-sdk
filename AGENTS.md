@@ -17,15 +17,14 @@ Speedle.
   coordinated release bump across SDKs may be one PR when it changes only
   version sources, each SDK's own version entries in lockfiles (never
   dependency entries), changelog or README text about versions, release
-  dates, status notes, the installation-reference Engine version,
-  compatibility text that restates design §12.3, and version-only
-  substitutions in install snippets and examples. Reviewers reject any other
-  change in such a PR, including any change to API documentation, install
-  commands, package names, registry URLs, credential setup or other setup
-  instructions, any change to the supported Engine or Cloud API ranges or
-  other compatibility claims (those need a design change with conformance
-  evidence), and any weakening or removal of security guidance, such as the
-  design §10 API-key warning.
+  dates or status notes, README text that restates design §12.3, and
+  version-only substitutions in install snippets and examples. Reviewers
+  reject any other change in such a PR, including any change to API
+  documentation, install commands, package names, registry URLs, credential
+  setup or other setup instructions, any change to the supported Engine or
+  Cloud API ranges or other compatibility claims (those need a design change
+  with conformance evidence), and any weakening or removal of security
+  guidance, such as the design §10 API-key warning.
 - Every SDK must pass the shared vectors in `conformance/` against the mock
   server in `conformance/mock`, in its CI workflow.
 
