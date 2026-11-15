@@ -65,13 +65,16 @@ request; the other five SDKs remain tag-driven.
    heading from `## X.Y.Z (unreleased)` to `## X.Y.Z (YYYY-MM-DD)`. A
    coordinated release bump across SDKs may be one PR when it changes only
    version sources, each SDK's own version entries in lockfiles (never
-   dependency entries), and changelog or README text about versions, release
-   dates, status notes, compatibility or documented Engine versions, plus
-   version-only substitutions in install snippets and examples. Reviewers
-   reject any other change in such a PR, including any change to API
-   documentation, install commands, package names, registry URLs, credential
-   setup or other setup instructions, and any weakening or removal of security
-   guidance, such as the design §10 API-key warning.
+   dependency entries), changelog or README text about versions, release
+   dates, status notes, the installation-reference Engine version,
+   compatibility text that restates design §12.3, and version-only
+   substitutions in install snippets and examples. Reviewers reject any other
+   change in such a PR, including any change to API documentation, install
+   commands, package names, registry URLs, credential setup or other setup
+   instructions, any change to the supported Engine or Cloud API ranges or
+   other compatibility claims (those need a design change with conformance
+   evidence), and any weakening or removal of security guidance, such as the
+   design §10 API-key warning.
 
    | SDK | Version sources (all must match the tag) | Helper |
    | --- | --- | --- |
@@ -83,7 +86,8 @@ request; the other five SDKs remain tag-driven.
    | rust | `rust/Cargo.toml` `version`; `rust/Cargo.lock` entry `speedle` | `cargo update -p speedle` in `rust/` |
 
    To check locally: `python3 .github/scripts/release-version.py node/vX.Y.Z`.
-2. **Merge** the PR and wait until that SDK's CI workflow is green on `main`.
+2. **Merge** the PR and wait until the CI workflow of every SDK in the PR is
+   green on `main`.
 3. **Start the run**:
    - For Node.js, Python, Java, C# or Rust, tag the merge commit and push only
      that tag:
@@ -101,14 +105,16 @@ request; the other five SDKs remain tag-driven.
      gh workflow run release.yml --repo teramoby/speedle-sdk --ref main -f version=X.Y.Z
      ```
 
-4. **Watch** the run (Actions → release). The publish job starts automatically
-   after the checks pass. Confirm that:
+   For a coordinated release bump, repeat this step for every SDK in the PR,
+   each with its own tag or Go dispatch.
+4. **Watch** the run for each SDK (Actions → release). The publish job starts
+   automatically after the checks pass. Confirm that:
    - the run is for the requested tag or Go version and the expected `main`
      commit;
    - `preflight` passed, `verify` printed `... is on main` and an `ok:` line for
      every version source, and the build and test job is green.
 5. **Check** the registry or pkg.go.dev page linked from the `release`
-   environment in the run. For npm, verify the published version and its
+   environment in each run. For npm, verify the published version and its
    provenance (npm below). The publish job summary prints the same command.
 
 If a publish job fails before anything was uploaded (for example, a missing
