@@ -63,9 +63,13 @@ request; the other five SDKs remain tag-driven.
 1. **Release PR** for one SDK, titled for example `chore(node): release 1.0.0`.
    Set the version in every source of that SDK and change the `CHANGELOG.md`
    heading from `## X.Y.Z (unreleased)` to `## X.Y.Z (YYYY-MM-DD)`. A
-   coordinated release bump that changes only version sources, the SDK's own
-   version entries in lockfiles, changelogs and READMEs across SDKs may be one
-   PR.
+   coordinated release bump across SDKs may be one PR when it changes only
+   version sources, each SDK's own version entries in lockfiles (never
+   dependency entries), and changelog or README text about versions, release
+   dates, status notes, compatibility or installation. Reviewers reject any
+   other change in such a PR, including any change to API documentation or any
+   weakening or removal of security guidance, such as the design §10 API-key
+   warning.
 
    | SDK | Version sources (all must match the tag) | Helper |
    | --- | --- | --- |
