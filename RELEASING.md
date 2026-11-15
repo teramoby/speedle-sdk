@@ -76,7 +76,8 @@ request; the other five SDKs remain tag-driven.
    to compatibility or security claims, even where design §12.3 or §10 states
    the current text (those need a design change with conformance evidence), and
    any weakening or removal of security guidance, such as the design §10
-   API-key warning.
+   API-key warning. A repository maintainer approves such a PR only after
+   checking every change against this list.
 
    | SDK | Version sources (all must match the tag) | Helper |
    | --- | --- | --- |

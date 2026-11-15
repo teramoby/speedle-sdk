@@ -1519,7 +1519,8 @@ registry URLs, install commands, credential setup or other setup instructions,
 any change to compatibility or security claims, even where §12.3 or §10
 states the current text (those need a design change with conformance
 evidence), and any weakening or removal of security guidance, such as the §10
-API-key warning.
+API-key warning. A repository maintainer approves such a PR only after
+checking every change against this list.
 
 License: UPL-1.0, the same license text as teramoby/speedle-plus, with the copyright
 line `Copyright (c) 2026 The Speedle Authors`, in
