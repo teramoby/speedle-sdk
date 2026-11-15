@@ -8,9 +8,13 @@ Client for the `is-allowed` authorization check of
 - Java 17 or later. No runtime dependencies: transport is `java.net.http.HttpClient`.
 - License: UPL-1.0.
 
-Published on Maven Central: 0.1.0 (2026-11-05) and 0.2.0 (2026-11-07). This
-README describes 0.2.0. The design is in [docs/design.md](../docs/design.md).
+This README describes 1.0.0, prepared for release and not yet published.
+The design is in [docs/design.md](../docs/design.md).
 See the [Java SDK documentation](https://engine.speedle.io/docs/sdks/java/).
+
+See the [compatibility table](https://github.com/teramoby/speedle-sdk#compatibility)
+for supported Engine and Cloud API versions. SDK, Engine and Cloud versions
+are independent.
 
 ## Install
 
@@ -18,7 +22,7 @@ See the [Java SDK documentation](https://engine.speedle.io/docs/sdks/java/).
 <dependency>
   <groupId>io.speedle</groupId>
   <artifactId>speedle-sdk</artifactId>
-  <version>0.2.0</version>
+  <version>1.0.0</version>
 </dependency>
 ```
 

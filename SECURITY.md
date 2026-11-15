@@ -2,8 +2,8 @@
 
 ## Supported versions
 
-The latest release (currently 0.1.0) and the default branch (`main`) are
-supported with security fixes.
+The latest release of each SDK and the default branch (`main`) are
+supported with security fixes. SDKs are versioned independently.
 
 ## Reporting a vulnerability
 

@@ -13,7 +13,11 @@ commit of `main` (design §12.3). Never publish a package by hand.
 | Rust | `rust/vX.Y.Z` | crates.io `speedle` |
 
 Versions are plain `X.Y.Z` (no pre-release suffix). Each SDK has its own
-version, starting at `0.1.0`.
+semantic version, independent of Engine and Speedle Cloud. The next releases
+are `node/v1.0.0`, `python/v1.0.0`, `java/v1.0.0`, `go/v1.0.0`,
+`dotnet/v1.0.0` and `rust/v1.0.0`, marking the existing APIs stable. Subsequent
+releases may advance each SDK independently. This preparation does not
+publish anything; a repository admin starts each release after merge.
 
 ## What the workflow does
 
@@ -56,7 +60,7 @@ request; the other five SDKs remain tag-driven.
 
 ## Cutting a release
 
-1. **Release PR** for one SDK, titled for example `chore(node): release 0.2.0`.
+1. **Release PR** for one SDK, titled for example `chore(node): release 1.0.0`.
    Set the version in every source of that SDK and change the `CHANGELOG.md`
    heading from `## X.Y.Z (unreleased)` to `## X.Y.Z (YYYY-MM-DD)`.
 
@@ -77,8 +81,8 @@ request; the other five SDKs remain tag-driven.
 
      ```sh
      git fetch origin
-     git tag -a node/v0.2.0 -m "node 0.2.0" <merge-commit-sha>
-     git push origin node/v0.2.0
+     git tag -a node/v1.0.0 -m "node 1.0.0" <merge-commit-sha>
+     git push origin node/v1.0.0
      ```
 
    - For Go, **do not push `go/vX.Y.Z`**. Dispatch the release workflow on
