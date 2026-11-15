@@ -62,7 +62,9 @@ request; the other five SDKs remain tag-driven.
 
 1. **Release PR** for one SDK, titled for example `chore(node): release 1.0.0`.
    Set the version in every source of that SDK and change the `CHANGELOG.md`
-   heading from `## X.Y.Z (unreleased)` to `## X.Y.Z (YYYY-MM-DD)`.
+   heading from `## X.Y.Z (unreleased)` to `## X.Y.Z (YYYY-MM-DD)`. A
+   coordinated release bump that changes only version sources, lockfiles,
+   changelogs and READMEs across SDKs may be one PR.
 
    | SDK | Version sources (all must match the tag) | Helper |
    | --- | --- | --- |
