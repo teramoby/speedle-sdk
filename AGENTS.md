@@ -14,8 +14,9 @@ Speedle.
 
 - One directory per language (`node/`, `python/`, `java/`, `go/`, `dotnet/`,
   `rust/`), and one PR per language. Do not mix languages in a PR. A
-  coordinated release bump that changes only version sources, lockfiles,
-  changelogs and READMEs across SDKs may be one PR.
+  coordinated release bump that changes only version sources, the SDK's own
+  version entries in lockfiles, changelogs and READMEs across SDKs may be one
+  PR.
 - Every SDK must pass the shared vectors in `conformance/` against the mock
   server in `conformance/mock`, in its CI workflow.
 

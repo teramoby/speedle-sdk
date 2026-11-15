@@ -1507,7 +1507,8 @@ service, and no caching of errors.
 Layout: `node/`, `python/`, `java/`, `go/`, `dotnet/`, `rust/`,
 `conformance/`, `contract/`, `docs/`. Each language has its own directory, PR
 and CI workflow. A coordinated release bump that changes only version sources,
-lockfiles, changelogs and READMEs across SDKs may be one PR.
+the SDK's own version entries in lockfiles, changelogs and READMEs across SDKs
+may be one PR.
 
 License: UPL-1.0, the same license text as teramoby/speedle-plus, with the copyright
 line `Copyright (c) 2026 The Speedle Authors`, in
