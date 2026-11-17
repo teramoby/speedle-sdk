@@ -15,8 +15,8 @@ Rust client for the Speedle authorization decision service
 See the [Rust SDK documentation](https://engine.speedle.io/docs/sdks/rust/).
 
 See the [compatibility table](https://github.com/teramoby/speedle-sdk#compatibility)
-for supported Engine and Cloud API versions. SDK versions follow the Engine
-release version.
+for supported Engine and Cloud API versions. SDK major and minor versions are
+aligned with the Engine; patch numbers are independent per package.
 
 ## Install
 
