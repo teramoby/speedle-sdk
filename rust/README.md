@@ -10,13 +10,13 @@ Rust client for the Speedle authorization decision service
 - Runtime and HTTP: `tokio` with `reqwest` (rustls with the platform's root
   store, HTTP/1.1 and HTTP/2), `serde`/`serde_json`
 - License: UPL-1.0, © 2026 The Speedle Authors
-- Status: 1.0.0 prepared for release, not yet published
+- Status: 1.9.0 prepared for release, not yet published
 
 See the [Rust SDK documentation](https://engine.speedle.io/docs/sdks/rust/).
 
 See the [compatibility table](https://github.com/teramoby/speedle-sdk#compatibility)
-for supported Engine and Cloud API versions. SDK, Engine and Cloud versions
-are independent.
+for supported Engine and Cloud API versions. SDK major and minor versions are
+aligned with the Engine; patch numbers are independent per package.
 
 ## Install
 
@@ -24,8 +24,8 @@ Install from crates.io:
 
 ```toml
 [dependencies]
-speedle = "1.0.0"
-# Optional blocking client: speedle = { version = "1.0.0", features = ["blocking"] }
+speedle = "1.9.0"
+# Optional blocking client: speedle = { version = "1.9.0", features = ["blocking"] }
 ```
 
 ## Quickstart: self-hosted Speedle
@@ -185,7 +185,7 @@ deadline only.
 
 ## Requests on the wire
 
-`User-Agent: speedle-sdk-rust/1.0.0 (rust/<version>; <os>)`, plus
+`User-Agent: speedle-sdk-rust/1.9.0 (rust/<version>; <os>)`, plus
 `user_agent_suffix`. The body is the Speedle `JsonContext` for both
 backends. Server trust is the platform's root store plus any
 `add_root_certificate_pem` CAs; certificate verification cannot be disabled.

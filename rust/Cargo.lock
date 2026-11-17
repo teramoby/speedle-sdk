@@ -1067,7 +1067,7 @@ dependencies = [
 
 [[package]]
 name = "speedle"
-version = "1.0.0"
+version = "1.9.0"
 dependencies = [
  "rcgen",
  "reqwest",
