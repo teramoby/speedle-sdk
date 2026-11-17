@@ -1562,15 +1562,16 @@ module path is written into `go.mod` and every import:
   A patch number says nothing about the Engine patch with the same number:
   node `1.9.3` and Engine `1.9.1` are unrelated, and both belong to the
   `1.9` line. Breaking API changes require a major version bump.
-- SDK 1.x supports self-hosted Engine >= 1.6 and Speedle Cloud API v1.
-  Version alignment is not a compatibility claim: the decision API used by
-  the SDKs is unchanged through Engine v1.8.0, and SDK 1.9.0 is validated
-  through that version.
+- SDK 1.x supports self-hosted Engine >= 1.6 and Speedle Cloud API v1; SDK
+  1.9.0 keeps that range. Version alignment is not a compatibility claim:
+  the decision request and response format used by the SDKs is unchanged
+  through Engine v1.9.0.
   The [compatibility evidence](../conformance/README.md#engine-compatibility)
-  records how the lower bound is checked. Engine v1.8.0 is the installation
-  reference for new deployments; the two backends remain self-hosted ADS
-  (no authentication or mutual TLS) and Cloud (an account API key as a
-  bearer credential).
+  records how the lower bound is checked, including real-Engine runs against
+  Engine v1.6.0 and v1.8.0. Engine v1.9.0 is the installation reference for
+  new deployments; the two backends remain self-hosted ADS (no
+  authentication or mutual TLS) and Cloud (an account API key as a bearer
+  credential).
 - Releases come only from tags on the default branch, one tag prefix per SDK:
   `node/v1.9.0`, `python/v1.9.0`, `java/v1.9.0`, `go/v1.9.0`,
   `dotnet/v1.9.0`, `rust/v1.9.0`. The Go prefix is what Go modules in a
