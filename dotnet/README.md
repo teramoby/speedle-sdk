@@ -9,13 +9,13 @@ Client for the `is-allowed` authorization check of
   source generation. Trimming and AOT compatible.
 - License: UPL-1.0.
 
-This README describes 1.0.0, prepared for release and not yet published.
+This README describes 1.9.0, prepared for release and not yet published.
 The design is in [docs/design.md](../docs/design.md).
 See the [.NET SDK documentation](https://engine.speedle.io/docs/sdks/dotnet/).
 
 See the [compatibility table](https://github.com/teramoby/speedle-sdk#compatibility)
-for supported Engine and Cloud API versions. SDK, Engine and Cloud versions
-are independent.
+for supported Engine and Cloud API versions. SDK major and minor versions are
+aligned with the Engine; patch numbers are independent per package.
 
 ## Install
 
