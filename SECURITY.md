@@ -3,7 +3,7 @@
 ## Supported versions
 
 The latest release of each SDK and the default branch (`main`) are
-supported with security fixes. SDKs are versioned independently.
+supported with security fixes. All SDKs release with the Engine version.
 
 ## Reporting a vulnerability
 

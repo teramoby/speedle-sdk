@@ -7,11 +7,11 @@ and asyncio clients, fully typed. The only runtime dependency is `httpx`.
 The behaviour follows [docs/design.md](../docs/design.md). See the
 [Python SDK documentation](https://engine.speedle.io/docs/sdks/python/).
 
-> This README describes 1.0.0, prepared for release and not yet published.
+> This README describes 1.9.0, prepared for release and not yet published.
 
 See the [compatibility table](https://github.com/teramoby/speedle-sdk#compatibility)
-for supported Engine and Cloud API versions. SDK, Engine and Cloud versions
-are independent.
+for supported Engine and Cloud API versions. SDK versions follow the Engine
+release version.
 
 ## Install
 

@@ -1,6 +1,6 @@
 # Speedle SDK design
 
-Status: implemented; stable 1.0.0 releases are being prepared. Originally proposed in
+Status: implemented; stable 1.9.0 releases are being prepared. Originally proposed in
 [teramoby/cloud.speedle.io#212](https://github.com/teramoby/cloud.speedle.io/issues/212).
 The retry, attribute and error contracts below remain binding for 1.x.
 
@@ -1426,7 +1426,7 @@ error of the last attempt, except for `DeadlineExceededError` and
 ## 8. User-Agent, telemetry and logging
 
 - `User-Agent: speedle-sdk-<language>/<sdk version> (<runtime>/<version>; <os>)`,
-  for example `speedle-sdk-go/1.0.0 (go/1.26.1; linux)`. `<language>` is
+  for example `speedle-sdk-go/1.9.0 (go/1.26.1; linux)`. `<language>` is
   `node`, `python`, `java`, `go`, `dotnet` or `rust`. `userAgentSuffix` is
   appended after a space.
 - No telemetry: the SDK sends nothing except the `is-allowed` request, adds no
@@ -1554,9 +1554,10 @@ module path is written into `go.mod` and every import:
 
 ### 12.3 Versioning and releases
 
-- All six SDKs mark their existing APIs stable at `1.0.0`. Each SDK then
-  keeps its own semantic version, independent of Engine and Speedle Cloud.
-  Breaking API changes require a major version bump.
+- All six SDKs release together with the Engine version: the SDK version
+  `X.Y.Z` equals the Engine release version. A fix to one SDK between Engine
+  releases is a patch release of that SDK only. Breaking API changes require
+  a major version bump.
 - SDK 1.x supports self-hosted Engine >= 1.6 and Speedle Cloud API v1.
   The decision API used by the SDKs is unchanged through Engine v1.8.0.
   The [compatibility evidence](../conformance/README.md#engine-compatibility)
@@ -1565,8 +1566,8 @@ module path is written into `go.mod` and every import:
   (no authentication or mutual TLS) and Cloud (an account API key as a
   bearer credential).
 - Releases come only from tags on the default branch, one tag prefix per SDK:
-  `node/v1.0.0`, `python/v1.0.0`, `java/v1.0.0`, `go/v1.0.0`,
-  `dotnet/v1.0.0`, `rust/v1.0.0`. The Go prefix is what Go modules in a
+  `node/v1.9.0`, `python/v1.9.0`, `java/v1.9.0`, `go/v1.9.0`,
+  `dotnet/v1.9.0`, `rust/v1.9.0`. The Go prefix is what Go modules in a
   subdirectory require.
 - The release workflow, `.github/workflows/release.yml`, starts on a tag push
   for Node.js, Python, Java, .NET and Rust. Go starts from a manual dispatch

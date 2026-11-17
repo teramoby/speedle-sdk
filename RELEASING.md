@@ -12,11 +12,11 @@ commit of `main` (design §12.3). Never publish a package by hand.
 | C# | `dotnet/vX.Y.Z` | NuGet `Speedle.Sdk` |
 | Rust | `rust/vX.Y.Z` | crates.io `speedle` |
 
-Versions are plain `X.Y.Z` (no pre-release suffix). Each SDK has its own
-semantic version, independent of Engine and Speedle Cloud. The next releases
-are `node/v1.0.0`, `python/v1.0.0`, `java/v1.0.0`, `go/v1.0.0`,
-`dotnet/v1.0.0` and `rust/v1.0.0`, marking the existing APIs stable. Subsequent
-releases may advance each SDK independently. This preparation does not
+Versions are plain `X.Y.Z` (no pre-release suffix). All six SDKs release
+together with the Engine version: for Engine release X.Y.Z, each SDK releases
+X.Y.Z. A fix to one SDK between Engine releases is a patch release of that SDK
+only. The next releases are `node/v1.9.0`, `python/v1.9.0`, `java/v1.9.0`,
+`go/v1.9.0`, `dotnet/v1.9.0` and `rust/v1.9.0`. This preparation does not
 publish anything; a repository admin starts each release after merge.
 
 ## What the workflow does
@@ -60,9 +60,12 @@ request; the other five SDKs remain tag-driven.
 
 ## Cutting a release
 
-1. **Release PR** for one SDK, titled for example `chore(node): release 1.0.0`.
-   Set the version in every source of that SDK and change the `CHANGELOG.md`
-   heading from `## X.Y.Z (unreleased)` to `## X.Y.Z (YYYY-MM-DD)`.
+1. **Release PR**, titled for example `chore: release 1.9.0 for every SDK`
+   when all six SDKs share the Engine release version, or
+   `chore(node): release 1.9.1` for a patch release of one SDK between Engine
+   releases. Set the version in every source of the SDK being released and
+   change its `CHANGELOG.md` heading from `## X.Y.Z (unreleased)` to
+   `## X.Y.Z (YYYY-MM-DD)`.
 
    | SDK | Version sources (all must match the tag) | Helper |
    | --- | --- | --- |
@@ -81,8 +84,8 @@ request; the other five SDKs remain tag-driven.
 
      ```sh
      git fetch origin
-     git tag -a node/v1.0.0 -m "node 1.0.0" <merge-commit-sha>
-     git push origin node/v1.0.0
+     git tag -a node/v1.9.0 -m "node 1.9.0" <merge-commit-sha>
+     git push origin node/v1.9.0
      ```
 
    - For Go, **do not push `go/vX.Y.Z`**. Dispatch the release workflow on

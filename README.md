@@ -6,7 +6,7 @@ Client libraries for the Speedle authorization decision API,
 lines of code.
 
 **Status:** all six SDKs are implemented. This tree prepares their stable
-1.0.0 releases; packages are published by a repository admin after merge via
+1.9.0 releases; packages are published by a repository admin after merge via
 the [release workflow](RELEASING.md).
 See the [Speedle SDK documentation](https://engine.speedle.io/docs/sdks/).
 
@@ -26,12 +26,12 @@ yet released.
 
 | Language | Package | Version in this tree |
 | --- | --- | --- |
-| Node.js/TypeScript | [npm `@speedle/sdk`](https://www.npmjs.com/package/@speedle/sdk) | 1.0.0 (unreleased) |
-| Python | [PyPI `speedle`](https://pypi.org/project/speedle/) | 1.0.0 (unreleased) |
-| Java | [Maven Central `io.speedle:speedle-sdk`](https://central.sonatype.com/artifact/io.speedle/speedle-sdk) | 1.0.0 (unreleased) |
-| Go | [`github.com/teramoby/speedle-sdk/go`](https://pkg.go.dev/github.com/teramoby/speedle-sdk/go) | 1.0.0 (unreleased) |
-| C# | [NuGet `Speedle.Sdk`](https://www.nuget.org/packages/Speedle.Sdk) | 1.0.0 (unreleased) |
-| Rust | [crates.io `speedle`](https://crates.io/crates/speedle) | 1.0.0 (unreleased) |
+| Node.js/TypeScript | [npm `@speedle/sdk`](https://www.npmjs.com/package/@speedle/sdk) | 1.9.0 (unreleased) |
+| Python | [PyPI `speedle`](https://pypi.org/project/speedle/) | 1.9.0 (unreleased) |
+| Java | [Maven Central `io.speedle:speedle-sdk`](https://central.sonatype.com/artifact/io.speedle/speedle-sdk) | 1.9.0 (unreleased) |
+| Go | [`github.com/teramoby/speedle-sdk/go`](https://pkg.go.dev/github.com/teramoby/speedle-sdk/go) | 1.9.0 (unreleased) |
+| C# | [NuGet `Speedle.Sdk`](https://www.nuget.org/packages/Speedle.Sdk) | 1.9.0 (unreleased) |
+| Rust | [crates.io `speedle`](https://crates.io/crates/speedle) | 1.9.0 (unreleased) |
 
 ## Compatibility
 
@@ -39,10 +39,11 @@ yet released.
 | --- | --- | --- |
 | 1.x | >= 1.6 | v1 |
 
-Each SDK follows its own semantic version after 1.0.0. SDKs, Engine and
-Speedle Cloud are versioned independently; matching version numbers are not
-required. The decision API used by the SDKs is unchanged through Engine
-v1.8.0. See the [compatibility test evidence](conformance/README.md#engine-compatibility)
+All six SDKs release together with the Engine version: the SDK version
+matches the Engine release version. A fix to one SDK between Engine releases
+is a patch release of that SDK only. The decision API used by the SDKs is
+unchanged through Engine v1.8.0. See the
+[compatibility test evidence](conformance/README.md#engine-compatibility)
 for the lower bound and the scope of the tests.
 
 ## Quickstart: self-hosted Speedle (local ADS)
