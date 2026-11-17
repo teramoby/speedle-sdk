@@ -65,12 +65,11 @@ request; the other five SDKs remain tag-driven.
 
 ## Cutting a release
 
-1. **Release PR**, titled for example `chore: release 1.9.0 for every SDK`
-   when the Engine releases `X.Y.0` and all six SDKs move to `X.Y.0`, or
-   `chore(node): release 1.9.1` for a patch release of one SDK within the
-   current `X.Y` line. Set the version in every source of the SDK being
-   released and change its `CHANGELOG.md` heading from `## X.Y.Z (unreleased)`
-   to `## X.Y.Z (YYYY-MM-DD)`.
+1. **Release PR** for one SDK, titled for example `chore(node): release
+   1.9.0`. When the Engine releases `X.Y.0` and all six SDKs move to `X.Y.0`,
+   prepare one release PR per SDK, as `AGENTS.md` requires. Set the version in
+   every source of the SDK being released and change its `CHANGELOG.md`
+   heading from `## X.Y.Z (unreleased)` to `## X.Y.Z (YYYY-MM-DD)`.
 
    | SDK | Version sources (all must match the tag) | Helper |
    | --- | --- | --- |
