@@ -199,11 +199,15 @@ SPEEDLE_DIR=/path/to/engine-v1.6.0 e2e/speedle/run-local.sh all
 SPEEDLE_DIR=/path/to/engine-v1.8.0 e2e/speedle/run-local.sh all
 ```
 
-Engine v1.9.0 is the current installation reference; the same harness checks
-it with `SPEEDLE_DIR=/path/to/engine-v1.9.0 e2e/speedle/run-local.sh all`.
+Engine v1.9.0 is the current installation reference. To check it, run the
+same harness with:
+
+```sh
+SPEEDLE_DIR=/path/to/engine-v1.9.0 e2e/speedle/run-local.sh all
+```
 
 These commands load the same policies, check the stored parsed forms and raw
 HTTP decisions, then run every SDK against the local ADS. They do not change
 the recorded expectations. CI's regular `e2e-local` workflow uses the older
 commit pinned in `e2e/vectors.json`; release-bound checks and their results
-are recorded separately in the [1.0.0 release-preparation PR](https://github.com/teramoby/speedle-sdk/pull/58).
+are recorded separately in the [release-preparation PR](https://github.com/teramoby/speedle-sdk/pull/58).

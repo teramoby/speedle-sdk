@@ -45,12 +45,12 @@ SDK major and minor versions are aligned with the Engine; patch numbers are
 independent per package. All six SDKs release `X.Y.0` together with Engine
 `X.Y.0`, even without an SDK API change, and each SDK releases its own patch
 versions within that `X.Y` line. Version alignment is not a compatibility
-claim: SDK 1.9.0 supports self-hosted Engine >= 1.6 and Speedle Cloud API v1,
-the same range as the rest of 1.x, and the decision request and response
-format it uses is unchanged through Engine v1.9.0. See the
+claim: SDK 1.9.0 keeps the 1.x support range, self-hosted Engine >= 1.6 and
+Speedle Cloud API v1. The recorded real-Engine compatibility runs cover
+Engine v1.6.0 and v1.8.0; Engine v1.9.0 is the installation reference for new
+deployments. See the
 [compatibility test evidence](conformance/README.md#engine-compatibility)
-for the lower bound, the real-Engine runs against Engine v1.6.0 and v1.8.0,
-and the scope of the tests.
+for the lower bound and the scope of the tests.
 
 ## Quickstart: self-hosted Speedle (local ADS)
 
