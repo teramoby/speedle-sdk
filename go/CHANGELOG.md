@@ -3,9 +3,12 @@
 ## 1.9.0 (2026-11-17)
 
 - Version aligned with Speedle Engine 1.9.0; earlier releases were 0.x.
+
+## 1.0.0 (2026-11-15)
+
 - Mark the existing public API stable; no API or decision behaviour changes.
 - Document compatibility with self-hosted Engine >= 1.6 and Speedle Cloud
-  API v1.
+  API v1. SDK, Engine and Cloud versions are independent.
 
 ## 0.2.0 (2026-11-07)
 
