@@ -1554,10 +1554,14 @@ module path is written into `go.mod` and every import:
 
 ### 12.3 Versioning and releases
 
-- All six SDKs release together with the Engine version: the SDK version
-  `X.Y.Z` equals the Engine release version. A fix to one SDK between Engine
-  releases is a patch release of that SDK only. Breaking API changes require
-  a major version bump.
+- SDK major and minor versions are aligned with the Engine; patch numbers
+  are independent per package. The `X.Y` of every SDK is the Engine release
+  line it is made for: all six SDKs release `X.Y.0` together with Engine
+  `X.Y.0`, even without an SDK API change. Within an Engine `X.Y` line, each
+  SDK releases its own patch versions (`node/v1.9.1`, `node/v1.9.2`, ...).
+  A patch number says nothing about the Engine patch with the same number:
+  node `1.9.3` and Engine `1.9.1` are unrelated, and both belong to the
+  `1.9` line. Breaking API changes require a major version bump.
 - SDK 1.x supports self-hosted Engine >= 1.6 and Speedle Cloud API v1.
   Version alignment is not a compatibility claim: the decision API used by
   the SDKs is unchanged through Engine v1.8.0, and SDK 1.9.0 is validated

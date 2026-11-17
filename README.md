@@ -39,9 +39,10 @@ yet released.
 | --- | --- | --- |
 | 1.x | >= 1.6 | v1 |
 
-All six SDKs release together with the Engine version: the SDK version
-matches the Engine release version. A fix to one SDK between Engine releases
-is a patch release of that SDK only. Version alignment is not a compatibility
+SDK major and minor versions are aligned with the Engine; patch numbers are
+independent per package. All six SDKs release `X.Y.0` together with Engine
+`X.Y.0`, even without an SDK API change, and each SDK releases its own patch
+versions within that `X.Y` line. Version alignment is not a compatibility
 claim: the decision API used by the SDKs is unchanged through Engine v1.8.0,
 and SDK 1.9.0 is validated through that version. See the
 [compatibility test evidence](conformance/README.md#engine-compatibility)

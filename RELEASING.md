@@ -12,12 +12,17 @@ commit of `main` (design §12.3). Never publish a package by hand.
 | C# | `dotnet/vX.Y.Z` | NuGet `Speedle.Sdk` |
 | Rust | `rust/vX.Y.Z` | crates.io `speedle` |
 
-Versions are plain `X.Y.Z` (no pre-release suffix). All six SDKs release
-together with the Engine version: for Engine release X.Y.Z, each SDK releases
-X.Y.Z. A fix to one SDK between Engine releases is a patch release of that SDK
-only. The next releases are `node/v1.9.0`, `python/v1.9.0`, `java/v1.9.0`,
-`go/v1.9.0`, `dotnet/v1.9.0` and `rust/v1.9.0`. This preparation does not
-publish anything; a repository admin starts each release after merge.
+Versions are plain `X.Y.Z` (no pre-release suffix). SDK major and minor
+versions are aligned with the Engine; patch numbers are independent per
+package. The `X.Y` of every SDK is the Engine release line it is made for:
+all six SDKs release `X.Y.0` together with Engine `X.Y.0`, even without an
+SDK API change. Within an Engine `X.Y` line, each SDK releases its own patch
+versions, for example `node/v1.9.1` and `node/v1.9.2`. A patch number says
+nothing about the Engine patch with the same number: node `1.9.3` and Engine
+`1.9.1` are unrelated, and both belong to the `1.9` line. The next releases
+are `node/v1.9.0`, `python/v1.9.0`, `java/v1.9.0`, `go/v1.9.0`,
+`dotnet/v1.9.0` and `rust/v1.9.0`. This preparation does not publish
+anything; a repository admin starts each release after merge.
 
 ## What the workflow does
 
@@ -61,11 +66,11 @@ request; the other five SDKs remain tag-driven.
 ## Cutting a release
 
 1. **Release PR**, titled for example `chore: release 1.9.0 for every SDK`
-   when all six SDKs share the Engine release version, or
-   `chore(node): release 1.9.1` for a patch release of one SDK between Engine
-   releases. Set the version in every source of the SDK being released and
-   change its `CHANGELOG.md` heading from `## X.Y.Z (unreleased)` to
-   `## X.Y.Z (YYYY-MM-DD)`.
+   when the Engine releases `X.Y.0` and all six SDKs move to `X.Y.0`, or
+   `chore(node): release 1.9.1` for a patch release of one SDK within the
+   current `X.Y` line. Set the version in every source of the SDK being
+   released and change its `CHANGELOG.md` heading from `## X.Y.Z (unreleased)`
+   to `## X.Y.Z (YYYY-MM-DD)`.
 
    | SDK | Version sources (all must match the tag) | Helper |
    | --- | --- | --- |
