@@ -10,8 +10,8 @@ The behaviour follows [docs/design.md](../docs/design.md). See the
 > This README describes 1.9.0, prepared for release and not yet published.
 
 See the [compatibility table](https://github.com/teramoby/speedle-sdk#compatibility)
-for supported Engine and Cloud API versions. SDK versions follow the Engine
-release version.
+for supported Engine and Cloud API versions. SDK major and minor versions are
+aligned with the Engine; patch numbers are independent per package.
 
 ## Install
 
