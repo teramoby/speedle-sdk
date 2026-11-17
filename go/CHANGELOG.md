@@ -2,7 +2,11 @@
 
 ## 1.9.0 (2026-11-17)
 
-- Version aligned with Speedle Engine 1.9.0; earlier releases were 0.x.
+- Version aligned with Speedle Engine 1.9.0; earlier published releases were
+  0.x.
+- From this release, SDK major and minor versions are aligned with the
+  Engine, and patch numbers are independent per package. This supersedes the
+  independent-versioning note in the 1.0.0 entry.
 
 ## 1.0.0 (2026-11-15)
 
