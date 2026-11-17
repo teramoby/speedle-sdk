@@ -1559,7 +1559,9 @@ module path is written into `go.mod` and every import:
   releases is a patch release of that SDK only. Breaking API changes require
   a major version bump.
 - SDK 1.x supports self-hosted Engine >= 1.6 and Speedle Cloud API v1.
-  The decision API used by the SDKs is unchanged through Engine v1.8.0.
+  Version alignment is not a compatibility claim: the decision API used by
+  the SDKs is unchanged through Engine v1.8.0, and SDK 1.9.0 is validated
+  through that version.
   The [compatibility evidence](../conformance/README.md#engine-compatibility)
   records how the lower bound is checked. Engine v1.8.0 is the installation
   reference for new deployments; the two backends remain self-hosted ADS
