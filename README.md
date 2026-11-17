@@ -5,9 +5,10 @@ Client libraries for the Speedle authorization decision API,
 "is this subject allowed to perform this action on this resource?" with a few
 lines of code.
 
-**Status:** all six SDKs are implemented. This tree prepares their stable
-1.0.0 releases; packages are published by a repository admin after merge via
-the [release workflow](RELEASING.md).
+**Status:** all six SDKs are implemented. Their next release is 1.9.0, the
+Engine 1.9 line; each SDK's release PR sets that SDK's version sources, and
+packages are published by a repository admin after merge via the
+[release workflow](RELEASING.md).
 See the [Speedle SDK documentation](https://engine.speedle.io/docs/sdks/).
 
 ## Supported backends
@@ -21,17 +22,18 @@ See the [Speedle SDK documentation](https://engine.speedle.io/docs/sdks/).
 ## Packages
 
 All six SDKs are built together, with the same API, retry behaviour and
-conformance suite. The versions below are prepared in this tree and are not
-yet released.
+conformance suite. The versions below are the next release of each SDK; each
+SDK's release PR sets its version sources, and nothing is released until the
+release workflow runs.
 
-| Language | Package | Version in this tree |
+| Language | Package | Next release |
 | --- | --- | --- |
-| Node.js/TypeScript | [npm `@speedle/sdk`](https://www.npmjs.com/package/@speedle/sdk) | 1.0.0 (unreleased) |
-| Python | [PyPI `speedle`](https://pypi.org/project/speedle/) | 1.0.0 (unreleased) |
-| Java | [Maven Central `io.speedle:speedle-sdk`](https://central.sonatype.com/artifact/io.speedle/speedle-sdk) | 1.0.0 (unreleased) |
-| Go | [`github.com/teramoby/speedle-sdk/go`](https://pkg.go.dev/github.com/teramoby/speedle-sdk/go) | 1.0.0 (unreleased) |
-| C# | [NuGet `Speedle.Sdk`](https://www.nuget.org/packages/Speedle.Sdk) | 1.0.0 (unreleased) |
-| Rust | [crates.io `speedle`](https://crates.io/crates/speedle) | 1.0.0 (unreleased) |
+| Node.js/TypeScript | [npm `@speedle/sdk`](https://www.npmjs.com/package/@speedle/sdk) | 1.9.0 (unreleased) |
+| Python | [PyPI `speedle`](https://pypi.org/project/speedle/) | 1.9.0 (unreleased) |
+| Java | [Maven Central `io.speedle:speedle-sdk`](https://central.sonatype.com/artifact/io.speedle/speedle-sdk) | 1.9.0 (unreleased) |
+| Go | [`github.com/teramoby/speedle-sdk/go`](https://pkg.go.dev/github.com/teramoby/speedle-sdk/go) | 1.9.0 (unreleased) |
+| C# | [NuGet `Speedle.Sdk`](https://www.nuget.org/packages/Speedle.Sdk) | 1.9.0 (unreleased) |
+| Rust | [crates.io `speedle`](https://crates.io/crates/speedle) | 1.9.0 (unreleased) |
 
 ## Compatibility
 
@@ -39,15 +41,20 @@ yet released.
 | --- | --- | --- |
 | 1.x | >= 1.6 | v1 |
 
-Each SDK follows its own semantic version after 1.0.0. SDKs, Engine and
-Speedle Cloud are versioned independently; matching version numbers are not
-required. The decision API used by the SDKs is unchanged through Engine
-v1.8.0. See the [compatibility test evidence](conformance/README.md#engine-compatibility)
+SDK major and minor versions are aligned with the Engine; patch numbers are
+independent per package. All six SDKs release `X.Y.0` together with Engine
+`X.Y.0`, even without an SDK API change, and each SDK releases its own patch
+versions within that `X.Y` line. Version alignment is not a compatibility
+claim: SDK 1.9.0 keeps the 1.x support range, self-hosted Engine >= 1.6 and
+Speedle Cloud API v1. The recorded real-Engine compatibility runs cover
+Engine v1.6.0 and v1.8.0; Engine v1.9.0 is the installation reference for new
+deployments. See the
+[compatibility test evidence](conformance/README.md#engine-compatibility)
 for the lower bound and the scope of the tests.
 
 ## Quickstart: self-hosted Speedle (local ADS)
 
-Use [Engine v1.8.0](https://github.com/teramoby/speedle-plus/releases/tag/v1.8.0)
+Use [Engine v1.9.0](https://github.com/teramoby/speedle-plus/releases/tag/v1.9.0)
 for a new self-hosted installation. Start with a local ADS; no token is
 needed for an unauthenticated loopback endpoint. Each package README puts
 its self-hosted example first:
