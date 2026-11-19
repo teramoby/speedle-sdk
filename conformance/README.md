@@ -78,7 +78,7 @@ Mutual TLS is not covered here; each SDK tests it with its own TLS fixtures.
 ## Mock server
 
 `conformance/mock` is a Go program with no dependencies outside the
-standard library (Go 1.26 or later). A runner starts it once per test run
+standard library (Go 1.22 or later). A runner starts it once per test run
 and loads one vector at a time.
 
 Start it from the repository root:

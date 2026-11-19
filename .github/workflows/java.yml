@@ -43,7 +43,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: ["17", "21", "25"]
+        # 17 is the declared minimum; 27 is the latest release.
+        java: ["17", "21", "25", "27"]
     defaults:
       run:
         working-directory: java

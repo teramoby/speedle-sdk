@@ -687,7 +687,7 @@ calling thread aborts the attempt or the retry delay and throws
 `CancelledError` with the interrupt flag restored; the deadline is the
 time bound.
 
-### 5.4 Go (the two latest Go releases)
+### 5.4 Go (1.22 or later; CI tests 1.22 and the latest release)
 
 ```go
 package speedle

@@ -2,8 +2,9 @@
 
 Python SDK for Speedle authorization checks: `is-allowed` against
 [Speedle Cloud](https://cloud.speedle.io) and [self-hosted
-Speedle](https://github.com/teramoby/speedle-plus). Python 3.10 or later, sync
-and asyncio clients, fully typed. The only runtime dependency is `httpx`.
+Speedle](https://github.com/teramoby/speedle-plus). Python 3.10 or later (CI
+tests 3.10 through 3.15), sync and asyncio clients, fully typed. The only
+runtime dependency is `httpx`.
 The behaviour follows [docs/design.md](../docs/design.md). See the
 [Python SDK documentation](https://engine.speedle.io/docs/sdks/python/).
 
@@ -12,6 +13,8 @@ The behaviour follows [docs/design.md](../docs/design.md). See the
 See the [compatibility table](https://github.com/teramoby/speedle-sdk#compatibility)
 for supported Engine and Cloud API versions. SDK major and minor versions are
 aligned with the Engine; patch numbers are independent per package.
+See the [runtime support policy](https://github.com/teramoby/speedle-sdk#runtime-support)
+for the minimum table and how the minimum and latest releases are tested.
 
 ## Install
 

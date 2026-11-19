@@ -28,7 +28,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: ["22", "24"]
+        # 22 is the declared minimum; 26 is the latest release.
+        node: ["22", "24", "26"]
     defaults:
       run:
         working-directory: node

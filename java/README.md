@@ -5,7 +5,8 @@ Client for the `is-allowed` authorization check of
 [self-hosted Speedle](https://github.com/teramoby/speedle-plus) ADS.
 
 - Maven `io.speedle:speedle-sdk`, Java package and JPMS module `io.speedle.sdk`.
-- Java 17 or later. No runtime dependencies: transport is `java.net.http.HttpClient`.
+- Java 17 or later (CI tests 17, 21, 25 and 27). No runtime dependencies:
+  transport is `java.net.http.HttpClient`.
 - License: UPL-1.0.
 
 This README describes 1.9.0, prepared for release and not yet published.
@@ -15,6 +16,8 @@ See the [Java SDK documentation](https://engine.speedle.io/docs/sdks/java/).
 See the [compatibility table](https://github.com/teramoby/speedle-sdk#compatibility)
 for supported Engine and Cloud API versions. SDK major and minor versions are
 aligned with the Engine; patch numbers are independent per package.
+See the [runtime support policy](https://github.com/teramoby/speedle-sdk#runtime-support)
+for the minimum table and how the minimum and latest releases are tested.
 
 ## Install
 

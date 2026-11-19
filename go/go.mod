@@ -1,3 +1,3 @@
 module github.com/teramoby/speedle-sdk/go
 
-go 1.26
+go 1.22

@@ -35,6 +35,34 @@ release workflow runs.
 | C# | [NuGet `Speedle.Sdk`](https://www.nuget.org/packages/Speedle.Sdk) | 1.9.0 (unreleased) |
 | Rust | [crates.io `speedle`](https://crates.io/crates/speedle) | 1.9.0 (unreleased) |
 
+## Runtime support
+
+Each SDK supports every language or runtime version released in the past
+three years; older versions may also work. A declared minimum is never raised
+above the oldest release in that window just because the repository builds
+with a newer toolchain, and CI builds and tests the declared minimum and the
+latest release. Where a dependency would force a newer minimum, the dependency
+changes instead of the minimum.
+
+The table uses the three-year window ending 2026-11-19:
+
+| SDK | Oldest in-window release | Declared minimum | CI test versions |
+| --- | --- | --- | --- |
+| Go | [Go 1.22](https://go.dev/doc/devel/release#go1.22.0) (2024-02-06) | `go 1.22` | 1.22, 1.27 |
+| Python | [Python 3.13](https://www.python.org/downloads/release/python-3130/) (2024-10-07) | `requires-python = ">=3.10"` | 3.10, 3.11, 3.12, 3.13, 3.14, 3.15 |
+| Node.js | [Node.js 22](https://nodejs.org/en/blog/announcements/v22-release-announce) (2024-04-24) | `engines.node >= 22` | 22, 24, 26 |
+| Java | [JDK 22](https://openjdk.org/projects/jdk/22/) (2024-03-19) | `maven.compiler.release 17` | 17, 21, 25, 27 |
+| .NET | [.NET 9](https://github.com/dotnet/core/blob/main/release-notes/9.0/9.0.0/9.0.0.md) (2024-11-12) | `net8.0` | net8.0, net10.0, net11.0 |
+| Rust | [Rust 1.75](https://github.com/rust-lang/rust/blob/master/RELEASES.md#version-1750-2023-12-28) (2023-12-28) | `rust-version = "1.75"` | 1.75, stable |
+
+Release dates come from the official release histories:
+[Go](https://go.dev/doc/devel/release),
+[Python](https://www.python.org/downloads/source/),
+[Node.js](https://nodejs.org/dist/index.json),
+[OpenJDK](https://openjdk.org/projects/jdk/),
+[.NET](https://dotnet.microsoft.com/en-us/platform/support/policy/dotnet-core)
+and [Rust](https://github.com/rust-lang/rust/blob/master/RELEASES.md).
+
 ## Compatibility
 
 | SDK version (all six languages) | Self-hosted Speedle Engine | Speedle Cloud API |

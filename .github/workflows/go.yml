@@ -27,7 +27,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go: ["1.26.x", "1.27.x"]
+        # 1.22 is the oldest Go release in the support window; 1.27 is the
+        # latest. The test below runs on both ends of the declared range.
+        go: ["1.22.x", "1.27.x"]
     defaults:
       run:
         working-directory: go
@@ -46,6 +48,8 @@ jobs:
       - name: go vet
         run: go vet ./...
       - name: staticcheck
+        # staticcheck itself needs a newer Go than the SDK minimum.
+        if: matrix.go == '1.27.x'
         run: go run honnef.co/go/tools/cmd/staticcheck@2026.2.2 ./...
       - name: Unit tests
         run: go test -short -race -count=1 ./...
