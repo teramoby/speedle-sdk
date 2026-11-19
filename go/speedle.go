@@ -28,7 +28,7 @@ import (
 )
 
 // Version is the SDK version sent in the User-Agent header.
-const Version = "1.9.0"
+const Version = "1.9.1"
 
 // Backend selects the auth rules and the error body interpretation. The
 // request format is the same for both.
