@@ -2,8 +2,9 @@
 
 Node.js/TypeScript SDK for Speedle authorization checks: `is-allowed` against
 [Speedle Cloud](https://cloud.speedle.io) and [self-hosted
-Speedle](https://github.com/teramoby/speedle-plus). Node.js 22 or later, ESM and
-CommonJS, no runtime dependencies. See the [Node.js SDK
+Speedle](https://github.com/teramoby/speedle-plus). Node.js 22 or later (CI
+tests 22, 24 and 26), ESM and CommonJS, no runtime dependencies. See the
+[Node.js SDK
 documentation](https://engine.speedle.io/docs/sdks/node/) and [design
 specification](https://github.com/teramoby/speedle-sdk/blob/main/docs/design.md).
 
@@ -12,6 +13,8 @@ specification](https://github.com/teramoby/speedle-sdk/blob/main/docs/design.md)
 See the [compatibility table](https://github.com/teramoby/speedle-sdk#compatibility)
 for supported Engine and Cloud API versions. SDK major and minor versions are
 aligned with the Engine; patch numbers are independent per package.
+See the [runtime support policy](https://github.com/teramoby/speedle-sdk#runtime-support)
+for the minimum table and how the minimum and latest releases are tested.
 
 ## Install
 

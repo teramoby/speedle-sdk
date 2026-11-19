@@ -6,7 +6,7 @@ Go client for the Speedle authorization decision service
 [self-hosted Speedle](https://github.com/teramoby/speedle-plus) ADS.
 
 - Module: `github.com/teramoby/speedle-sdk/go`, package `speedle`
-- Go: the two latest releases (1.26 and 1.27)
+- Go: 1.22 or later; CI tests 1.22 and 1.27
 - Dependencies: the standard library only
 - License: UPL-1.0, © 2026 The Speedle Authors
 - Status: 1.9.0 prepared for release, not yet published
@@ -16,6 +16,8 @@ See the [Go SDK documentation](https://engine.speedle.io/docs/sdks/go/).
 See the [compatibility table](https://github.com/teramoby/speedle-sdk#compatibility)
 for supported Engine and Cloud API versions. SDK major and minor versions are
 aligned with the Engine; patch numbers are independent per package.
+See the [runtime support policy](https://github.com/teramoby/speedle-sdk#runtime-support)
+for the minimum table and how the minimum and latest releases are tested.
 
 ## Install
 

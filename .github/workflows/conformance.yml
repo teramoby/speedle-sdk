@@ -25,7 +25,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go: ["1.26.x", "1.27.x"]
+        # The mock declares go 1.22 so the SDKs' minimum-version jobs can
+        # build it; 1.27 is the latest release.
+        go: ["1.22.x", "1.27.x"]
     defaults:
       run:
         working-directory: conformance/mock

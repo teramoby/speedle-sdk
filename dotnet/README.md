@@ -4,7 +4,8 @@ Client for the `is-allowed` authorization check of
 [Speedle Cloud](https://cloud.speedle.io) and
 [self-hosted Speedle](https://github.com/teramoby/speedle-plus) ADS.
 
-- NuGet `Speedle.Sdk`, namespace `Speedle.Sdk`, target `net8.0` (.NET 8 or later).
+- NuGet `Speedle.Sdk`, namespace `Speedle.Sdk`, target `net8.0` (.NET 8 or
+  later; CI tests net8.0, net10.0 and net11.0).
 - No dependencies: `HttpClient` over `SocketsHttpHandler` and `System.Text.Json`
   source generation. Trimming and AOT compatible.
 - License: UPL-1.0.
@@ -16,6 +17,8 @@ See the [.NET SDK documentation](https://engine.speedle.io/docs/sdks/dotnet/).
 See the [compatibility table](https://github.com/teramoby/speedle-sdk#compatibility)
 for supported Engine and Cloud API versions. SDK major and minor versions are
 aligned with the Engine; patch numbers are independent per package.
+See the [runtime support policy](https://github.com/teramoby/speedle-sdk#runtime-support)
+for the minimum table and how the minimum and latest releases are tested.
 
 ## Install
 

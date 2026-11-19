@@ -6,7 +6,7 @@ Rust client for the Speedle authorization decision service
 [self-hosted Speedle](https://github.com/teramoby/speedle-plus) ADS.
 
 - Crate: `speedle` (`use speedle::Client`)
-- Rust: stable, MSRV 1.75, edition 2021
+- Rust: stable, MSRV 1.75, edition 2021; CI tests 1.75 and stable
 - Runtime and HTTP: `tokio` with `reqwest` (rustls with the platform's root
   store, HTTP/1.1 and HTTP/2), `serde`/`serde_json`
 - License: UPL-1.0, © 2026 The Speedle Authors
@@ -17,6 +17,8 @@ See the [Rust SDK documentation](https://engine.speedle.io/docs/sdks/rust/).
 See the [compatibility table](https://github.com/teramoby/speedle-sdk#compatibility)
 for supported Engine and Cloud API versions. SDK major and minor versions are
 aligned with the Engine; patch numbers are independent per package.
+See the [runtime support policy](https://github.com/teramoby/speedle-sdk#runtime-support)
+for the minimum table and how the minimum and latest releases are tested.
 
 ## Install
 
