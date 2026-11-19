@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.9.1 (2026-11-19)
+
+- The module now declares `go 1.22`, down from `go 1.26` in the released
+  1.9.0 module (the directive was lowered on `main` in #70), so the SDK
+  supports every Go release from the last three years. CI builds and tests
+  Go 1.22 and the latest release.
+
 ## 1.9.0 (2026-11-17)
 
 - Version aligned with Speedle Engine 1.9.0; earlier published releases were

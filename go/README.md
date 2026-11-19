@@ -9,7 +9,7 @@ Go client for the Speedle authorization decision service
 - Go: 1.22 or later; CI tests 1.22 and 1.27
 - Dependencies: the standard library only
 - License: UPL-1.0, © 2026 The Speedle Authors
-- Status: 1.9.0 prepared for release, not yet published
+- Status: 1.9.1 prepared for release, not yet published
 
 See the [Go SDK documentation](https://engine.speedle.io/docs/sdks/go/).
 
@@ -199,7 +199,7 @@ nothing but the is-allowed request: no telemetry, no logging.
 
 ## Requests on the wire
 
-`User-Agent: speedle-sdk-go/1.9.0 (go/<version>; <os>)`, plus
+`User-Agent: speedle-sdk-go/1.9.1 (go/<version>; <os>)`, plus
 `UserAgentSuffix`. The body is the Speedle `JsonContext` for both backends.
 The transport honours the standard `HTTPS_PROXY`/`NO_PROXY` environment
 variables, as `net/http` does. Certificate verification cannot be disabled;
