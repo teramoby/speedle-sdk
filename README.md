@@ -5,9 +5,9 @@ Client libraries for the Speedle authorization decision API,
 "is this subject allowed to perform this action on this resource?" with a few
 lines of code.
 
-**Status:** all six SDKs are implemented. Their next release is 1.9.0, the
-Engine 1.9 line; each SDK's release PR sets that SDK's version sources, and
-packages are published by a repository admin after merge via the
+**Status:** all six SDKs are implemented, on the Engine 1.9 line; each SDK's
+release PR sets that SDK's version sources, and packages are published by a
+repository admin after merge via the
 [release workflow](RELEASING.md).
 See the [Speedle SDK documentation](https://engine.speedle.io/docs/sdks/).
 
@@ -31,7 +31,7 @@ release workflow runs.
 | Node.js/TypeScript | [npm `@speedle/sdk`](https://www.npmjs.com/package/@speedle/sdk) | 1.9.0 (unreleased) |
 | Python | [PyPI `speedle`](https://pypi.org/project/speedle/) | 1.9.0 (unreleased) |
 | Java | [Maven Central `io.speedle:speedle-sdk`](https://central.sonatype.com/artifact/io.speedle/speedle-sdk) | 1.9.0 (unreleased) |
-| Go | [`github.com/teramoby/speedle-sdk/go`](https://pkg.go.dev/github.com/teramoby/speedle-sdk/go) | 1.9.0 (unreleased) |
+| Go | [`github.com/teramoby/speedle-sdk/go`](https://pkg.go.dev/github.com/teramoby/speedle-sdk/go) | 1.9.1 (unreleased) |
 | C# | [NuGet `Speedle.Sdk`](https://www.nuget.org/packages/Speedle.Sdk) | 1.9.0 (unreleased) |
 | Rust | [crates.io `speedle`](https://crates.io/crates/speedle) | 1.9.0 (unreleased) |
 

@@ -2,8 +2,9 @@
 
 ## 1.9.1 (2026-11-19)
 
-- The module now declares `go 1.22`, so the SDK supports every Go release from
-  the last three years. CI builds and tests Go 1.22 and the latest release.
+- The module now declares `go 1.22` (previously `go 1.26`), so the SDK
+  supports every Go release from the last three years. CI builds and tests
+  Go 1.22 and the latest release.
 
 ## 1.9.0 (2026-11-17)
 
